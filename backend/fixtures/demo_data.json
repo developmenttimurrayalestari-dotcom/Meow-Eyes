@@ -1,0 +1,884 @@
+{
+  "seed.py": {
+    "PRODUCT_IMAGES": [
+      "https://images.unsplash.com/photo-1772009288423-96090d2998c7?crop=entropy&cs=srgb&fm=jpg&w=900",
+      "https://images.unsplash.com/photo-1618677366787-9727aacca7ea?crop=entropy&cs=srgb&fm=jpg&w=900",
+      "https://images.unsplash.com/photo-1574258495973-f010dfbb5371?crop=entropy&cs=srgb&fm=jpg&w=900",
+      "https://images.unsplash.com/photo-1577803645773-f96470509666?crop=entropy&cs=srgb&fm=jpg&w=900",
+      "https://images.unsplash.com/photo-1556306535-0f09a537f0a3?crop=entropy&cs=srgb&fm=jpg&w=900",
+      "https://images.unsplash.com/photo-1511499767150-a48a237f0083?crop=entropy&cs=srgb&fm=jpg&w=900",
+      "https://images.unsplash.com/photo-1473496169904-658ba7c44d8a?crop=entropy&cs=srgb&fm=jpg&w=900",
+      "https://images.unsplash.com/photo-1508296695146-257a814070b4?crop=entropy&cs=srgb&fm=jpg&w=900",
+      "https://images.unsplash.com/photo-1633621641966-23836fcafd7b?crop=entropy&cs=srgb&fm=jpg&w=900",
+      "https://images.unsplash.com/photo-1601924994987-69e26d50dc26?crop=entropy&cs=srgb&fm=jpg&w=900",
+      "https://images.unsplash.com/photo-1591076482161-42ce6da69f67?crop=entropy&cs=srgb&fm=jpg&w=900",
+      "https://images.unsplash.com/photo-1581290447921-b54aaca33ac2?crop=entropy&cs=srgb&fm=jpg&w=900"
+    ],
+    "frame_subs_data": [
+      "Leinz",
+      "Cat Eye",
+      "Round",
+      "Square",
+      "Oversized",
+      "Rimless",
+      "Half Rim",
+      "Full Rim",
+      "Sport Frame",
+      "Kids Frame"
+    ],
+    "segments": [
+      "Pria",
+      "Wanita",
+      "Anak-anak",
+      "Unisex"
+    ],
+    "lens_subs": [
+      [
+        "Single Vision",
+        []
+      ],
+      [
+        "Bifokal",
+        []
+      ],
+      [
+        "Progresif",
+        []
+      ],
+      [
+        "Anti Radiasi (Blue Cut)",
+        []
+      ],
+      [
+        "Photochromic",
+        []
+      ],
+      [
+        "Polarized",
+        []
+      ]
+    ],
+    "products_data": [
+      [
+        "Leinz Aero Pria",
+        "frame",
+        "Leinz",
+        "Leinz",
+        "Pria",
+        850000,
+        720000,
+        [
+          "bestseller",
+          "new"
+        ],
+        [
+          {
+            "color": "Hitam",
+            "color_hex": "#0B192C",
+            "size": "M",
+            "sku": "LE-AER-PR-BLK"
+          },
+          {
+            "color": "Cokelat",
+            "color_hex": "#7B4F2D",
+            "size": "M",
+            "sku": "LE-AER-PR-BRN"
+          }
+        ]
+      ],
+      [
+        "Leinz Urban Pria",
+        "frame",
+        "Leinz",
+        "Leinz",
+        "Pria",
+        950000,
+        null,
+        [
+          "new"
+        ],
+        [
+          {
+            "color": "Silver",
+            "color_hex": "#9CA3AF",
+            "size": "L",
+            "sku": "LE-URB-PR-SLV"
+          }
+        ]
+      ],
+      [
+        "Leinz Petite Cat Eye",
+        "frame",
+        "Leinz",
+        "Leinz",
+        "Wanita",
+        880000,
+        790000,
+        [
+          "bestseller"
+        ],
+        [
+          {
+            "color": "Pink Soft",
+            "color_hex": "#FFB5C5",
+            "size": "S",
+            "sku": "LE-PET-WN-PNK"
+          },
+          {
+            "color": "Bening",
+            "color_hex": "#F0F0F0",
+            "size": "S",
+            "sku": "LE-PET-WN-CLR"
+          }
+        ]
+      ],
+      [
+        "Leinz Bloom Wanita",
+        "frame",
+        "Leinz",
+        "Leinz",
+        "Wanita",
+        750000,
+        null,
+        [],
+        [
+          {
+            "color": "Tortoise",
+            "color_hex": "#8B5A2B",
+            "size": "M",
+            "sku": "LE-BLM-WN-TRT"
+          }
+        ]
+      ],
+      [
+        "Leinz Mini Anak",
+        "frame",
+        "Leinz",
+        "Leinz",
+        "Anak-anak",
+        480000,
+        380000,
+        [
+          "new"
+        ],
+        [
+          {
+            "color": "Biru",
+            "color_hex": "#3B82F6",
+            "size": "XS",
+            "sku": "LE-MIN-AN-BLU"
+          },
+          {
+            "color": "Merah",
+            "color_hex": "#EF4444",
+            "size": "XS",
+            "sku": "LE-MIN-AN-RED"
+          }
+        ]
+      ],
+      [
+        "Catlux Diva Cat Eye",
+        "frame",
+        "Cat Eye",
+        "Catlux",
+        "Wanita",
+        1200000,
+        999000,
+        [
+          "bestseller",
+          "flashsale"
+        ],
+        [
+          {
+            "color": "Coral",
+            "color_hex": "#FF6B6B",
+            "size": "M",
+            "sku": "CT-DIV-WN-COR"
+          },
+          {
+            "color": "Hitam Glam",
+            "color_hex": "#0B192C",
+            "size": "M",
+            "sku": "CT-DIV-WN-BLK"
+          }
+        ]
+      ],
+      [
+        "MeowOptik Sweetie Cat Eye",
+        "frame",
+        "Cat Eye",
+        "MeowOptik",
+        "Wanita",
+        690000,
+        599000,
+        [],
+        [
+          {
+            "color": "Putih Mutiara",
+            "color_hex": "#F5F5DC",
+            "size": "S",
+            "sku": "MO-SWT-WN-WHT"
+          }
+        ]
+      ],
+      [
+        "MeowOptik Vintage Round",
+        "frame",
+        "Round",
+        "MeowOptik",
+        "Pria",
+        720000,
+        null,
+        [
+          "new"
+        ],
+        [
+          {
+            "color": "Gold",
+            "color_hex": "#FCA311",
+            "size": "M",
+            "sku": "MO-VTG-PR-GLD"
+          },
+          {
+            "color": "Black Matte",
+            "color_hex": "#1F2937",
+            "size": "M",
+            "sku": "MO-VTG-PR-BMT"
+          }
+        ]
+      ],
+      [
+        "Kittycraft Lola Round",
+        "frame",
+        "Round",
+        "Kittycraft",
+        "Wanita",
+        650000,
+        550000,
+        [],
+        [
+          {
+            "color": "Beige",
+            "color_hex": "#D6BFA0",
+            "size": "S",
+            "sku": "KC-LOL-WN-BEG"
+          }
+        ]
+      ],
+      [
+        "EssenseEye Quad Unisex",
+        "frame",
+        "Square",
+        "EssenseEye",
+        "Unisex",
+        880000,
+        null,
+        [
+          "new"
+        ],
+        [
+          {
+            "color": "Black",
+            "color_hex": "#0B192C",
+            "size": "M",
+            "sku": "ES-QUD-UN-BLK"
+          },
+          {
+            "color": "Blue Crystal",
+            "color_hex": "#1E3A8A",
+            "size": "M",
+            "sku": "ES-QUD-UN-BLC"
+          }
+        ]
+      ],
+      [
+        "Catlux Aurora Oversized",
+        "frame",
+        "Oversized",
+        "Catlux",
+        "Wanita",
+        1300000,
+        1100000,
+        [
+          "bestseller"
+        ],
+        [
+          {
+            "color": "Honey",
+            "color_hex": "#E0A85A",
+            "size": "L",
+            "sku": "CT-AUR-WN-HNY"
+          }
+        ]
+      ],
+      [
+        "EssenseEye Air Rimless",
+        "frame",
+        "Rimless",
+        "EssenseEye",
+        "Pria",
+        1450000,
+        null,
+        [],
+        [
+          {
+            "color": "Silver",
+            "color_hex": "#A0A0A0",
+            "size": "M",
+            "sku": "ES-AIR-PR-SLV"
+          }
+        ]
+      ],
+      [
+        "PurrLens Trail Sport",
+        "frame",
+        "Sport Frame",
+        "PurrLens",
+        "Pria",
+        950000,
+        850000,
+        [
+          "new"
+        ],
+        [
+          {
+            "color": "Hitam Sport",
+            "color_hex": "#000000",
+            "size": "L",
+            "sku": "PL-TRL-PR-BLK"
+          },
+          {
+            "color": "Hijau Neon",
+            "color_hex": "#22C55E",
+            "size": "L",
+            "sku": "PL-TRL-PR-GRN"
+          }
+        ]
+      ],
+      [
+        "Kittycraft Cubby Anak",
+        "frame",
+        "Kids Frame",
+        "Kittycraft",
+        "Anak-anak",
+        420000,
+        350000,
+        [
+          "new"
+        ],
+        [
+          {
+            "color": "Kuning",
+            "color_hex": "#FCA311",
+            "size": "XS",
+            "sku": "KC-CBY-AN-YLW"
+          }
+        ]
+      ],
+      [
+        "Lensa Anti Radiasi Blue Cut",
+        "lens",
+        "Anti Radiasi (Blue Cut)",
+        "PurrLens",
+        "Unisex",
+        350000,
+        280000,
+        [
+          "bestseller"
+        ],
+        [
+          {
+            "lens_type": "Blue Cut Standard",
+            "sku": "LNS-BLC-STD"
+          },
+          {
+            "lens_type": "Blue Cut Premium",
+            "sku": "LNS-BLC-PRM",
+            "price_override": 450000
+          }
+        ]
+      ],
+      [
+        "Lensa Photochromic",
+        "lens",
+        "Photochromic",
+        "PurrLens",
+        "Unisex",
+        550000,
+        null,
+        [],
+        [
+          {
+            "lens_type": "Photochromic Grey",
+            "sku": "LNS-PCM-GRY"
+          },
+          {
+            "lens_type": "Photochromic Brown",
+            "sku": "LNS-PCM-BRN"
+          }
+        ]
+      ],
+      [
+        "Lensa Progresif Premium",
+        "lens",
+        "Progresif",
+        "PurrLens",
+        "Unisex",
+        1500000,
+        1300000,
+        [],
+        [
+          {
+            "lens_type": "Progresif Hi-Index",
+            "sku": "LNS-PRG-HI"
+          }
+        ]
+      ],
+      [
+        "Paket Hemat Leinz + Blue Cut",
+        "package",
+        "Paket Hemat",
+        "Leinz",
+        "Unisex",
+        1100000,
+        950000,
+        [
+          "bestseller"
+        ],
+        [
+          {
+            "sku": "PKG-LE-BLC-001",
+            "stock": 30
+          }
+        ]
+      ],
+      [
+        "Paket Premium Catlux + Photochromic",
+        "package",
+        "Paket Premium",
+        "Catlux",
+        "Wanita",
+        1800000,
+        1599000,
+        [
+          "new"
+        ],
+        [
+          {
+            "sku": "PKG-CT-PCM-001",
+            "stock": 15
+          }
+        ]
+      ],
+      [
+        "Paket Anak Kittycraft + Blue Cut",
+        "package",
+        "Paket Anak",
+        "Kittycraft",
+        "Anak-anak",
+        700000,
+        600000,
+        [],
+        [
+          {
+            "sku": "PKG-KC-BLC-001",
+            "stock": 20
+          }
+        ]
+      ]
+    ]
+  },
+  "seed_content.py": {
+    "base": [
+      [
+        "1.50 Standard",
+        "1.50",
+        "Standard, cocok untuk minus/plus di bawah 2.00",
+        "thick",
+        "-2.00 s/d +2.00",
+        0
+      ],
+      [
+        "1.56 Blue Cut",
+        "1.56",
+        "Anti radiasi biru layar, ringan",
+        "medium",
+        "-4.00 s/d +4.00",
+        75000
+      ],
+      [
+        "1.60 Ultra Thin",
+        "1.60",
+        "Ultra tipis, ringan, cocok minus tinggi",
+        "thin",
+        "-5.00 s/d +5.00",
+        175000
+      ],
+      [
+        "1.67 Super Thin",
+        "1.67",
+        "Super tipis untuk minus/plus di atas 5.00",
+        "thinner",
+        "-7.00 s/d +7.00",
+        350000
+      ],
+      [
+        "1.74 Extra Thin",
+        "1.74",
+        "Paling tipis di kelasnya",
+        "thinnest",
+        ">-7.00 atau >+7.00",
+        650000
+      ]
+    ],
+    "articles": [
+      [
+        "Panduan Memilih Frame Sesuai Bentuk Wajah",
+        "panduan-frame-bentuk-wajah",
+        "Cocok kah frame Cat Eye untuk wajah bulat? Yuk cari tahu tips memilih bentuk frame berdasarkan bentuk wajahmu.",
+        "<p>Setiap bentuk wajah punya karakter unik, dan frame yang tepat bisa mempertajam fitur wajahmu. Berikut panduan singkat dari Meow Eyes:</p>\n<h3>1. Wajah Oval</h3>\n<p>Kabar baik! Hampir semua bentuk frame cocok. Coba <strong>Square</strong> atau <strong>Rectangle</strong> untuk kesan formal, atau <strong>Round</strong> untuk vibe vintage.</p>\n<h3>2. Wajah Bulat</h3>\n<p>Pilih frame <strong>Square</strong>, <strong>Rectangular</strong>, atau <strong>Cat Eye</strong> untuk memberi kesan lebih tirus dan tegas.</p>\n<h3>3. Wajah Persegi</h3>\n<p>Frame <strong>Round</strong> atau <strong>Oval</strong> menyeimbangkan garis rahang yang kuat. Hindari frame boxy.</p>\n<h3>4. Wajah Hati/Segitiga</h3>\n<p><strong>Aviator</strong>, <strong>Rimless</strong>, atau <strong>Cat Eye</strong> yang lembut adalah pilihan ideal.</p>\n<p>Masih bingung? Coba fitur <em>filter bentuk frame</em> di halaman Shop Now Meow Eyes.</p>",
+        "panduan-belanja",
+        "https://images.unsplash.com/photo-1633621641966-23836fcafd7b?crop=entropy&cs=srgb&fm=jpg&w=1200"
+      ],
+      [
+        "Lensa Anti Radiasi Blue Cut: Perlu atau Tidak?",
+        "lensa-blue-cut-perlu-atau-tidak",
+        "Buat kamu yang seharian di depan layar, blue cut bukan sekadar tren — ini investasi kesehatan mata.",
+        "<p>Screen time rata-rata orang Indonesia kini melebihi 8 jam sehari. Paparan cahaya biru dari layar bisa menyebabkan mata lelah, sakit kepala, dan gangguan tidur.</p>\n<p><strong>Lensa Blue Cut</strong> di Meow Eyes memfilter cahaya biru berbahaya dan tersedia dari <em>index 1.56</em> hingga <em>1.74</em>. Untuk kamu yang bekerja dari rumah, blue cut wajib banget.</p>\n<h3>Manfaat</h3>\n<ul>\n<li>Mengurangi kelelahan mata</li>\n<li>Mencegah sakit kepala</li>\n<li>Membantu kualitas tidur lebih baik</li>\n</ul>",
+        "kesehatan-mata",
+        "https://images.unsplash.com/photo-1508296695146-257a814070b4?crop=entropy&cs=srgb&fm=jpg&w=1200"
+      ],
+      [
+        "Trend Frame 2026: Cat Eye, Aviator, dan Rimless",
+        "trend-frame-2026",
+        "Tiga siluet ini akan mendominasi fashion eyewear di 2026. Yuk cek koleksi Meow Eyes.",
+        "<p>Tahun 2026 akan penuh dengan pernyataan berani. Berikut tiga frame trend yang wajib kamu punya:</p>\n<h3>1. Cat Eye Bold</h3>\n<p>Cat eye kembali dengan warna-warna berani seperti coral dan honey.</p>\n<h3>2. Aviator Reimagined</h3>\n<p>Aviator klasik dengan sentuhan metal titanium yang ringan.</p>\n<h3>3. Rimless Minimalist</h3>\n<p>Untuk kamu yang suka simple tapi berkelas.</p>",
+        "fashion-eyewear",
+        "https://images.unsplash.com/photo-1591076482161-42ce6da69f67?crop=entropy&cs=srgb&fm=jpg&w=1200"
+      ],
+      [
+        "Kupon MEOWWELCOME 15%: Yuk Belanja Pertama Kamu",
+        "kupon-meowwelcome-15-persen",
+        "Baru gabung Meow Eyes? Dapat diskon 15% untuk pembelian pertama kamu.",
+        "<p>Pakai kupon <strong>MEOWWELCOME</strong> di checkout dan dapatkan potongan 15% (maks Rp 100.000) untuk pembelian minimal Rp 250.000.</p>\n<p>Kupon berlaku 30 hari sejak kamu registrasi. Jangan lupa cek voucher lain di halaman <a href=\"/vouchers\">Voucher</a>!</p>",
+        "promo-event",
+        "https://images.unsplash.com/photo-1670739368045-7f09844fc862?crop=entropy&cs=srgb&fm=jpg&w=1200"
+      ]
+    ],
+    "frame_shapes": [
+      [
+        "Round",
+        "Frame bulat cocok untuk wajah kotak. Menambah kesan lembut & vintage.",
+        "Wajah Kotak, Persegi",
+        "Vintage, Playful",
+        [
+          "Ringan",
+          "Klasik"
+        ],
+        [
+          "Kurang cocok untuk wajah bulat"
+        ]
+      ],
+      [
+        "Square",
+        "Frame kotak/persegi memberi kesan tegas & profesional.",
+        "Wajah Bulat, Oval",
+        "Formal, Bisnis",
+        [
+          "Tegas",
+          "Mudah dipadukan"
+        ],
+        [
+          "Kurang cocok wajah persegi"
+        ]
+      ],
+      [
+        "Cat Eye",
+        "Frame runcing di ujung, playful dan feminim.",
+        "Wajah Bulat, Hati",
+        "Playful, Fashion",
+        [
+          "Ikonik",
+          "Fashionable"
+        ],
+        [
+          "Mungkin terlihat mencolok"
+        ]
+      ],
+      [
+        "Aviator",
+        "Frame tetesan air klasik dari era 1930-an.",
+        "Wajah Oval, Persegi",
+        "Vintage, Casual",
+        [
+          "Timeless",
+          "Cocok semua umur"
+        ],
+        [
+          "Kurang formal"
+        ]
+      ],
+      [
+        "Round Oval",
+        "Perpaduan bulat & oval, semi-vintage.",
+        "Hampir semua wajah",
+        "Retro, Cute",
+        [
+          "Nyaman"
+        ],
+        []
+      ],
+      [
+        "Rectangle",
+        "Frame kotak memanjang, minimalis modern.",
+        "Wajah Bulat, Hati",
+        "Minimalis, Profesional",
+        [
+          "Simpel",
+          "Serbaguna"
+        ],
+        []
+      ],
+      [
+        "Oversized",
+        "Frame besar, statement piece.",
+        "Wajah Oval, Kotak",
+        "Bold, Fashion",
+        [
+          "Menutupi lebih banyak wajah",
+          "Trend"
+        ],
+        [
+          "Bisa terlalu besar untuk wajah kecil"
+        ]
+      ],
+      [
+        "Rimless",
+        "Tanpa bingkai — invisible frame.",
+        "Semua wajah",
+        "Minimalis, Profesional",
+        [
+          "Ringan",
+          "Formal"
+        ],
+        [
+          "Kurang cocok wajah minus tinggi"
+        ]
+      ]
+    ],
+    "materials": [
+      [
+        "Acetate",
+        "Plastik premium fleksibel, warna kaya, ringan.",
+        [
+          "Ringan",
+          "Warna beragam",
+          "Nyaman dipakai lama"
+        ],
+        [
+          "Bisa memuai bila panas"
+        ]
+      ],
+      [
+        "Metal",
+        "Frame logam klasik, tipis & elegan.",
+        [
+          "Tipis",
+          "Kokoh"
+        ],
+        [
+          "Bisa berat",
+          "Bisa berkarat"
+        ]
+      ],
+      [
+        "Titanium",
+        "Ringan seperti kertas, kuat seperti baja.",
+        [
+          "Sangat ringan",
+          "Hypoallergenic",
+          "Tahan karat"
+        ],
+        [
+          "Harga premium"
+        ]
+      ],
+      [
+        "TR90",
+        "Polimer teknologi tinggi, super lentur.",
+        [
+          "Fleksibel",
+          "Anti pecah"
+        ],
+        [
+          "Terlihat kurang premium"
+        ]
+      ],
+      [
+        "Stainless Steel",
+        "Kokoh, awet, harga terjangkau.",
+        [
+          "Kokoh"
+        ],
+        [
+          "Sedikit berat"
+        ]
+      ]
+    ],
+    "lens_types": [
+      [
+        "Lensa Single Vision",
+        "Untuk minus, plus, atau silinder tunggal.",
+        [
+          "Termurah"
+        ],
+        []
+      ],
+      [
+        "Lensa Blue Cut",
+        "Anti radiasi cahaya biru layar.",
+        [
+          "Baik untuk WFH"
+        ],
+        []
+      ],
+      [
+        "Lensa Photochromic",
+        "Berubah gelap saat kena UV.",
+        [
+          "Multifungsi"
+        ],
+        [
+          "Harga tinggi"
+        ]
+      ],
+      [
+        "Lensa Progresif",
+        "Multi jarak — jauh, sedang, dekat.",
+        [
+          "Untuk usia 40+"
+        ],
+        [
+          "Butuh adaptasi"
+        ]
+      ]
+    ],
+    "indexes_kn": [
+      [
+        "Index 1.50",
+        "1.50",
+        "Standar, cocok minus ringan"
+      ],
+      [
+        "Index 1.56",
+        "1.56",
+        "Slightly tipis, populer"
+      ],
+      [
+        "Index 1.60",
+        "1.60",
+        "Tipis untuk minus 4-5"
+      ],
+      [
+        "Index 1.67",
+        "1.67",
+        "Super tipis untuk minus 6+"
+      ],
+      [
+        "Index 1.74",
+        "1.74",
+        "Paling tipis untuk minus tinggi"
+      ]
+    ],
+    "faqs": [
+      [
+        "Bagaimana cara memesan di Meow Eyes?",
+        "Pilih produk > tambahkan ke cart > checkout > masukkan PIN 6 digit > bayar via DOKU.",
+        "pemesanan"
+      ],
+      [
+        "Bisa pilih frame + lensa sekaligus?",
+        "Bisa! Di halaman detail frame, ada opsi 'Tambahkan Lensa'. Kamu bisa pilih jenis lensa, index, dan input resep kalau perlu.",
+        "pemesanan"
+      ],
+      [
+        "Apa saja metode pembayaran yang tersedia?",
+        "Saat ini kami mendukung DOKU Virtual Account (BCA, Mandiri, BNI, BRI) dengan validitas 1 jam.",
+        "pembayaran"
+      ],
+      [
+        "Berapa lama pengiriman?",
+        "Tergantung kurir yang kamu pilih. JNE REG 2-3 hari, JNE YES 1 hari, GoSend Instant hari yang sama.",
+        "pengiriman"
+      ],
+      [
+        "Apakah ada garansi?",
+        "Ya, semua frame & lensa mendapat garansi 12 bulan untuk cacat produksi.",
+        "garansi-retur"
+      ],
+      [
+        "Bisa retur / tukar barang?",
+        "Bisa dalam 7 hari sejak diterima jika produk masih segel dan tidak ada kerusakan pemakaian.",
+        "garansi-retur"
+      ]
+    ],
+    "pages": [
+      [
+        "privacy_policy",
+        "Kebijakan Privasi",
+        "kebijakan-privasi",
+        "<h2>Kebijakan Privasi Meow Eyes</h2>\n<p>Kami menjaga kerahasiaan data pribadi Anda seperti kami menjaga kucing kesayangan sendiri. 🐱</p>\n<h3>Data yang Kami Kumpulkan</h3>\n<ul>\n<li>Nama, email, nomor telepon (saat registrasi)</li>\n<li>Alamat pengiriman</li>\n<li>Riwayat pembelian & pembayaran</li>\n</ul>\n<h3>Penggunaan Data</h3>\n<p>Data digunakan untuk memproses pesanan, mengirim update pesanan, kampanye pemasaran (opt-in), serta rekomendasi produk.</p>\n<h3>Keamanan</h3>\n<p>Semua data dienkripsi (bcrypt untuk password/PIN), dan pembayaran diproses oleh DOKU dengan standar PCI-DSS.</p>"
+      ],
+      [
+        "terms_conditions",
+        "Syarat & Ketentuan",
+        "syarat-ketentuan",
+        "<h2>Syarat & Ketentuan</h2>\n<p>Dengan menggunakan Meow Eyes, Anda setuju dengan syarat berikut:</p>\n<ol>\n<li>Semua transaksi final setelah pembayaran berhasil.</li>\n<li>Voucher tidak dapat digabung kecuali disebutkan.</li>\n<li>Reward roulette berlaku sesuai masa berlaku, tidak dapat ditukar uang.</li>\n<li>Meow Eyes berhak mengubah harga, promo, dan ketersediaan produk sewaktu-waktu.</li>\n</ol>"
+      ],
+      [
+        "refund_policy",
+        "Kebijakan Refund",
+        "kebijakan-refund",
+        "<h2>Kebijakan Refund</h2>\n<p>Refund berlaku dalam kondisi:</p>\n<ul>\n<li>Produk cacat produksi & masih dalam masa garansi</li>\n<li>Ada kesalahan pengiriman dari sisi kami</li>\n<li>Order dibatalkan sebelum diproses</li>\n</ul>\n<p>Refund akan diproses 3-7 hari kerja ke rekening asal pembayaran.</p>"
+      ],
+      [
+        "shipping_policy",
+        "Kebijakan Pengiriman",
+        "kebijakan-pengiriman",
+        "<h2>Kebijakan Pengiriman</h2>\n<p>Meow Eyes bekerjasama dengan aggregator EVERPRO (JNE, J&T, SiCepat, AnterAja, GoSend).</p>\n<ul>\n<li>Order dikirim maksimal 1 hari kerja setelah pembayaran</li>\n<li>Estimasi tiba tergantung kurir & tujuan</li>\n<li>Tracking otomatis di halaman detail pesanan</li>\n</ul>"
+      ],
+      [
+        "about",
+        "Tentang Meow Eyes",
+        "tentang-meow-eyes",
+        "<h2>Tentang Meow Eyes 🐱👓</h2>\n<p>Meow Eyes adalah marketplace kacamata online yang dibangun dengan kecintaan pada fashion, teknologi, dan tentu saja... kucing! Kami menyediakan frame berkualitas premium dari Leinz, Catlux, MeowOptik, PurrLens, dan brand pilihan lainnya.</p>\n<p>Misi kami: bikin setiap orang bisa lihat dunia dengan tatapan meow yang stylish.</p>"
+      ]
+    ],
+    "banners": [
+      [
+        "Diskon Hingga 50% — Cat Eye Edition",
+        "https://images.unsplash.com/photo-1670739368045-7f09844fc862?crop=entropy&cs=srgb&fm=jpg&w=1600",
+        "shop_now",
+        "/shop-now?badge=flashsale",
+        "hero",
+        1
+      ],
+      [
+        "Koleksi Leinz Pria Terbaru",
+        "https://images.unsplash.com/photo-1525786210598-d527194d3e9a?crop=entropy&cs=srgb&fm=jpg&w=1600",
+        "category",
+        "/shop-now?brand=leinz",
+        "promo",
+        2
+      ],
+      [
+        "Baca Panduan Kacamata Terbaru",
+        "https://images.unsplash.com/photo-1633621641966-23836fcafd7b?crop=entropy&cs=srgb&fm=jpg&w=1600",
+        "article",
+        "/articles",
+        "shop_now",
+        3
+      ]
+    ]
+  }
+}

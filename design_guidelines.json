@@ -1,0 +1,148 @@
+{
+  "theme_and_archetype": {
+    "domain": "E-commerce & Gamification",
+    "theme": "LIGHT",
+    "archetype": "Archetype 6 (Vibrant Play) combined with Archetype 5 (Premium/Luxury touches)",
+    "description": "A dopamine-driven, playful yet premium aesthetic. We use high-contrast vibrant accents against a warm, pearl-like off-white background. The 'Meow Eyes' identity is expressed through subtle cat-eye geometry, amber tones, and tactile game-like interactions. It avoids flat/generic corporate looks by leaning into editorial typography and asymmetrical bento layouts."
+  },
+  "typography": {
+    "rules": {
+      "headings_banned": ["Inter", "Roboto", "Open Sans", "Lato", "Syne"],
+      "typesetting": "Tight tracking on large headings (tracking-tighter), loose leading on body text (leading-relaxed)."
+    },
+    "families": {
+      "heading": "Cabinet Grotesk",
+      "body": "Figtree"
+    },
+    "hierarchy": {
+      "h1": "text-4xl sm:text-5xl lg:text-6xl font-black tracking-tighter text-meow-midnight",
+      "h2": "text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-meow-midnight",
+      "h3": "text-xl sm:text-2xl font-bold tracking-tight",
+      "h4": "text-lg sm:text-xl font-bold",
+      "body_large": "text-lg font-medium leading-relaxed",
+      "body_base": "text-base font-normal leading-relaxed text-meow-gray",
+      "body_small": "text-sm font-medium",
+      "label": "text-xs font-bold uppercase tracking-[0.2em] text-meow-salmon"
+    }
+  },
+  "colors": {
+    "palette": {
+      "base": {
+        "background": "#FDFBF7",
+        "surface": "#FFFFFF",
+        "surface_admin": "#F4F4F5"
+      },
+      "brand": {
+        "midnight": "#0B192C",
+        "gray": "#4A5568",
+        "salmon": "#FF6B6B",
+        "salmon_hover": "#FF5252",
+        "amber": "#FCA311",
+        "amber_hover": "#F09100",
+        "mint": "#2A9D8F"
+      },
+      "gamification": {
+        "roulette_bg": "#FF8FA3",
+        "points_gold": "#FFD166",
+        "success_green": "#06D6A0"
+      }
+    },
+    "rules": {
+      "prohibited": "Purple gradients on white background, generic deep teal.",
+      "contrast": "All text must pass WCAG AA. Ensure midnight or dark gray text on light backgrounds. Salmon and Amber are for CTAs and highlights.",
+      "hover_states": "Must explicitly set hover text and background colors (e.g., hover:bg-meow-salmon_hover hover:text-white)."
+    }
+  },
+  "spacing_and_layout": {
+    "philosophy": "Generous Spacing Philosophy. Use 2-3x more spacing than typical designs to let the premium products breathe.",
+    "container_padding": "p-6 md:p-8 lg:p-12",
+    "grids": {
+      "customer_bento": "grid grid-cols-1 md:grid-cols-12 gap-6 or gap-8. Mix spans like col-span-8 and col-span-4 to create asymmetry.",
+      "admin_control_room": "grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6. Every pixel utilized, h-full on children."
+    },
+    "alignment": "Optical alignment. Left-align dense content. Avoid center-everything disease."
+  },
+  "surface_strategies": {
+    "headers": "Crystal Glass. backdrop-blur-xl bg-white/70 with a delicate 1px border-b border-meow-midnight/5.",
+    "customer_cards": "Playful Geometry. rounded-[32px] rounded-br-[12px] bg-white shadow-sm border border-meow-midnight/5. Hover adds -translate-y-1 and shadow-lg.",
+    "gamification_elements": "Neumorphism (Tactile). For buttons in mini-games and roulette to invite touch. Use soft shadows paired with sharp 1px inner borders.",
+    "admin_dashboard_cards": "Flat background, 1px subtle border (border-zinc-200), rounded-2xl, no shadow by default."
+  },
+  "component_patterns": {
+    "buttons": {
+      "primary": "bg-meow-salmon text-white font-bold rounded-full px-8 py-4 transition-all hover:bg-meow-salmon_hover hover:scale-[1.02] active:scale-95 shadow-[0_8px_20px_rgba(255,107,107,0.3)]",
+      "secondary": "bg-white text-meow-midnight font-bold rounded-full px-8 py-4 border-2 border-meow-midnight transition-all hover:bg-meow-midnight hover:text-white",
+      "gamified": "bg-meow-amber text-meow-midnight font-black rounded-2xl px-8 py-4 border-b-4 border-[#D98200] active:border-b-0 active:translate-y-1 transition-all"
+    },
+    "badges": "rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider bg-meow-mint/10 text-meow-mint",
+    "inputs": "Shadcn based. rounded-2xl border-2 border-transparent bg-zinc-100 focus:bg-white focus:border-meow-salmon focus:ring-4 focus:ring-meow-salmon/20 transition-all",
+    "bottom_navigation": "Mobile-only. fixed bottom-4 left-4 right-4 bg-meow-midnight/90 backdrop-blur-xl rounded-full flex justify-between items-center px-6 py-4 shadow-2xl z-50 text-white"
+  },
+  "iconography": {
+    "library": "lucide-react",
+    "style": "Clean, scalable. Use subtle cat motifs where appropriate (e.g., Cat icon for profile/mascot, Glasses icon for catalog). Stroke width 2px."
+  },
+  "customer_facing_features": {
+    "homepage": "Hero banner with dynamic product layout (playful cat + glasses aesthetic). Flash sale countdown using tactile bento cards. Horizontal scrolling marquee for brand benefits.",
+    "catalog": "Left sidebar or top horizontal modern filter (category, brand, frame shape). Product cards must show variant colors as small colored dots. Hover to reveal 'Try On' or alternate angle.",
+    "product_detail": "Massive product gallery (max-h-[80vh]). Right side sticky details. Sticky 'Add to Cart' bar on mobile.",
+    "cart_checkout": "Simplified layout. Security PIN verification step modeled with clear input masks. Mocked shipping (EVERPRO) and payment (DOKU) integrations.",
+    "gamification": {
+      "mini_games": "Dedicated pages for Puzzle, Tetris, Matching Card. Use Vibrant Play archetype colors here. Big tactile buttons.",
+      "roulette": "Spin wheel interface with sound/motion references. Rewards: vouchers, points, free shipping."
+    }
+  },
+  "admin_cms_features": {
+    "dashboard": "Chart.js or Recharts for visual reports (Sales, Top Products, Game Engagement). High-contrast data visualization.",
+    "tables": "Shadcn tables. Dense layout, pagination, export to Excel button prominently displayed.",
+    "management": "Forms for CRUD operations across products, inventory, games, promo. Use side-drawers (Sheets) or Modals for quick edits to preserve context."
+  },
+  "accessibility_and_testing": {
+    "contrast": "Check all text against backgrounds using APCA.",
+    "motion": "Respect prefers-reduced-motion for all gamification elements.",
+    "testing_attributes": "All interactive and key informational elements MUST include a 'data-testid' attribute (e.g., data-testid='hero-shop-button', data-testid='cart-checkout-btn')."
+  },
+  "media_assets": {
+    "hero_and_mascot": [
+      {
+        "url": "https://images.unsplash.com/photo-1533738363-b7f9aef128ce?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODh8MHwxfHNlYXJjaHwxfHxjYXQlMjB3ZWFyaW5nJTIwZ2xhc3Nlc3xlbnwwfHx8fDE3ODExNTk4ODB8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Russian blue cat wearing yellow sunglasses - Mascot/Hero image"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1670739368045-7f09844fc862?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODh8MHwxfHNlYXJjaHwzfHxjYXQlMjB3ZWFyaW5nJTIwZ2xhc3Nlc3xlbnwwfHx8fDE3ODExNTk4ODB8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Cat wearing sunglasses looking at camera - Gamification/Promo image"
+      }
+    ],
+    "products": [
+      {
+        "url": "https://images.unsplash.com/photo-1772009288423-96090d2998c7?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Nzd8MHwxfHNlYXJjaHw0fHxtb2Rlcm4lMjBleWV3ZWFyJTIwcHJvZHVjdCUyMHNob3R8ZW58MHx8fHwxNzgxMTU5ODgwfDA&ixlib=rb-4.1.0&q=85",
+        "description": "Red-rimmed eyeglasses on geometric stand - Premium frame shot"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1618677366787-9727aacca7ea?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Nzd8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBleWV3ZWFyJTIwcHJvZHVjdCUyMHNob3R8ZW58MHx8fHwxNzgxMTU5ODgwfDA&ixlib=rb-4.1.0&q=85",
+        "description": "Black framed sunglasses on white/pink surface - Minimal product shot"
+      }
+    ],
+    "lifestyle": [
+      {
+        "url": "https://images.unsplash.com/photo-1525786210598-d527194d3e9a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjV8MHwxfHNlYXJjaHwyfHxmYXNoaW9uJTIwbW9kZWwlMjB3ZWFyaW5nJTIwZ2xhc3Nlc3xlbnwwfHx8fDE3ODExNTk4ODB8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Woman wearing black framed eyeglasses - Lifestyle catalog image"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1524255684952-d7185b509571?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjV8MHwxfHNlYXJjaHwxfHxmYXNoaW9uJTIwbW9kZWwlMjB3ZWFyaW5nJTIwZ2xhc3Nlc3xlbnwwfHx8fDE3ODExNTk4ODB8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Woman wearing glasses - Banner/Category image"
+      }
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Initialize React + FastAPI + MongoDB stack.",
+    "Implement the custom Tailwind colors (meow-midnight, meow-salmon, meow-amber) in tailwind.config.js.",
+    "Import 'Cabinet Grotesk' and 'Figtree' fonts. Apply them globally in index.css.",
+    "Build the customer layout with the Crystal Glass sticky header and mobile bottom navigation.",
+    "Build the gamification modules (Roulette, Mini-games) using framer-motion for playful animations.",
+    "Use Shadcn components for complex inputs, dropdowns, and admin tables, but heavily customize them to match the 'Meow Eyes' premium playful aesthetic.",
+    "Mock payment with DOKU flow and shipping with EVERPRO flow.",
+    "Ensure the Admin CMS is responsive and uses Recharts/Chart.js for the dashboard.",
+    "Add 'data-testid' to ALL interactive elements for automated testing."
+  ]
+}

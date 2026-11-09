@@ -1,0 +1,37 @@
+{
+  "summary": "Iteration 4 backend delta (RBAC full coverage + Bundle Recommendation + Cron Scheduler): 30/30 pass (100%). Verified: (1) RBAC deny — staff with only [article.*, review.*] correctly 403'd on GET /api/admin/faqs, /api/admin/pages, /api/admin/contact-setting, /api/admin/lens/indexes; /api/admin/knowledge still 200 (uses article.view, per spec note). (2) RBAC grant — after temporarily adding setting.view+setting.update+product.view, staff can GET all 4 routes above (200); POST /api/admin/knowledge (200, article.create); POST/PUT /api/admin/faqs (200); POST/DELETE /api/admin/pages (200). Permissions restored to base after each test via autouse fixture. (3) Bundle Recommendation — GET /api/lens/recommended-bundle/{frame_id} returns 3 picks with tiers [basic,popular,premium]; each pick includes lens_product_id, lens_index_id, frame_price, lens_price, lens_index_price, bundle_total, original_total, savings; bundle_total math verified (= frame_price + lens_price + lens_index_price); 404 on unknown frame. (4) Bundle Checkout — POST /api/cart with lens_product_id+lens_index_id yields cart subtotal exactly matching pick.bundle_total. (5) Scheduler — GET /api/health returns {ok:true, scheduler_running:true}; GET /api/admin/scheduler/status (admin) returns 4 registered jobs; customer & staff both 403. (6) Manual trigger — POST /api/admin/scheduler/run/{job_id} returns {ok:true, job:<id>} for all 4 valid ids; unknown id returns {ok:false, error:...}. (7) Cron effect — Inserted pending_payment order with past reservation_expires_at → after run/expire-pending-orders → status='expired'; inserted flash_sale (is_active=false, start_at past, end_at future) → after run/activate-flash-sales → is_active=true. (8) Regression — admin/customer /auth/me + /vouchers/active pass.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/admin/scheduler/run/{invalid}", "issue": "Invalid job id returns HTTP 200 with {ok:false,error:...} rather than 400/404. Behaviorally OK (spec explicitly asked for {ok:false, error:...}), but from REST hygiene POV a 400 would be more idiomatic."},
+      {"endpoint": "/api/admin/scheduler/status", "issue": "Uses current_admin (excludes staff even if given a scheduler.view perm). No permission catalog entry for scheduler mgmt — acceptable for MVP since scheduler is super_admin territory."},
+      {"endpoint": "seed.py", "issue": "Still no staff@meoweyes.id seed (carry-over from iter3). Tests rely on out-of-band user creation. Recommend adding idempotent upsert with role=staff, permissions=BASE_STAFF_PERMS, PIN 111222 for reproducibility on DB wipe."}
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iteration4.py",
+    "/app/test_reports/pytest/pytest_iter4.xml"
+  ],
+  "action_items": [
+    "Consider seeding staff@meoweyes.id in seed.py (idempotent) for DB-wipe resilience.",
+    "Optional: return HTTP 400 for invalid scheduler job_id in POST /api/admin/scheduler/run/{job_id} instead of 200 + ok:false, for REST idiomaticity."
+  ],
+  "critical_code_review_comments": [
+    "scheduler.py: job_poll_shipments never advances carrier_status='delivered' to a customer-facing 'delivered' order status (kept at 'shipped' with comment 'customer still needs to confirm receipt'). This is intentional but means auto-complete-orders solely relies on shipment_checked_at/updated_at cutoff — worth documenting in the order lifecycle spec.",
+    "scheduler.py: AsyncIOScheduler singleton assumed process-global. If backend is ever scaled to >1 uvicorn worker (currently supervisor runs single worker), jobs will double-fire. Add a note or a mongodb-based lock if scaled.",
+    "routes_content.recommended_bundle: idx_sorted[min(1, len-1)] means when only 1 lens_index exists all 3 picks share the same index — acceptable degenerate case but worth guarding against len==1 lens_products which would repeat lens across tiers too.",
+    "routes_admin_content.py: full RBAC migration completed for knowledge/faq/pages/contact/lens-indexes. Consistent mapping (knowledge→article.*, faq/page/contact→setting.*, lens-indexes→product.*). Staff module now exposes every route in the permission catalog.",
+    "server.py scheduler_run_now: swallowing exceptions inside job functions (via internal try/except) but the endpoint itself doesn't try/except — if a job raises, admin gets a 500. Recommend wrapping fn() in try/except and returning {ok:false, error:str(e)}."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration4.py (new)"
+  ],
+  "success_rate": {"backend": "100% (30/30)", "frontend": "not tested (backend only per request)"},
+  "test_credentials": "admin@meoweyes.id / Admin@123 (super_admin); customer@meoweyes.id / Customer@123; staff@meoweyes.id / Staff@123 (staff, base perms: article.*, review.view, review.moderate — RBAC grant tests temporarily add setting.view/update+product.view then restore).",
+  "seed_data_creation": "Tests create+cleanup: temporary knowledge/faqs/pages via API (deleted in same test), 1 pending order + 1 flash_sale via direct Mongo (cleaned in finally block), 1 real cart bundle item (leaves cart populated for customer — not cleaned). No permanent DB pollution.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "4 test files under /app/backend/tests/. Iteration 4 (test_iteration4.py, 30 tests) covers RBAC full coverage, bundle recommendation, scheduler status/run/cron-effect, and light regression. All pass. Scheduler is confirmed running in-process; APScheduler singleton scheduler.running=true. Bundle endpoint is unauthenticated (public). RBAC grant tests use autouse fixture to restore staff perms after each test so re-runs are safe.",
+  "rca of the issue": "N/A — no issues found. All P0/P1 items from the review request are green."
+}

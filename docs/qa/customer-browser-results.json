@@ -1,0 +1,124 @@
+{
+  "ran_at": "2026-11-06T10:20:10.475Z",
+  "environment": "Real Chromium 153 + FastAPI + disposable SQLite; payment and shipping explicitly mock",
+  "results": [
+    {
+      "name": "Shop Now shows fifteen products, supports page 2 and preserves sorting",
+      "status": "passed",
+      "duration_ms": 7051,
+      "detail": {
+        "first_page": 15,
+        "second_page": 5
+      }
+    },
+    {
+      "name": "New Arrival and frame New Arrival category include supported fixture frame",
+      "status": "passed",
+      "duration_ms": 628,
+      "detail": {
+        "frame": "leinz-urban-pria"
+      }
+    },
+    {
+      "name": "Flash Sale frontend matches active canonical product API",
+      "status": "passed",
+      "duration_ms": 2368,
+      "detail": {
+        "active_products": 1
+      }
+    },
+    {
+      "name": "Product breadcrumb and image/GLB Virtual Try-On render with local photo",
+      "status": "passed",
+      "duration_ms": 3337,
+      "detail": {
+        "canvas": [
+          694,
+          521
+        ],
+        "photo_stays_local": true
+      }
+    },
+    {
+      "name": "Virtual Try-On starts fake camera only after click and stops on modal close",
+      "status": "passed",
+      "duration_ms": 1446,
+      "detail": {
+        "fake_browser_camera": true,
+        "tracks_stopped": true
+      }
+    },
+    {
+      "name": "Virtual Try-On camera denial gives usable photo fallback",
+      "status": "passed",
+      "duration_ms": 1407,
+      "detail": {
+        "permission_failure_simulated": true,
+        "photo_fallback": true
+      }
+    },
+    {
+      "name": "Article and Product Knowledge share/copy and unavailable article states",
+      "status": "passed",
+      "duration_ms": 2872,
+      "detail": {
+        "pages": 2,
+        "clipboard": true,
+        "not_found": true
+      }
+    },
+    {
+      "name": "Floating WhatsApp appears on login and storefront with encoded default message",
+      "status": "passed",
+      "duration_ms": 568,
+      "detail": {
+        "global_routes": [
+          "login",
+          "storefront"
+        ],
+        "login": true
+      }
+    },
+    {
+      "name": "Frame+lens checkout stores complete prescription and private photo, then creates one payment intent",
+      "status": "passed",
+      "duration_ms": 5233,
+      "detail": {
+        "order_id": "ord_6683ce6c44d84756",
+        "private_photo_unauthenticated_status": 401,
+        "prescription_snapshot": true,
+        "payment_provider": "doku-mock"
+      }
+    },
+    {
+      "name": "Mock payment success reveals purchase-specific product and transaction ratings",
+      "status": "passed",
+      "duration_ms": 1425,
+      "detail": {
+        "transaction_rating": 5,
+        "product_rating": 4,
+        "verified_purchase": true,
+        "mock_only": true
+      }
+    },
+    {
+      "name": "Mobile storefront and product detail avoid document overflow",
+      "status": "passed",
+      "duration_ms": 2376,
+      "detail": {
+        "shop": {
+          "viewport": 390,
+          "document": 390
+        },
+        "detail": {
+          "viewport": 390,
+          "document": 390
+        },
+        "dialog_width": 369.15985774993896
+      }
+    }
+  ],
+  "page_errors": [],
+  "passed": 11,
+  "failed": 0
+}

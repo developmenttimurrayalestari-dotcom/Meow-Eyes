@@ -1,0 +1,19 @@
+This directory contains versioned MySQL schema migrations.
+
+Run from backend/:
+  python -m alembic upgrade head
+  python -m alembic current
+  python -m alembic upgrade head --sql > sql/001_initial_schema.sql
+
+Offline SQL generation requires no database credentials or network connection.
+Online migrations read .env.mysql and environment overrides. They require a
+dedicated EMPTY database for the initial revision. No MongoDB data import or
+application cutover occurs merely by running Alembic. The separate Step 2
+importer and application use the migrated schema. Never run downgrade against production
+data: MySQL DDL is not a transactionally reversible data backup.
+
+The initial revision is an immutable snapshot. It does NOT call create_all()
+on current application models. Shared MySQL 5.7 compilation policies apply
+DYNAMIC row format, omit unsupported native CHECK syntax and adapt the known
+legacy point_logs.note TEXT default. Tests compare the frozen revision's
+rendered schema to the reviewed full SQL export and current relational model.

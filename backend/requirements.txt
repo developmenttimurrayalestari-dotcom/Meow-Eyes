@@ -1,0 +1,2 @@
+# Canonical runtime entry point: the application now uses MySQL.
+-r requirements-mysql.txt

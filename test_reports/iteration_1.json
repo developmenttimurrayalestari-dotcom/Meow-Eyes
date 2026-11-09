@@ -1,0 +1,48 @@
+{
+  "summary": "Comprehensive backend pytest suite (42 tests) + frontend smoke testing. Backend 40/42 pass (95.2%). Critical bug found: /api/admin/dashboard/summary returns 500 due to invalid MongoDB $expr-inside-$elemMatch query — breaks entire Admin Dashboard UI ('Memuat dashboard...' stuck with uncaught AxiosError 500). All other flows (auth, register+PIN setup, catalog, cart, wishlist, addresses, shipping options, checkout preview, checkout confirm with PIN, wrong PIN rejection, DOKU mock payment, order detail with tracking, vouchers, roulette, games, newsletter, Excel exports for all 8 keys, cron expire-orders) work end-to-end. Frontend homepage/login/products list/login-as-admin all load correctly.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "GET /api/admin/dashboard/summary", "issue": "Returns 500. MongoDB query uses $expr inside $elemMatch referring to top-level document fields ($stock, $reserved, $min_stock_alert) which Mongo rejects: \"$expr can only be applied to the top-level document\". This breaks the Admin Dashboard page (stuck on 'Memuat dashboard...' with uncaught AxiosError). Fix in /app/backend/routes_admin.py around line 41-44 — rewrite low_stock count using $expr at root with $anyElementTrue/$map over $variants, e.g. {'$expr': {'$anyElementTrue': {'$map': {'input': '$variants', 'as': 'v', 'in': {'$lte': [{'$subtract': ['$$v.stock', '$$v.reserved']}, '$$v.min_stock_alert']}}}}}", "priority": "CRITICAL"}
+    ],
+    "minor": [
+      {"endpoint": "PUT /api/admin/products/{pid}", "issue": "Update endpoint expects full ProductCreate body — partial updates (e.g. {name, price}) return 422 missing description/main_image. Need a ProductUpdate schema with Optional fields, or accept partial dict."},
+      {"endpoint": "Seed data", "issue": "Product slug 'paws-vision' referenced in problem statement does NOT exist in seed.py. Actual seeded slugs: leinz-aero-pria, catlux-aurora-oversized, paket-anak-kittycraft-blue-cut, etc. Either update seed to include paws-vision (matches brand) or update docs."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AdminDashboard", "issue": "Page stuck on 'Memuat dashboard...' with Uncaught runtime AxiosError due to 500 from /api/admin/dashboard/summary. Needs error-boundary or graceful error state. Currently throws uncaught runtime error overlay in dev.", "selector": "/admin/dashboard", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_meow_backend.py",
+    "/app/backend/tests/conftest.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "FIX (CRITICAL): Rewrite low_stock aggregation in routes_admin.py:41 — use $expr at root with $anyElementTrue+$map over $variants instead of $expr inside $elemMatch (Mongo rejects field refs to top-level inside elemMatch). This restores admin dashboard.",
+    "FIX (HIGH): AdminDashboard.jsx should display an error state (toast/empty card) when /admin/dashboard/summary fails — currently entire page stays in 'Memuat...' loading + throws uncaught Axios error.",
+    "FIX (MEDIUM): Add ProductUpdate Pydantic model with Optional fields and use it in PUT /api/admin/products/{pid} so admin can do partial product edits.",
+    "FIX (MINOR): Add a product with slug 'paws-vision' to seed.py to match problem statement, OR update docs/tests to use existing slug."
+  ],
+  "critical_code_review_comments": [
+    "routes_admin.py:41 — Mongo $expr inside $elemMatch only sees the array element, not top-level fields; the query is invalid and crashes the entire dashboard endpoint.",
+    "PUT /admin/products/{pid} reuses ProductCreate causing required-field 422s on partial updates — bad UX for admin edit forms.",
+    "/api/auth/me returns a flat user dict (matches /login user object) — OK, but inconsistent docs in some places assume {user: ...} wrapper.",
+    "CORS middleware uses allow_credentials=True with allow_origins='*' from env default — browsers reject this combo. Set explicit origins in prod.",
+    "/api/cron/expire-orders has no auth — anyone on the internet can hit it. Should require a CRON_SECRET header."
+  ],
+  "updated_files": [
+    "/app/backend/tests/conftest.py (new)",
+    "/app/backend/tests/test_meow_backend.py (new)"
+  ],
+  "success_rate": {"backend": "95% (40/42)", "frontend": "smoke-pass; admin dashboard blocked by backend 500"},
+  "test_credentials": "admin@meoweyes.id / Admin@123 / PIN 123456 ; customer@meoweyes.id / Customer@123 / PIN 654321 (both seeded and working).",
+  "seed_data_creation": "Tests create per-run TEST_ users via register + a TEST_Auto Frame product (visible in /products list — soft-delete by admin endpoint sets is_active=false but the list query may still include it; verify via filter).",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend tests live at /app/backend/tests/test_meow_backend.py (uses BASE_URL from REACT_APP_BACKEND_URL). Run: `pytest /app/backend/tests/ -v --junitxml=/app/test_reports/pytest/pytest_results.xml`. Two failures remain and are real backend bugs (not test issues): (1) admin dashboard summary 500 — Mongo aggregation bug; (2) admin product PUT requires full body. Frontend admin dashboard UI is broken until (1) is fixed. After fixes, re-run pytest and visit /admin/dashboard to confirm stat cards render.",
+  "rca of the issue": "Admin Dashboard 500 RCA: In /app/backend/routes_admin.py line 41-44, query `{'variants': {'$elemMatch': {'$expr': {'$lte': [{'$subtract': ['$stock', '$reserved']}, '$min_stock_alert']}}}}` is invalid because MongoDB requires $expr's field references to be resolved against the top-level document; inside $elemMatch they would need to reference the array element. The server raises pymongo.errors.OperationFailure '$expr can only be applied to the top-level document'. Repro: GET /api/admin/dashboard/summary with admin token. Mitigation: Replace with an $expr at the root using $anyElementTrue over $map of $variants so field refs become $$v.stock etc."
+}

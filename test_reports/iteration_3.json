@@ -1,0 +1,35 @@
+{
+  "summary": "Iteration 3 RBAC + regression suite: 21/21 pass (100%). Verified: (1) staff@meoweyes.id can GET/POST/PUT/DELETE /api/admin/articles and GET /api/admin/reviews + POST moderate + reviews/analytics — all 200. (2) Staff correctly denied 403 on /api/admin/banners-v2, /api/admin/products, /api/admin/staff, /api/admin/products/import/template. (3) Admin regression: all 7 admin routes still 200 (articles, banners-v2, products, staff, reviews, reviews/analytics, import template). (4) Voucher fix confirmed: GET /api/vouchers/active returns MEOWWELCOME + GRATISONGKIR + MEOW50K (previously empty in iter2). (5) Review gate tightened: shipped-only order → 400 (previously 200); completed order → 200. (6) Checkout regression full flow (customer cart w/ lens bundle → preview w/ address_id+courier_code+service_code → confirm w/ PIN 654321 → payment/confirm/{order_number}) all 200. (7) Excel import template still 200 for admin.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/admin/knowledge, /api/admin/faqs, /api/admin/pages, /api/admin/contact-setting, /api/admin/lens/indexes", "issue": "These content routes still use current_admin (not require_permission) per routes_admin_content.py. Review-request said 'knowledge/banner/faq/page/review/import routes now use require_permission' but only banner/review/import were migrated. If spec expects staff with e.g. faq.view perm to access, they will 403. Currently staff has none of these perms so behavior is consistent, but the code review comment stands."},
+      {"endpoint": "POST /api/admin/staff", "issue": "seed.py does not create staff@meoweyes.id — the user exists in DB from a prior manual run/admin POST. If DB is wiped, staff RBAC tests will fail on login. Recommend adding upsert of staff account with permissions list in seed.py alongside admin/customer for reproducibility."}
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_rbac_iteration3.py",
+    "/app/test_reports/pytest/pytest_iter3.xml"
+  ],
+  "action_items": [
+    "Add staff@meoweyes.id seed to /app/backend/seed.py (idempotent upsert with role=staff, permissions=[article.*, review.view, review.moderate], PIN 111222) so RBAC tests survive DB wipe.",
+    "Decide whether knowledge/faq/page/lens-indexes/contact-setting admin routes should also migrate from current_admin → require_permission per original RBAC spec. Currently they remain admin-only."
+  ],
+  "critical_code_review_comments": [
+    "auth.require_permission: admin/super_admin bypass permission checks (correct). Staff without perm returns 403 with detail 'Izin \"{perm}\" diperlukan' — good UX.",
+    "routes_admin_content.py: partial RBAC migration — only banner/article/review/import migrated; knowledge/faq/pages/contact/lens still use current_admin. Consistent with staff's current permission set but leaves half of the permission catalog (faq/setting/report) unused.",
+    "routes_shopping.py:245 review endpoint now correctly filters status='completed' only (previously ['completed','shipped']). Review gate spec satisfied.",
+    "seed.py: still no staff user seed — infra-fragile. staff@meoweyes.id was created out-of-band."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_rbac_iteration3.py (new)"
+  ],
+  "success_rate": {"backend": "100% (21/21)", "frontend": "not tested (backend only)"},
+  "test_credentials": "admin@meoweyes.id / Admin@123 / PIN 123456 (super_admin); customer@meoweyes.id / Customer@123 / PIN 654321; staff@meoweyes.id / Staff@123 / PIN 111222 (staff, perms: article.*, review.view, review.moderate) — all working via password login.",
+  "seed_data_creation": "Test creates and cleans up temporary orders (shipped + completed) via direct Mongo, plus 1 TEST_ article by staff (created+deleted in same test), and 1 real checkout order (customer flow — not cleaned up, leaves 1 order + payment record in DB). Recommend periodic cleanup of TEST_* orders.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "3 test files under /app/backend/tests/. Run full suite: `pytest /app/backend/tests/ -v`. iteration_3 file (test_rbac_iteration3.py) covers RBAC + voucher + review gate + checkout regression. All 21 pass. Only unresolved item: seed.py should include staff account for DB-wipe resilience. Voucher /active now returns 3 items (fix from iter2 confirmed).",
+  "rca of the issue": "N/A — all issues from iter2 resolved. Voucher fix (seed.py end_at extended/refreshed) verified via GET /api/vouchers/active returning MEOWWELCOME+GRATISONGKIR+MEOW50K. CheckoutPreview 500 fix from iter2 still stands (checkout flow test passes). Review gate now correctly rejects shipped-only (returns 400) and accepts completed (200)."
+}

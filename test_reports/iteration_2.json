@@ -1,0 +1,48 @@
+{
+  "summary": "Phase 2 regression + new features tested. 83/85 pass (97.6%). Confirmed CheckoutPreview model fix (address_id/courier_code/service_code now accepted → no 500). Cart lens bundle math verified: Kittycraft Cubby Anak (350000) + Lensa Progresif Premium (1300000) + 1.56 Blue Cut (+75000) = 1,725,000 EXACT MATCH. All 11 public content endpoints work (articles, knowledge, faqs, pages/kebijakan-privasi, contact/info, banners?position=hero, lens/indexes, lens/options-for-frame). All admin content CRUD (articles, knowledge, faqs, pages, banners-v2, contact-setting, lens/indexes, staff, permissions, reviews list, reviews analytics) work. Review gating verified: rejected 400 without completed order, allowed after direct DB status='completed' flip, duplicate rejected 400. Excel import template + preview + commit (2-row multi-color variant) all 200. Admin dashboard summary + sales-chart + order-status-chart + top-products 200 (previous critical Mongo $expr bug FIXED). All 8 export endpoints 200. Full checkout flow (preview → confirm w/ PIN → mock DOKU payment) works end-to-end.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/vouchers/active", "issue": "Returns empty [] even though DB has 3 vouchers (MEOWWELCOME, GRATISONGKIR, MEOW50K). Root cause: seed.py runs once (idempotent) and stamps start_at/end_at using datetime.now() at seed time. Current DB records show start_at=2026-06-11 and end_at=2026-07-11 while server date is 2026-08-07 — vouchers are EXPIRED. Filter `end_at >= now` excludes them. Fix options: (a) run cron/re-seed to refresh voucher dates; (b) make seed idempotently update start_at/end_at on every boot; (c) extend end_at to 365 days. Impact: Frontend voucher chip UI + checkout voucher input will show nothing."},
+      {"endpoint": "Endpoint naming mismatch vs spec", "issue": "Spec/request mentions endpoints /api/admin/dashboard/{sales-trend, orders-by-status, revenue-by-category, low-stock-alert, subscriber-growth}. Actual routes are /sales-chart, /order-status-chart, /top-products, /payment-chart, /shipment-chart, /game-chart, /roulette-chart. Not a bug per se (naming choice) but there is NO revenue-by-category, low-stock-alert or subscriber-growth endpoint — if frontend expects them, they will 404. Verify frontend and either add missing endpoints or update spec/frontend."},
+      {"endpoint": "GET /api/articles/paws-vision & /api/knowledge/paws-vision", "issue": "No article or knowledge item is seeded with slug 'paws-vision'. Both fall back to the first item in the list (test tolerates this). If spec requires literal slug 'paws-vision', seed must include it."},
+      {"endpoint": "PUT /api/admin/products/{pid}", "issue": "Previous iteration: still requires full ProductCreate body — partial edits 422. Not re-verified this run (unchanged)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_meow_backend.py",
+    "/app/backend/tests/test_phase2_content_and_bundle.py",
+    "/app/backend/tests/conftest.py",
+    "/app/test_reports/pytest/pytest_results.xml",
+    "/app/test_reports/pytest/pytest_phase2.xml"
+  ],
+  "action_items": [
+    "FIX (MEDIUM): Refresh voucher seed dates on every boot OR extend end_at to +365 days so seeded vouchers don't expire and /api/vouchers/active keeps returning data.",
+    "VERIFY (MEDIUM): Confirm frontend consumes /dashboard/sales-chart etc. — if any component calls /dashboard/sales-trend or /revenue-by-category or /low-stock-alert or /subscriber-growth, add those endpoints or rename existing ones.",
+    "FIX (LOW): Add article + knowledge with slug 'paws-vision' to seed_content.py to match spec.",
+    "FIX (LOW): Add ProductUpdate Pydantic model with Optional fields for PUT /api/admin/products/{pid} (from prev iteration, still applies)."
+  ],
+  "critical_code_review_comments": [
+    "Voucher seed is not idempotent for time fields — first boot stamps dates, subsequent boots skip. Any time-bounded seed data should refresh dates on each boot or use a floating window ('now + 365d').",
+    "routes_shopping.py review endpoint currently allows review when order.status in ['completed', 'shipped'] — spec says 'only completed'. Consider tightening to ['completed'] only if 'shipped' should not qualify (currently 'shipped' also allows review).",
+    "routes_content.py GET /faqs returns categories from db.faq_categories but seed only has 6 FAQ items — categories may be empty and frontend grouping might break. Verify.",
+    "routes_admin_content.py file size + number of endpoints is large; consider splitting into per-resource modules for maintainability.",
+    "CORS + no cron auth risks noted in iteration_1 still apply."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_phase2_content_and_bundle.py (new)",
+    "/app/backend/tests/test_meow_backend.py (updated 1 stale assertion for dashboard summary keys)"
+  ],
+  "success_rate": {"backend": "97.6% (83/85)", "frontend": "not tested this iteration (backend only)"},
+  "test_credentials": "admin@meoweyes.id / Admin@123 / PIN 123456 ; customer@meoweyes.id / Customer@123 / PIN 654321 — both working.",
+  "seed_data_creation": "Tests create per-run TEST_ users (register + PIN setup + address + order for review gating test). Also creates 1 completed order (flipped in DB) and 1 approved review — leaves data in DB. Also creates 1 TEST_ImportProd via Excel commit. Advise a cleanup pass later.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Two pytest files under /app/backend/tests/. Full run: `pytest /app/backend/tests/ -v`. All Phase 2 features (content, lens bundle, review gate, admin CRUD, excel import, dashboard) pass. Only real backend issue: expired voucher seed → /vouchers/active returns []. To repro voucher issue: `date -u` shows 2026-08-07 but seeded voucher end_at=2026-07-11. Regression on CheckoutPreview payload + review ObjectId serialization is confirmed FIXED.",
+  "rca of the issue": "Vouchers empty RCA: /app/backend/seed.py:265-281 computes start_at=now.isoformat() and end_at=(now+30days).isoformat() and seeds vouchers only if code not present. The seed ran on 2026-06-11; today is 2026-08-07 so end_at (2026-07-11) is in the past. /api/vouchers/active filter `{'end_at': {'$gte': now}}` returns 0 docs. Mitigation: change seed to always `update_one($set={start_at, end_at})` on boot, OR extend seeded end_at to 365 days, OR wipe vouchers and re-seed via a maintenance endpoint."
+}

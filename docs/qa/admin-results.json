@@ -1,0 +1,17 @@
+{
+  "passed": 11,
+  "checks": [
+    "WhatsApp admin save + global button sync",
+    "Article Publish/Unpublish + public detail access",
+    "Knowledge Publish/Unpublish + public detail access",
+    "VTO admin create/edit/publish model source",
+    "Flash Sale category form materializes products",
+    "Flash Sale edit keeps item identity/counters",
+    "Flash Sale manual deactivate",
+    "New Arrival admin flag saves without replacing variants",
+    "Banner destination URL and sort order save",
+    "Integration configuration dashboard renders no credential values",
+    "Mobile admin layout without horizontal overflow"
+  ],
+  "pageErrors": []
+}
