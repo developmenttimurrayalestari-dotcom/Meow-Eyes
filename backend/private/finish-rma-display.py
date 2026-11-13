@@ -1,0 +1,3 @@
+from pathlib import Path
+p=Path('../frontend/src/pages/admin/AdminReturns.jsx');t=p.read_text(encoding='utf-8').replace('Pesanan {claim.order_id} · Customer {claim.user_id}', "Pesanan {claim.order_number} · {claim.customer?.name}").replace('Item {item.order_item_id} · {item.quantity} buah', "{item.product_name}{item.variant_label ? ` · ${item.variant_label}` : ''} · {item.quantity} buah");p.write_text(t,encoding='utf-8')
+p=Path('../frontend/src/components/Returns.jsx');t=p.read_text(encoding='utf-8').replace('<p className="text-sm my-3">{claim.reason}</p>', '<p className="text-sm my-3">{claim.reason}</p><ul className="text-sm mb-3">{claim.items.map(item => <li key={item.id}>{item.product_name} · {item.quantity} buah</li>)}</ul>');p.write_text(t,encoding='utf-8')

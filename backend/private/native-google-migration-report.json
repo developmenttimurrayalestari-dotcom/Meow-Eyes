@@ -1,0 +1,24 @@
+{
+  "ok": true,
+  "revision": "20261112_0011",
+  "backup": "private\\backups\\native-google-before-0011-20261112T123813Z.sql",
+  "backup_sha256": "467b98e6daa0272646a86b5aea40b40e44a4dddaada64a6a120101dd7e015c08",
+  "existing_accounts_permissions_sessions_and_stock_unchanged": true,
+  "counts": {
+    "users": 3,
+    "user_permissions": 6,
+    "user_sessions": 9,
+    "products": 26,
+    "product_variants": 35
+  },
+  "google_client_id": "not configured; owner creates a Web application OAuth client",
+  "integrity": {
+    "ok": true,
+    "mode": "full_integrity_audit",
+    "expected_triggers": 154,
+    "row_rules": 139,
+    "definer_privileges_verified": false,
+    "issues": []
+  },
+  "backend_started": false
+}

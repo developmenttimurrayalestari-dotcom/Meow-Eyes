@@ -23,6 +23,7 @@ from integrations.common import ProviderError, strict_json
 from integrations.config import DokuSettings
 from integrations.doku import verify_notification
 from integrations.everpro import get_everpro_client
+from integrations.locations import region_options
 
 
 router = APIRouter(tags=["integrations"])
@@ -90,6 +91,26 @@ async def shipping_locations(postal_code: str = Query(pattern=r"^\d{5}$"), user:
         raise HTTPException(502, "Respons lokasi Everpro tidak valid")
     return {"locations": [{key: row.get(key) for key in ("postal_code", "province_name", "city_name", "district_name", "sub_district_name", "sub_district_id")}
                           for row in rows if isinstance(row, dict)]}
+
+
+@router.get('/shipping/locations/provinces')
+async def shipping_provinces(user: User = Depends(current_user)):
+    return {'locations': await region_options('provinces')}
+
+
+@router.get('/shipping/locations/cities')
+async def shipping_cities(province_id: str = Query(min_length=1, max_length=128), user: User = Depends(current_user)):
+    return {'locations': await region_options('cities', province_id)}
+
+
+@router.get('/shipping/locations/districts')
+async def shipping_districts(city_id: str = Query(min_length=1, max_length=128), user: User = Depends(current_user)):
+    return {'locations': await region_options('districts', city_id)}
+
+
+@router.get('/shipping/locations/subdistricts')
+async def shipping_subdistricts(district_id: str = Query(min_length=1, max_length=128), user: User = Depends(current_user)):
+    return {'locations': await region_options('subdistricts', district_id)}
 
 
 @router.get("/admin/integrations")

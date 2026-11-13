@@ -1,0 +1,27 @@
+{
+  "ok": true,
+  "revision": "20261112_0012",
+  "backup": "private\\backups\\accessories-before-0012-20261112T145135Z.sql",
+  "backup_sha256": "ecfcc30701a3f008138632b353e480f756423b80b9a6e6e0c22c14d5f3286837",
+  "existing_accounts_permissions_sessions_and_stock_unchanged": true,
+  "counts": {
+    "users": 3,
+    "user_permissions": 6,
+    "user_sessions": 9,
+    "categories": 66,
+    "products": 26,
+    "product_categories": 120,
+    "product_variants": 35,
+    "orders": 4
+  },
+  "category_creation": "admin creates the Accessories master; no store rows are seeded by this migration",
+  "integrity": {
+    "ok": true,
+    "mode": "full_integrity_audit",
+    "expected_triggers": 154,
+    "row_rules": 139,
+    "definer_privileges_verified": false,
+    "issues": []
+  },
+  "backend_started": false
+}

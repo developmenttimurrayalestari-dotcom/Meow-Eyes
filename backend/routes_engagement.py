@@ -17,12 +17,10 @@ from mysql import models as m
 from mysql.api import row_dict
 from mysql.base import utcnow
 from mysql.commerce import integer, lock_user
+from mysql import games as verified_games, points as wallet
 
 
 router = APIRouter(tags=["engagement"])
-DAILY_GAME_PLAY_LIMIT = 5
-DAILY_POINT_LIMIT = 200
-DAILY_ROULETTE_LIMIT = 3
 ROULETTE_REWARD_TTL_DAYS = 14
 
 
@@ -33,38 +31,12 @@ def _today():
 @router.get("/games")
 async def list_games():
     async with read_session() as s:
-        games = (await s.scalars(select(m.Game).where(m.Game.is_active.is_(True)).order_by(m.Game.key).limit(20))).all()
-        return {"games": [row_dict(game) for game in games]}
+        return {"games": await verified_games.catalog(s)}
 
 
 @router.post("/games/{game}/submit")
 async def submit_game(game: str, payload: dict[str, Any], user: User = Depends(current_user)):
-    if game not in ("puzzle", "tetris", "matching", "memory"):
-        raise HTTPException(400, "Game tidak dikenal")
-    score = max(0, min(integer(payload.get("score", 0), "Skor", -2147483647, 2147483647), 9999))
-    async with session_scope() as s:
-        fresh = await lock_user(s, user.user_id)
-        definition = await s.scalar(select(m.Game).where(m.Game.key == game, m.Game.is_active.is_(True)))
-        if definition is None:
-            raise HTTPException(400, "Game tidak tersedia")
-        today = _today()
-        plays = await s.scalar(select(func.count()).select_from(m.GameScore).where(
-            m.GameScore.user_id == user.user_id, m.GameScore.game == game, m.GameScore.played_at >= today
-        ))
-        if plays >= DAILY_GAME_PLAY_LIMIT:
-            raise HTTPException(429, "Batas permainan harian tercapai untuk game ini")
-        earned = await s.scalar(select(func.coalesce(func.sum(m.PointLog.delta), 0)).where(
-            m.PointLog.user_id == user.user_id, m.PointLog.type == "earn_game", m.PointLog.created_at >= today
-        ))
-        awarded = int(min(score // 10, 50, definition.max_points, max(0, DAILY_POINT_LIMIT - earned)))
-        entry = m.GameScore(id=gen_id("gms"), user_id=user.user_id, game=game, score=score, points_awarded=awarded)
-        s.add(entry)
-        if awarded:
-            fresh.points_balance += awarded
-            s.add(m.PointLog(id=gen_id("pts"), user_id=user.user_id, delta=awarded,
-                            balance_after=fresh.points_balance, type="earn_game", note=f"Game {game} score={score}"))
-        await s.flush()
-        return {"ok": True, "score": score, "points_awarded": awarded}
+    raise HTTPException(410, 'Pengiriman skor langsung dinonaktifkan. Mulai ronde baru dari halaman Games.')
 
 
 @router.get("/games/leaderboard")
@@ -91,31 +63,26 @@ async def list_rewards():
 async def spin_roulette(user: User = Depends(current_user)):
     async with session_scope() as s:
         fresh = await lock_user(s, user.user_id)
-        count = await s.scalar(select(func.count()).select_from(m.RouletteSpin).where(
-            m.RouletteSpin.user_id == user.user_id, m.RouletteSpin.created_at >= _today()
-        ))
-        if count >= DAILY_ROULETTE_LIMIT:
-            raise HTTPException(429, "Batas spin harian tercapai")
+        _, rule = await verified_games.definition(s, 'roulette')
+        previous = await s.scalar(select(m.RouletteSpin).where(m.RouletteSpin.user_id == user.user_id).order_by(m.RouletteSpin.created_at.desc()).limit(1))
+        remaining = max(0, int((previous.created_at + timedelta(seconds=rule.cooldown_seconds) - utcnow()).total_seconds())) if previous else 0
+        if remaining: raise HTTPException(429, f'Bisa diputar kembali dalam {remaining} detik', headers={'Retry-After': str(remaining)})
         rewards = (await s.scalars(select(m.RouletteReward).where(
             m.RouletteReward.is_active.is_(True), m.RouletteReward.probability > 0
         ).order_by(m.RouletteReward.id).limit(20))).all()
         if not rewards:
             raise HTTPException(503, "Roulette belum dikonfigurasi")
         chosen = random.SystemRandom().choices(rewards, weights=[float(r.probability) for r in rewards], k=1)[0]
-        awarded = int(chosen.value) if chosen.type == "points" else 0
+        awarded = min(rule.max_points, int(chosen.value)) if chosen.type == "points" else 0
         spin = m.RouletteSpin(
             id=gen_id("spn"), user_id=user.user_id, reward_id=chosen.id,
-            reward_label=chosen.label, reward_type=chosen.type, reward_value=chosen.value,
-            used=awarded > 0, expires_at=utcnow() + timedelta(days=ROULETTE_REWARD_TTL_DAYS),
+            reward_label=chosen.label, reward_type=chosen.type, reward_value=awarded if chosen.type == 'points' else chosen.value,
+            used=chosen.type == 'points', expires_at=utcnow() + timedelta(days=rule.expiry_days if chosen.type == 'points' else ROULETTE_REWARD_TTL_DAYS),
         )
         s.add(spin)
-        if awarded:
-            fresh.points_balance += awarded
-            s.add(m.PointLog(id=gen_id("pts"), user_id=user.user_id, delta=awarded,
-                            balance_after=fresh.points_balance, type="earn_roulette",
-                            note=f"Spin reward {chosen.label}"))
+        await wallet.credit(s, fresh, awarded, source='earn_roulette', key='roulette:' + spin.id, expiry_days=rule.expiry_days, note=chosen.label)
         await s.flush()
-        return {"ok": True, "spin": row_dict(spin), "reward": row_dict(chosen)}
+        return {"ok": True, "spin": row_dict(spin), "reward": {**row_dict(chosen), 'value': awarded if chosen.type == 'points' else float(chosen.value)}}
 
 
 @router.get("/roulette/my-rewards")
@@ -128,11 +95,23 @@ async def my_rewards(user: User = Depends(current_user)):
 
 @router.get("/points/logs")
 async def points_logs(user: User = Depends(current_user)):
+    async with session_scope() as s:
+        return await wallet.wallet_payload(s, await lock_user(s, user.user_id))
+
+@router.get('/games/puzzle-levels')
+async def puzzle_levels():
     async with read_session() as s:
-        fresh = await s.get(m.User, user.user_id)
-        logs = (await s.scalars(select(m.PointLog).where(m.PointLog.user_id == user.user_id)
-                               .order_by(m.PointLog.created_at.desc(), m.PointLog.id).limit(100))).all()
-        return {"logs": [row_dict(log) for log in logs], "balance": fresh.points_balance}
+        return {'levels': [row_dict(row) for row in (await s.scalars(select(m.PuzzleLevel).where(m.PuzzleLevel.is_active.is_(True)).order_by(m.PuzzleLevel.level))).all()]}
+
+@router.post('/games/{key}/start')
+async def start_game(key: str, payload: dict[str, Any], user: User = Depends(current_user)):
+    async with session_scope() as s:
+        return await verified_games.start(s, await lock_user(s, user.user_id), key, integer(payload.get('level', 1), 'Level', 1, 20))
+
+@router.post('/game-sessions/{session_id}/finish')
+async def finish_game(session_id: str, payload: dict[str, Any], user: User = Depends(current_user)):
+    async with session_scope() as s:
+        return await verified_games.finish(s, await lock_user(s, user.user_id), session_id, payload)
 
 
 def _email(payload: dict[str, Any]) -> str:

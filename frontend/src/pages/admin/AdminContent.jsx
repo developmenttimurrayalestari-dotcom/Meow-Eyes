@@ -3,6 +3,9 @@ import { api, API_BASE } from "../../lib/api";
 import { Plus, Trash2, Edit2, FileText, BookOpen, Ticket } from "lucide-react";
 import { toast } from "sonner";
 import ImagePicker, { resolveImageUrl } from "../../components/ImagePicker";
+import RichTextEditor from "../../components/RichTextEditor";
+import { hasRichContent } from "../../lib/richContent";
+import { cmsPagePath } from "../../lib/cmsPages";
 import PublicationButton from "./PublicationButton";
 import { adminError, localDateTime, utcDateTime } from "./adminUtils";
 
@@ -19,6 +22,7 @@ export const AdminArticles = () => {
   const del = async (id) => { if (confirm("Hapus artikel?")) { await api.delete(`/admin/articles/${id}`); load(); } };
   const submit = async (e) => {
     e.preventDefault();
+    if (!hasRichContent(editing.content)) { toast.error("Isi konten artikel terlebih dahulu."); return; }
     try {
       if (editing.id) await api.put(`/admin/articles/${editing.id}`, editing);
       else await api.post("/admin/articles", editing);
@@ -65,7 +69,7 @@ export const AdminArticles = () => {
 
       {editing && (
         <div className="fixed inset-0 bg-black/60 z-50 grid place-items-center p-4 overflow-y-auto" onClick={() => setEditing(null)}>
-          <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl p-6 max-w-2xl w-full space-y-3 max-h-[90vh] overflow-y-auto" data-testid="article-form">
+          <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl p-6 max-w-5xl w-full min-w-0 space-y-3 max-h-[90vh] overflow-y-auto" data-testid="article-form">
             <h3 className="font-heading font-extrabold text-xl">{editing.id ? "Edit" : "Buat"} Artikel</h3>
             <input required placeholder="Judul" value={editing.title} onChange={(e) => setEditing({ ...editing, title: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid="art-title" />
             <select value={editing.category_id || ""} onChange={(e) => setEditing({ ...editing, category_id: e.target.value || null })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid="art-cat">
@@ -79,7 +83,7 @@ export const AdminArticles = () => {
               testId="art-thumbnail-picker"
             />
             <input placeholder="Excerpt (ringkasan)" value={editing.excerpt || ""} onChange={(e) => setEditing({ ...editing, excerpt: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" />
-            <textarea required rows={10} placeholder="Konten HTML (bisa pakai <h3>, <p>, <ul>...)" value={editing.content || ""} onChange={(e) => setEditing({ ...editing, content: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none font-mono text-sm" data-testid="art-content" />
+            <RichTextEditor key={editing.id || 'new-article'} label="Konten artikel" value={editing.content || ""} onChange={(content) => setEditing(current => ({ ...current, content }))} testId="art-content" />
             <select value={editing.status} onChange={(e) => setEditing({ ...editing, status: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none">
               <option value="draft">Draft</option>
               <option value="published">Published</option>
@@ -147,7 +151,7 @@ export const AdminKnowledge = () => {
       </div>
       {editing && (
         <div className="fixed inset-0 bg-black/60 z-50 grid place-items-center p-4 overflow-y-auto" onClick={() => setEditing(null)}>
-          <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl p-6 max-w-2xl w-full space-y-3 max-h-[90vh] overflow-y-auto" data-testid="knowledge-form">
+          <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl p-6 max-w-5xl w-full min-w-0 space-y-3 max-h-[90vh] overflow-y-auto" data-testid="knowledge-form">
             <h3 className="font-heading font-extrabold text-xl">{editing.id ? "Edit" : "Buat"} Knowledge</h3>
             <select value={editing.knowledge_type} onChange={(e) => setEditing({ ...editing, knowledge_type: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none">
               <option value="frame_shape">Frame Shape</option>
@@ -166,7 +170,7 @@ export const AdminKnowledge = () => {
             <input placeholder="Deskripsi singkat" value={editing.description || ""} onChange={(e) => setEditing({ ...editing, description: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" />
             <input placeholder="Cocok untuk wajah" value={editing.face_shape_recommendation || ""} onChange={(e) => setEditing({ ...editing, face_shape_recommendation: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" />
             <input placeholder="Style" value={editing.style_recommendation || ""} onChange={(e) => setEditing({ ...editing, style_recommendation: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" />
-            <textarea rows={6} placeholder="Konten HTML" value={editing.content || ""} onChange={(e) => setEditing({ ...editing, content: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none font-mono text-sm" />
+            <RichTextEditor key={editing.id || 'new-knowledge'} label="Konten product knowledge" value={editing.content || ""} onChange={(content) => setEditing(current => ({ ...current, content }))} testId="knowledge-content" />
             <input placeholder="Kelebihan (pisah dengan ;)" value={(editing.pros || []).join(";")} onChange={(e) => setEditing({ ...editing, pros: e.target.value.split(";").map(x => x.trim()).filter(Boolean) })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" />
             <input placeholder="Kekurangan (pisah dengan ;)" value={(editing.cons || []).join(";")} onChange={(e) => setEditing({ ...editing, cons: e.target.value.split(";").map(x => x.trim()).filter(Boolean) })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" />
             <label className="block text-sm font-bold">Status publikasi<select value={editing.status || (editing.is_published ? "published" : "draft")} onChange={(e) => setEditing({ ...editing, status: e.target.value, is_published: e.target.value === "published" })} className="w-full px-3 py-2 mt-1 rounded-xl bg-meow-bg"><option value="draft">Draft</option><option value="published">Published</option><option value="unpublished">Unpublished</option><option value="archived">Archived</option></select></label>
@@ -382,9 +386,12 @@ export const AdminPages = () => {
   useEffect(() => { load(); }, []);
   const submit = async (e) => {
     e.preventDefault();
-    if (editing.id) await api.put(`/admin/pages/${editing.id}`, editing);
-    else await api.post("/admin/pages", editing);
-    toast.success("Tersimpan"); setEditing(null); load();
+    if (!hasRichContent(editing.content)) { toast.error("Isi konten halaman terlebih dahulu."); return; }
+    try {
+      if (editing.id) await api.put(`/admin/pages/${editing.id}`, editing);
+      else await api.post("/admin/pages", editing);
+      toast.success("Tersimpan"); setEditing(null); load();
+    } catch (err) { toast.error(adminError(err)); }
   };
   return (
     <div data-testid="admin-pages">
@@ -397,7 +404,8 @@ export const AdminPages = () => {
           <div key={p.id} className="bg-white rounded-2xl p-4 border border-zinc-200 flex justify-between" data-testid={`page-row-${p.slug}`}>
             <div>
               <p className="font-bold">{p.title} <span className="text-xs text-meow-gray">v{p.version}</span></p>
-              <p className="text-xs text-meow-gray">/{p.slug} · {p.page_type} · {p.status}</p>
+              <p className="text-xs text-meow-gray break-all">{cmsPagePath(p.slug)} · {p.page_type} · {p.status}</p>
+              {p.status === 'published' ? <a href={cmsPagePath(p.slug)} target="_blank" rel="noopener noreferrer" className="inline-block mt-1 text-xs font-bold text-meow-salmon underline" data-testid={`open-page-${p.slug}`}>Buka halaman ↗</a> : <p className="mt-1 text-xs text-meow-gray">Publikasikan halaman agar dapat dibuka pengunjung dan muncul di footer.</p>}
             </div>
             <div>
               <button onClick={() => setEditing({ ...p })} className="text-xs text-meow-amber font-bold mr-2">Edit</button>
@@ -408,7 +416,7 @@ export const AdminPages = () => {
       </div>
       {editing && (
         <div className="fixed inset-0 bg-black/60 z-50 grid place-items-center p-4 overflow-y-auto" onClick={() => setEditing(null)}>
-          <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl p-6 max-w-2xl w-full space-y-3 max-h-[90vh] overflow-y-auto" data-testid="page-form">
+          <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl p-6 max-w-5xl w-full min-w-0 space-y-3 max-h-[90vh] overflow-y-auto" data-testid="page-form">
             <select value={editing.page_type} onChange={(e) => setEditing({ ...editing, page_type: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none">
               <option value="about">About</option>
               <option value="privacy_policy">Privacy Policy</option>
@@ -418,7 +426,7 @@ export const AdminPages = () => {
               <option value="custom">Custom</option>
             </select>
             <input required placeholder="Title" value={editing.title} onChange={(e) => setEditing({ ...editing, title: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" />
-            <textarea required rows={12} placeholder="Content HTML" value={editing.content} onChange={(e) => setEditing({ ...editing, content: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none font-mono text-sm" />
+            <RichTextEditor key={editing.id || 'new-page'} label="Konten halaman" value={editing.content || ''} onChange={(content) => setEditing(current => ({ ...current, content }))} testId="page-content-editor" />
             <select value={editing.status} onChange={(e) => setEditing({ ...editing, status: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none">
               <option value="draft">Draft</option><option value="published">Published</option><option value="archived">Archived</option>
             </select>
@@ -658,34 +666,56 @@ export const AdminImport = () => {
 // ---------- Admin Lens Indexes ----------
 export const AdminLensIndexes = () => {
   const [items, setItems] = useState([]);
+  const [lensTypes, setLensTypes] = useState([]);
   const [creating, setCreating] = useState(null);
-  const load = () => api.get("/admin/lens/indexes").then(({ data }) => setItems(data.items));
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const load = async () => {
+    try {
+      const [indexes, categories] = await Promise.all([api.get('/admin/lens/indexes'), api.get('/admin/categories')]);
+      setItems(indexes.data.items || []);
+      setLensTypes((categories.data.categories || []).filter(category => category.group_type === 'lens_type'));
+      setError('');
+    } catch (err) { setError(adminError(err, 'Data Lens Index belum dapat dimuat.')); }
+  };
   useEffect(() => { load(); }, []);
   const submit = async (e) => {
     e.preventDefault();
-    await api.post("/admin/lens/indexes", creating);
-    toast.success("Index dibuat"); setCreating(null); load();
+    setSaving(true); setError('');
+    try {
+      if (creating.id) await api.put(`/admin/lens/indexes/${creating.id}`, creating);
+      else await api.post('/admin/lens/indexes', creating);
+      toast.success('Lens Index tersimpan'); setCreating(null); await load();
+    } catch (err) { setError(adminError(err, 'Lens Index belum berhasil disimpan.')); }
+    finally { setSaving(false); }
   };
   return (
     <div data-testid="admin-lens-indexes">
       <div className="flex justify-between mb-4">
         <h1 className="font-heading text-3xl font-black">Lens Indexes</h1>
-        <button onClick={() => setCreating({ name: "", index_value: "1.60", additional_price: 0, is_active: true, sort_order: 0 })} className="btn-primary text-sm"><Plus className="inline h-4 w-4 mr-1" /> Index Baru</button>
+        <button onClick={() => { setError(''); setCreating({ name: "", index_value: "1.60", lens_type_ids: [], additional_price: 0, is_active: true, sort_order: 0 }); }} className="btn-primary text-sm"><Plus className="inline h-4 w-4 mr-1" /> Index Baru</button>
       </div>
+      <p className="text-sm text-meow-gray mb-4">Hubungkan setiap Lens Index dengan satu atau beberapa Jenis Lensa. Pilihan pada Paket mengikuti Jenis Lensa produk dan sudah termasuk harga paket. Pada Frame, harga Lens Index ditambahkan per produk.</p>
+      {error && !creating && <p role="alert" className="text-sm text-red-600 mb-3">{error}</p>}
       <div className="bg-white rounded-3xl border border-zinc-200 overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-meow-bg text-xs uppercase text-meow-gray">
-            <tr><th className="text-left px-4 py-3">Nama</th><th className="text-left px-4 py-3">Index</th><th className="text-left px-4 py-3">Add Price</th><th className="text-left px-4 py-3">Range</th><th className="text-right px-4 py-3">Aksi</th></tr>
+            <tr><th className="text-left px-4 py-3">Nama</th><th className="text-left px-4 py-3">Index</th><th className="text-left px-4 py-3">Jenis Lensa</th><th className="text-left px-4 py-3">Harga Lensa</th><th className="text-left px-4 py-3">Range</th><th className="text-left px-4 py-3">Status</th><th className="text-right px-4 py-3">Aksi</th></tr>
           </thead>
           <tbody>
             {items.map((li) => (
               <tr key={li.id} className="border-t border-zinc-100" data-testid={`lens-idx-${li.id}`}>
                 <td className="px-4 py-3 font-bold">{li.name}</td>
                 <td className="px-4 py-3">{li.index_value}</td>
+                <td className="px-4 py-3">{li.lens_types?.map(type => type.name).join(', ') || <span className="text-amber-700">Belum dihubungkan</span>}</td>
                 <td className="px-4 py-3">Rp {(li.additional_price || 0).toLocaleString("id-ID")}</td>
                 <td className="px-4 py-3 text-xs">{li.recommended_power_range}</td>
+                <td className="px-4 py-3">{li.is_active ? 'Aktif' : 'Nonaktif'}</td>
                 <td className="px-4 py-3 text-right">
-                  <button onClick={async () => { await api.delete(`/admin/lens/indexes/${li.id}`); load(); }} className="text-red-500 text-xs"><Trash2 className="h-4 w-4" /></button>
+                  <div className="flex justify-end gap-3">
+                    <button type="button" aria-label={`Edit Lens Index ${li.name}`} onClick={() => { setError(''); setCreating({ ...li, lens_type_ids: li.lens_type_ids || [] }); }}><Edit2 className="h-4 w-4" /></button>
+                    <button type="button" aria-label={`Nonaktifkan Lens Index ${li.name}`} disabled={!li.is_active} onClick={async () => { try { await api.delete(`/admin/lens/indexes/${li.id}`); await load(); } catch (err) { setError(adminError(err, 'Lens Index belum dapat dinonaktifkan.')); } }} className="text-red-500 text-xs disabled:opacity-30"><Trash2 className="h-4 w-4" /></button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -693,14 +723,30 @@ export const AdminLensIndexes = () => {
         </table>
       </div>
       {creating && (
-        <div className="fixed inset-0 bg-black/60 z-50 grid place-items-center p-4" onClick={() => setCreating(null)}>
-          <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl p-6 max-w-md w-full space-y-3">
+        <div className="fixed inset-0 bg-black/60 z-50 grid place-items-center p-4" onClick={() => { if (!saving) setCreating(null); }}>
+          <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl p-6 max-w-lg w-full max-h-[90dvh] overflow-y-auto space-y-3" aria-label="Form Lens Index">
+            <h2 className="font-bold text-lg">{creating.id ? 'Edit Lens Index' : 'Lens Index Baru'}</h2>
+            {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+            <fieldset disabled={saving} className="space-y-3">
             <input required placeholder="Nama (e.g. 1.60 Ultra Thin)" value={creating.name} onChange={(e) => setCreating({ ...creating, name: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" />
             <input required placeholder="Index value (1.50, 1.56, 1.60...)" value={creating.index_value} onChange={(e) => setCreating({ ...creating, index_value: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" />
             <input placeholder="Range (mis. -4.00 s/d +4.00)" value={creating.recommended_power_range || ""} onChange={(e) => setCreating({ ...creating, recommended_power_range: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" />
-            <input type="number" placeholder="Additional price" value={creating.additional_price} onChange={(e) => setCreating({ ...creating, additional_price: Number(e.target.value) })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" />
+            <fieldset className="border rounded-xl p-3 space-y-2">
+              <legend className="text-sm font-bold px-1">Jenis Lensa</legend>
+              {lensTypes.filter(type => type.is_active || creating.lens_type_ids.includes(type.id)).map(type => <label key={type.id} className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={creating.lens_type_ids.includes(type.id)} onChange={event => setCreating({ ...creating, lens_type_ids: event.target.checked ? [...creating.lens_type_ids, type.id] : creating.lens_type_ids.filter(id => id !== type.id) })} />
+                {type.name}{!type.is_active ? ' (nonaktif)' : ''}
+              </label>)}
+              {!lensTypes.length && <p className="text-xs text-meow-gray">Tambahkan Jenis Lensa pada halaman kategori terlebih dahulu.</p>}
+              <p className="text-xs text-meow-gray">Pilih minimal satu agar Lens Index tersedia untuk Paket yang sesuai. Tanpa Jenis Lensa, Lens Index hanya tersedia untuk Frame.</p>
+            </fieldset>
+            <label className="block text-xs font-semibold">Harga Lensa (tambahan per Frame)
+              <input type="number" min="0" step="0.01" required value={creating.additional_price} onChange={(e) => setCreating({ ...creating, additional_price: Number(e.target.value) })} className="block w-full mt-1 px-3 py-2 rounded-xl bg-meow-bg outline-none" />
+            </label>
             <input placeholder="Deskripsi" value={creating.description || ""} onChange={(e) => setCreating({ ...creating, description: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" />
-            <div className="flex gap-2"><button type="button" onClick={() => setCreating(null)} className="btn-secondary flex-1">Batal</button><button type="submit" className="btn-primary flex-1">Simpan</button></div>
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={creating.is_active} onChange={event => setCreating({ ...creating, is_active: event.target.checked })} />Aktif</label>
+            <div className="flex gap-2"><button type="button" onClick={() => setCreating(null)} className="btn-secondary flex-1">Batal</button><button type="submit" className="btn-primary flex-1">{saving ? 'Menyimpan…' : 'Simpan'}</button></div>
+            </fieldset>
           </form>
         </div>
       )}

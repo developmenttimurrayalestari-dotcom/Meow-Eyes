@@ -1,0 +1,4 @@
+[
+{"_id": {"$oid": "6adb139d2615a279f5cd9318"}, "id": "ban_7cb3bed862e74002", "title": "Koleksi Leinz Pria Terbaru", "image": "https://images.unsplash.com/photo-1525786210598-d527194d3e9a?crop=entropy&cs=srgb&fm=jpg&w=1600", "link": "/category/leinz-pria", "position": "promo", "is_active": true, "created_at": "2026-10-23T07:58:21.237196+00:00"},
+{"_id": {"$oid": "6adb139d2615a279f5cd9317"}, "id": "ban_f532384098fa412e", "title": "Diskon Hingga 50% — Cat Eye Edition", "image": "https://images.unsplash.com/photo-1670739368045-7f09844fc862?crop=entropy&cs=srgb&fm=jpg&w=1600", "link": "/products?badge=flashsale", "position": "hero", "is_active": true, "created_at": "2026-10-23T07:58:21.237137+00:00"}
+]

@@ -1,0 +1,8 @@
+{
+  "ok": true,
+  "footerPagesOpened": 5,
+  "adminPublicLinks": true,
+  "draftsNotPublic": true,
+  "browserErrors": [],
+  "note": "Production build with mocked APIs. No live CMS content changed."
+}

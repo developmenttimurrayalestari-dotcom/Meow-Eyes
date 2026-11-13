@@ -1,10 +1,15 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { Cat, MapPin, Coins, Ticket, BellRing, ShoppingBag, Shield, Mail } from "lucide-react";
+import { MapPin, Coins, Ticket, BellRing, ShoppingBag, Shield, Mail } from "lucide-react";
+import CustomerProfileForm from "../components/CustomerProfileForm";
+import { safeMeowsurementReturn } from "../lib/authReturn";
 
 const ProfilePage = () => {
-  const { user } = useAuth();
+  const { user, refreshMe } = useAuth();
+  const location = useLocation();
+  const query = new URLSearchParams(location.search);
+  const returnTo = safeMeowsurementReturn(query.get("return_to") || query.get("next") || query.get("returnTo"));
   if (!user) return null;
   const links = [
     { to: "/orders", icon: ShoppingBag, label: "Pesanan", testid: "p-orders" },
@@ -38,6 +43,8 @@ const ProfilePage = () => {
           <Stat label="Status" value={user.is_active === false ? "Off" : "Aktif"} />
         </div>
       </div>
+
+      <CustomerProfileForm key={user.user_id} userId={user.user_id} onSaved={refreshMe} returnTo={returnTo} />
 
       <div className="mt-6 grid grid-cols-2 md:grid-cols-3 gap-3" data-testid="profile-links">
         {links.map((l) => (

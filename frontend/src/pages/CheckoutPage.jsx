@@ -26,20 +26,29 @@ export default function CheckoutPage() {
   const [cartVersion, setCartVersion] = useState(0);
   const [addresses, setAddresses] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingAddress, setEditingAddress] = useState(null);
   const [addressId, setAddressId] = useState("");
   const [shippingOptions, setShippingOptions] = useState([]);
   const [shipping, setShipping] = useState(null);
+  const [shippingCartVersion, setShippingCartVersion] = useState(-1);
   const [shippingLoading, setShippingLoading] = useState(false);
   const [shippingError, setShippingError] = useState("");
   const [shippingReload, setShippingReload] = useState(0);
   const [voucher, setVoucher] = useState("");
   const [voucherDraft, setVoucherDraft] = useState("");
   const [usePoints, setUsePoints] = useState(0);
+  const [pointWallet, setPointWallet] = useState(null);
+  const [cashbackEvents, setCashbackEvents] = useState([]);
+  useEffect(() => {
+    api.get('/points/logs').then(({ data }) => setPointWallet(data)).catch(() => {});
+    api.get('/cashback-events').then(({ data }) => setCashbackEvents(data.events || [])).catch(() => {});
+  }, []);
   const [rouletteSpinId, setRouletteSpinId] = useState(null);
   const [availableRewards, setAvailableRewards] = useState([]);
   const [integrations, setIntegrations] = useState(null);
   const [preview, setPreview] = useState(null);
   const [previewKey, setPreviewKey] = useState("");
+  const [previewCartVersion, setPreviewCartVersion] = useState(-1);
   const [previewError, setPreviewError] = useState("");
   const [previewLoading, setPreviewLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -77,44 +86,55 @@ export default function CheckoutPage() {
   useEffect(() => {
     const controller = new AbortController();
     setShipping(null); setShippingOptions([]); setShippingError(""); setPreview(null);
-    if (!addressId || !selectedKey || initialLoading || initialError) return () => controller.abort();
+    setShippingCartVersion(-1);
+    setShippingLoading(false);
+    if (!addressId || !selectedKey || initialLoading || initialError || showAddForm) return () => controller.abort();
     setShippingLoading(true);
     api.post("/checkout/shipping-options", { address_id: addressId, selected_item_ids: selectedItemIds }, { signal: controller.signal }).then(({ data }) => {
+      if (controller.signal.aborted) return;
       setShippingOptions(data.options || []);
       setShipping(data.options?.[0] ? { ...data.options[0], address_id: addressId } : null);
+      setShippingCartVersion(cartVersion);
       if (!data.options?.length) setShippingError("Belum ada layanan pengiriman untuk alamat ini. Periksa kode pos atau hubungi toko.");
     }).catch((err) => { if (!controller.signal.aborted) setShippingError(apiError(err, "Ongkir belum dapat dihitung. Periksa alamat dan coba lagi.")); })
       .finally(() => { if (!controller.signal.aborted) setShippingLoading(false); });
     return () => controller.abort();
-  }, [addressId, selectedKey, selectedItemIds, cartVersion, shippingReload, initialLoading, initialError]);
+  }, [addressId, selectedKey, selectedItemIds, cartVersion, shippingReload, initialLoading, initialError, showAddForm]);
 
+  const flashSaleExclusive = cartItems.some(item => item.flash_sale_active);
   const payload = useMemo(() => ({
     address_id: addressId, courier_code: shipping?.courier_code, service_code: shipping?.service_code,
-    shipping_quote_id: shipping?.quote_id || null, voucher_code: voucher || null,
-    use_points: usePoints || 0, roulette_spin_id: rouletteSpinId, selected_item_ids: selectedItemIds,
-  }), [addressId, shipping, voucher, usePoints, rouletteSpinId, selectedItemIds]);
+    shipping_quote_id: shipping?.quote_id || null, voucher_code: flashSaleExclusive ? null : voucher || null,
+    use_points: flashSaleExclusive ? 0 : usePoints || 0, roulette_spin_id: flashSaleExclusive ? null : rouletteSpinId, selected_item_ids: selectedItemIds,
+  }), [addressId, shipping, voucher, usePoints, rouletteSpinId, selectedItemIds, flashSaleExclusive]);
   const payloadKey = JSON.stringify(payload);
+  const requestFingerprint = JSON.stringify({ payload, cartVersion });
   const shippingExpired = Boolean(shipping?.expires_at && new Date(shipping.expires_at).getTime() <= now);
-  const currentShipping = Boolean(shipping && shipping.address_id === addressId && !shippingExpired);
+  const currentShipping = Boolean(!showAddForm && shipping && shipping.address_id === addressId && !shippingExpired && shippingCartVersion === cartVersion);
   useEffect(() => {
     const controller = new AbortController();
     setPreview(null); setPreviewKey(""); setPreviewError("");
+    setPreviewCartVersion(-1); setPreviewLoading(false);
     if (!currentShipping) return () => controller.abort();
     setPreviewLoading(true);
     api.post("/checkout/preview", JSON.parse(payloadKey), { signal: controller.signal }).then(({ data }) => {
+      if (controller.signal.aborted) return;
       setPreview(data); setPreviewKey(payloadKey);
+      setPreviewCartVersion(cartVersion);
     }).catch((err) => { if (!controller.signal.aborted) setPreviewError(apiError(err, "Ringkasan belum dapat dihitung.")); })
       .finally(() => { if (!controller.signal.aborted) setPreviewLoading(false); });
     return () => controller.abort();
-  }, [payloadKey, currentShipping]);
+  }, [payloadKey, currentShipping, cartVersion]);
 
   const handleDirty = useCallback((id, dirty) => setDirtyPrescriptions((current) => current[id] === dirty ? current : { ...current, [id]: dirty }), []);
-  const handlePrescriptionSaved = useCallback((id, prescription) => {
-    setCartItems((current) => current.map((item) => item.id === id ? { ...item, prescription } : item));
+  const handlePrescriptionSaved = useCallback((id, prescription, cartItem) => {
+    setCartItems((current) => current.map((item) => item.id === id ? (cartItem || { ...item, prescription }) : item));
     setCartVersion((version) => version + 1);
   }, []);
   const hasUnsavedPrescription = Object.values(dirtyPrescriptions).some(Boolean);
-  const validPreview = preview && previewKey === payloadKey && currentShipping && !previewLoading;
+  const validPreview = preview && previewKey === payloadKey && previewCartVersion === cartVersion && currentShipping && !previewLoading;
+  const lensSubtotal = Number(preview?.lens_subtotal ?? cartItems.reduce((sum, item) => sum + Number(item.lens_price || 0) * item.quantity, 0));
+  const productSubtotal = Number(preview?.product_subtotal ?? (Number(preview?.subtotal || 0) - lensSubtotal));
   const setPinAt = (index, value) => {
     if (!/^\d?$/.test(value)) return;
     setPin((current) => current.map((digit, i) => i === index ? value : digit));
@@ -125,11 +145,11 @@ export default function CheckoutPage() {
     if (pin.some((digit) => digit === "")) { setSubmitError("Masukkan PIN 6 digit."); pinRef.current[0]?.focus(); return; }
     setSubmitting(true); setSubmitError("");
     try {
-      if (!requestRef.current || requestRef.current.fingerprint !== payloadKey) {
+      if (!requestRef.current || requestRef.current.fingerprint !== requestFingerprint) {
         const storageKey = `meow_checkout_request_${user.user_id}`;
         let existing = null;
         try { existing = JSON.parse(sessionStorage.getItem(storageKey) || "null"); } catch { /* optional session storage */ }
-        requestRef.current = existing?.fingerprint === payloadKey ? existing : { fingerprint: payloadKey, key: newRequestId() };
+        requestRef.current = existing?.fingerprint === requestFingerprint ? existing : { fingerprint: requestFingerprint, key: newRequestId() };
         try { sessionStorage.setItem(storageKey, JSON.stringify(requestRef.current)); } catch { /* still retained in this page */ }
       }
       const { data } = await api.post("/checkout/confirm", { ...payload, pin: pin.join("") }, { headers: { "Idempotency-Key": requestRef.current.key } });
@@ -153,27 +173,34 @@ export default function CheckoutPage() {
         <section className="bg-white rounded-3xl p-5 md:p-6" data-testid="address-section">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <h2 className="font-heading font-extrabold text-xl flex items-center gap-2"><MapPin className="h-5 w-5 text-meow-salmon" />Alamat Pengiriman</h2>
-            <button type="button" disabled={submitting} onClick={() => setShowAddForm(!showAddForm)} className="text-sm font-bold text-meow-salmon flex items-center gap-1">{showAddForm ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}{showAddForm ? "Tutup" : "Tambah"}</button>
+            <button type="button" disabled={submitting} onClick={() => { setEditingAddress(null); setShowAddForm(!showAddForm); setShipping(null); setPreview(null); if (showAddForm) setShippingReload(value => value + 1); }} className="text-sm font-bold text-meow-salmon flex items-center gap-1">{showAddForm ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}{showAddForm ? "Tutup" : "Tambah"}</button>
           </div>
-          {showAddForm ? <AddressForm defaultAddress={!addresses.length} onCancel={() => setShowAddForm(false)} onSaved={(address) => { setAddresses((items) => [...items.map((item) => address.is_default ? { ...item, is_default: false } : item), address]); setAddressId(address.id); setShowAddForm(false); }} />
+          {showAddForm ? <AddressForm key={editingAddress?.id || 'new'} initialAddress={editingAddress} defaultAddress={!addresses.length} onCancel={() => { setShowAddForm(false); setEditingAddress(null); setShippingReload(value => value + 1); }} onSaved={(address) => { setAddresses((items) => [...items.filter(item => item.id !== address.id).map((item) => address.is_default ? { ...item, is_default: false } : item), address]); setAddressId(address.id); setShowAddForm(false); setEditingAddress(null); setShipping(null); setPreview(null); setShippingReload(value => value + 1); }} />
             : !addresses.length ? <p className="text-sm text-meow-gray">Tambahkan alamat pengiriman untuk menghitung ongkir.</p>
-              : <div className="space-y-2">{addresses.map((address) => <label key={address.id} className={`flex gap-2 p-3 rounded-2xl border-2 cursor-pointer ${addressId === address.id ? "border-meow-salmon bg-meow-salmon/5" : "border-meow-midnight/5"}`}>
-                <input type="radio" name="checkout-address" disabled={submitting} checked={addressId === address.id} onChange={() => setAddressId(address.id)} className="mt-1" />
-                <span className="text-sm"><span className="font-bold">{address.label} — {address.recipient}</span> · {address.phone}<br /><span className="text-meow-gray">{[address.street, address.subdistrict, address.district, address.city, address.province, address.postal_code].filter(Boolean).join(", ")}</span></span>
-              </label>)}</div>}
+              : <div className="space-y-2">{addresses.map((address) => <div key={address.id} className={`flex gap-2 p-3 rounded-2xl border-2 cursor-pointer ${addressId === address.id ? "border-meow-salmon bg-meow-salmon/5" : "border-meow-midnight/5"}`}>
+                <label className="flex items-start gap-2 flex-1 min-w-0"><input type="radio" name="checkout-address" disabled={submitting} checked={addressId === address.id} onChange={() => setAddressId(address.id)} className="mt-1" />
+                <span className="text-sm"><span className="font-bold">{address.label} — {address.recipient}</span> · {address.phone}<br /><span className="text-meow-gray">{[address.street, address.subdistrict, address.district, address.city, address.province, address.postal_code].filter(Boolean).join(", ")}</span></span></label><button type="button" disabled={submitting} data-testid={`checkout-edit-address-${address.id}`} onClick={() => { setEditingAddress(address); setShowAddForm(true); setShipping(null); setPreview(null); }} className="text-xs font-bold text-meow-salmon self-start">Ubah</button>
+              </div>)}</div>}
         </section>
 
         <section className="bg-white rounded-3xl p-5 md:p-6">
           <h2 className="font-heading font-extrabold text-xl mb-4">Produk Pilihan</h2>
           <div className="divide-y divide-meow-midnight/10">{cartItems.map((item) => <div key={item.id} className="flex items-center gap-3 py-3">
             <img src={imageSrc(item.product.main_image)} alt="" className="w-14 h-14 rounded-xl object-cover" />
-            <div className="flex-1 text-sm"><p className="font-bold">{item.product.name}</p>{item.lens_product && <p className="text-xs text-meow-gray">+ {item.lens_product.name}</p>}<p>{item.quantity} × {formatIDR(item.unit_price)}</p></div>
+            <div className="flex-1 min-w-0 text-sm">
+              <p className="font-bold">{item.product.name}</p>
+              {(item.lens_index || item.lens_product) && <div className="text-xs text-meow-gray space-y-1 my-1" data-testid={`checkout-item-pricing-${item.id}`}>
+                <p>{item.product.product_type === 'frame' ? 'Frame' : 'Produk'}{item.flash_sale_active ? ' (Flash Sale)' : ''}: {formatIDR(item.frame_price)} / produk</p>
+                <p>Lensa{item.lens_product ? ` ${item.lens_product.name}` : ''}{item.lens_index ? ` · ${item.lens_index.name}` : ''}: {formatIDR(item.lens_price)}{item.product.product_type === 'package' ? ' (termasuk harga paket)' : ' / produk'}</p>
+              </div>}
+              <p>{item.quantity} × {formatIDR(item.unit_price)}</p>
+            </div>
             <span className="font-bold text-sm">{formatIDR(item.subtotal)}</span>
           </div>)}</div>
         </section>
-        {cartItems.some((item) => item.lens_product) && <section className="bg-white rounded-3xl p-5 md:p-6 space-y-4" data-testid="checkout-prescriptions">
-          <div><h2 className="font-heading font-extrabold text-xl flex items-center gap-2"><Glasses className="h-5 w-5 text-meow-salmon" />Resep Frame + Lensa</h2><p className="text-sm text-meow-gray mt-1">Salin ukuran SPH, CYL, AXIS, ADD, dan PD sesuai resep. Setiap paket memiliki resep tersendiri.</p></div>
-          {cartItems.filter((item) => item.lens_product).map((item) => <PrescriptionForm key={item.id} item={item} onDirtyChange={handleDirty} onSaved={handlePrescriptionSaved} disabled={submitting} />)}
+        {cartItems.length > 0 && <section className="bg-white rounded-3xl p-5 md:p-6 space-y-4" data-testid="checkout-prescriptions">
+          <div><h2 className="font-heading font-extrabold text-xl flex items-center gap-2"><Glasses className="h-5 w-5 text-meow-salmon" />Lensa & Resep per Item (Opsional)</h2><p className="text-sm text-meow-gray mt-1">Untuk produk Frame, Anda boleh membeli frame saja tanpa lensa, catatan, atau foto resep. Isi bagian ini hanya jika diperlukan. Klik Simpan Resep jika ada perubahan; setiap baris produk disimpan terpisah.</p></div>
+          {cartItems.map((item) => <PrescriptionForm key={item.id} item={item} onDirtyChange={handleDirty} onSaved={handlePrescriptionSaved} disabled={submitting} showMeasurements={false} selectLens />)}
         </section>}
         {addressId && <section className="bg-white rounded-3xl p-5 md:p-6" data-testid="shipping-section">
           <div className="flex items-center justify-between gap-2 mb-3"><h2 className="font-heading font-extrabold text-xl flex items-center gap-2"><Truck className="h-5 w-5 text-meow-mint" />Pengiriman</h2><button type="button" onClick={() => setShippingReload((value) => value + 1)} disabled={shippingLoading || submitting} className="text-xs font-bold flex items-center gap-1"><RefreshCw className={`h-3.5 w-3.5 ${shippingLoading ? "animate-spin" : ""}`} />Cek ulang</button></div>
@@ -192,10 +219,11 @@ export default function CheckoutPage() {
 
         <section className="bg-white rounded-3xl p-5 md:p-6 space-y-4" data-testid="promo-section">
           <h2 className="font-heading font-extrabold text-xl flex items-center gap-2"><Ticket className="h-5 w-5 text-meow-amber" />Promo & Reward</h2>
-          <label className="block text-xs font-bold">Kode voucher<div className="flex gap-2 mt-1"><input value={voucherDraft} disabled={submitting} onChange={(event) => setVoucherDraft(event.target.value.toUpperCase())} placeholder="Masukkan kode voucher" className="min-w-0 flex-1 px-3 py-2 rounded-xl bg-meow-bg border border-meow-midnight/10" data-testid="voucher-input" /><button type="button" disabled={submitting} onClick={() => setVoucher(voucherDraft.trim())} className="btn-secondary text-xs py-2 px-4">Terapkan</button></div></label>
+          {flashSaleExclusive && <p role="status" className="rounded-xl bg-amber-50 p-3 text-xs text-amber-900">Flash Sale diprioritaskan. Voucher, poin, dan reward roulette tidak dapat digabung pada checkout ini.</p>}<label className="block text-xs font-bold">Kode voucher<div className="flex gap-2 mt-1"><input value={voucherDraft} disabled={submitting || flashSaleExclusive} onChange={(event) => setVoucherDraft(event.target.value.toUpperCase())} placeholder="Masukkan kode voucher" className="min-w-0 flex-1 px-3 py-2 rounded-xl bg-meow-bg border border-meow-midnight/10" data-testid="voucher-input" /><button type="button" disabled={submitting || flashSaleExclusive} onClick={() => setVoucher(voucherDraft.trim())} className="btn-secondary text-xs py-2 px-4">Terapkan</button></div></label>
           {voucher && <p className="text-xs">Voucher: {voucher} <button type="button" onClick={() => { setVoucher(""); setVoucherDraft(""); }} className="ml-2 underline">Hapus</button></p>}
-          <label className="block text-xs font-bold"><span className="flex items-center gap-1"><Coins className="h-3 w-3" />Pakai Poin · Saldo {user.points_balance || 0} (1 poin = Rp100)</span><input type="number" min="0" max={user.points_balance || 0} step="1" disabled={submitting} value={usePoints} onChange={(event) => setUsePoints(Math.min(user.points_balance || 0, Math.max(0, Math.floor(Number(event.target.value) || 0))))} className="w-full mt-1 px-3 py-2 rounded-xl bg-meow-bg border border-meow-midnight/10" data-testid="points-input" /></label>
-          {!!availableRewards.length && <label className="block text-xs font-bold">Reward Roulette<select value={rouletteSpinId || ""} disabled={submitting} onChange={(event) => setRouletteSpinId(event.target.value || null)} className="w-full mt-1 px-3 py-2 rounded-xl bg-meow-bg"><option value="">Tidak digunakan</option>{availableRewards.map((reward) => <option key={reward.id} value={reward.id}>{reward.reward_label}</option>)}</select></label>}
+          <label className="block text-xs font-bold"><span className="flex items-center gap-1"><Coins className="h-3 w-3" />Pakai Poin · Saldo {pointWallet?.balance ?? user.points_balance ?? 0} · rate mengikuti setiap perolehan</span><input type="number" min="0" max={pointWallet?.balance ?? user.points_balance ?? 0} step="1" disabled={submitting || flashSaleExclusive} value={flashSaleExclusive ? 0 : usePoints} onChange={(event) => setUsePoints(Math.min(pointWallet?.balance ?? user.points_balance ?? 0, Math.max(0, Math.floor(Number(event.target.value) || 0))))} className="w-full mt-1 px-3 py-2 rounded-xl bg-meow-bg border border-meow-midnight/10" data-testid="points-input" /></label>
+          {!!cashbackEvents.length && <p className="text-xs rounded-xl bg-teal-50 p-3">Event {cashbackEvents[0].name}: cashback {cashbackEvents[0].percent}% dalam bentuk poin setelah pesanan selesai. Poin berlaku {cashbackEvents[0].expiry_days} hari dan memakai rate yang dikunci pada pesanan.</p>}
+          {!!availableRewards.length && <label className="block text-xs font-bold">Reward Roulette<select value={flashSaleExclusive ? "" : rouletteSpinId || ""} disabled={submitting || flashSaleExclusive} onChange={(event) => setRouletteSpinId(event.target.value || null)} className="w-full mt-1 px-3 py-2 rounded-xl bg-meow-bg"><option value="">Tidak digunakan</option>{availableRewards.map((reward) => <option key={reward.id} value={reward.id}>{reward.reward_label}</option>)}</select></label>}
         </section>
         <section className="bg-white rounded-3xl p-5 md:p-6" data-testid="pin-section">
           <h2 className="font-heading font-extrabold text-xl flex items-center gap-2"><Shield className="h-5 w-5 text-meow-mint" />Verifikasi PIN</h2>
@@ -205,6 +233,8 @@ export default function CheckoutPage() {
       <aside><div className="bg-white rounded-3xl p-6 sticky top-28" data-testid="checkout-summary">
         <h2 className="font-heading font-extrabold text-xl mb-4">Ringkasan Pesanan</h2>
         <div className="space-y-2 text-sm" aria-busy={previewLoading}>
+          <Row label="Harga produk" testId="checkout-product-subtotal" value={validPreview ? formatIDR(productSubtotal) : "—"} />
+          <Row label="Tambahan lensa" testId="checkout-lens-subtotal" value={validPreview ? formatIDR(lensSubtotal) : "—"} />
           <Row label="Subtotal" value={validPreview ? formatIDR(preview.subtotal) : "—"} />
           <Row label="Voucher" value={validPreview ? `−${formatIDR(preview.voucher_discount)}` : "—"} />
           <Row label="Poin" value={validPreview ? `−${formatIDR(preview.points_discount)}` : "—"} />
@@ -224,4 +254,4 @@ export default function CheckoutPage() {
   </div>;
 }
 
-const Row = ({ label, value }) => <div className="flex justify-between gap-3"><span className="text-meow-gray">{label}</span><span className="font-bold">{value}</span></div>;
+const Row = ({ label, value, testId }) => <div className="flex justify-between gap-3"><span className="text-meow-gray">{label}</span><span className="font-bold" data-testid={testId}>{value}</span></div>;

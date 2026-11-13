@@ -30,6 +30,7 @@ from integrations.common import ProviderError, json_bytes
 from integrations.config import DokuSettings, EverproSettings, payment_provider, shipping_provider, mock_enabled
 from integrations.doku import get_doku_client, safe_checkout_url
 from integrations.everpro import get_everpro_client
+from integrations.locations import canonical_shipping_location
 
 
 def _digest(value: Any) -> str:
@@ -49,6 +50,15 @@ def _amount(value: Any, provider: str, *, positive: bool = False) -> Decimal:
 
 
 def _safe_error(exc: ProviderError, action: str) -> HTTPException:
+    if exc.provider == 'everpro' and action == 'menghitung ongkir':
+        message = 'Layanan ongkir EVERPRO belum dapat dihubungi. Silakan coba kembali.'
+        if exc.code in {'authentication_failed', 'invalid_auth_response'}:
+            message = 'Koneksi EVERPRO belum dapat diautentikasi. Hubungi toko untuk memeriksa layanan pengiriman.'
+        elif exc.code == 'provider_rejected':
+            message = 'EVERPRO menolak permintaan ongkir. Periksa wilayah alamat melalui tombol Ubah; jika sudah sesuai, hubungi toko.'
+        elif exc.code in {'invalid_rates_response', 'invalid_response', 'invalid_amount'}:
+            message = 'Tarif EVERPRO belum dapat dibaca. Silakan coba kembali atau hubungi toko.'
+        return HTTPException(503, message)
     return HTTPException(503, f"Layanan {exc.provider.upper()} belum dapat {action}. Silakan coba kembali; referensi transaksi tetap sama.")
 
 
@@ -114,7 +124,10 @@ def _rate_options(body: dict) -> list[dict]:
                 raise ProviderError("everpro", "invalid_rates_response")
             courier, service = rate.get("logistic_code"), rate.get("rate_code")
             if not isinstance(courier, str) or not isinstance(service, str) or not 1 <= len(courier) <= 64 or not 1 <= len(service) <= 64:
-                raise ProviderError("everpro", "invalid_rates_response")
+                # The live provider can include cargo rows without a courier
+                # code. They cannot be booked, but must not hide valid rates
+                # from the other couriers. Never guess a code from its name.
+                continue
             key = (courier, service)
             if key in seen or rate.get("is_flat_rate") or rate.get("is_use_wood_packing"):
                 # Flat-rate/wood-packing rate requests require an extended
@@ -150,13 +163,14 @@ async def shipping_options(user_id: str, address_id: str, selected_ids: list[str
         client = get_everpro_client()
         settings = client.settings
         _shipping_address_valid(address)
+        destination = await canonical_shipping_location(address, client)
         fingerprint, snapshot = shipping_fingerprint(items, address, settings)
         value = sum((item.subtotal for item in items), ZERO).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
         if value <= 0:
             raise HTTPException(422, "Nilai barang untuk pengiriman harus lebih besar dari nol")
         request = {
             "origin_postal_code": settings.origin_postal_code, "origin_sub_district_name": settings.origin_subdistrict,
-            "destination_postal_code": address.postal_code, "destination_sub_district_name": address.subdistrict or "",
+            "destination_postal_code": destination['postal_code'], "destination_sub_district_name": destination['subdistrict'],
             "weight": float(Decimal(weight) / 1000), "item_price": int(value), "package_type_id": settings.package_type_id,
             "shipment_type": settings.shipment_type, "length": settings.length_cm, "width": settings.width_cm,
             "height": settings.height_cm, "is_cod": False, "is_use_insurance": settings.insurance, "include_flat_rate": False,
@@ -268,8 +282,8 @@ async def ensure_doku_payment(order_id: str) -> dict:
                 "customer": {"id": owner, "name": user.name, "email": user.email, "phone": address.phone,
                              "address": address.street, "country": "ID", "city": address.city, "postcode": address.postal_code},
             }
-            if settings.public_api_url:
-                request["additional_info"] = {"override_notification_url": settings.public_api_url + settings.notification_path}
+            if settings.notification_override_url:
+                request["additional_info"] = {"override_notification_url": settings.notification_override_url}
             s.add(m.PaymentLog(id=gen_id("plg"), order_id=order_id, payment_id=payment.id, provider="doku",
                                action="doku_request", payload=request))
             s.add(m.PaymentLog(id=gen_id("plg"), order_id=order_id, payment_id=payment.id, provider="doku", action="doku_configuration",
@@ -871,11 +885,17 @@ def integration_status(*, admin: bool = False) -> dict:
                 item = {"provider": provider, "ready": True, "mock": False}
                 if admin:
                     item["environment"] = settings.environment
+                    if key == 'payment':
+                        item['notification_override_ready'] = bool(settings.notification_override_url)
+                        if settings.public_api_url and not settings.notification_override_url:
+                            item['configuration_notes'] = ['PUBLIC_API_URL memakai alamat lokal sehingga tidak dikirim sebagai override notifikasi DOKU. Gunakan URL HTTPS publik atau konfigurasi notifikasi pada dashboard DOKU; saat uji lokal, status dapat diperiksa lewat tombol Periksa Status.']
                     if key == "shipping":
                         item["shipment_type"] = settings.shipment_type
                         item["webhook_ready"] = bool(settings.webhook_key)
-        except HTTPException:
+        except HTTPException as error:
             item = {"provider": "doku" if key == "payment" else "everpro", "ready": False, "mock": False}
+            if admin:
+                item['configuration_error'] = str(error.detail)
         if admin:
             item["missing"] = [name for name in required if not os.environ.get(name)] if not item["mock"] and not item["ready"] else []
         data[key] = item

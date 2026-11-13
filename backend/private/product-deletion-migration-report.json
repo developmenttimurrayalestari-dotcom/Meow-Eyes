@@ -1,0 +1,19 @@
+{
+  "ok": true,
+  "revision": "20261112_0007",
+  "backup": "private\\backups\\product-deletion-before-0007-20261112T033335Z.sql",
+  "backup_sha256": "684eb06fc8bbf7a996910184e47977e0b98caeada27ed7d894cc4d2f998fdaf8",
+  "existing_product_data_unchanged": true,
+  "before_product_count": 20,
+  "after_product_count": 20,
+  "deleted_product_count": 0,
+  "integrity": {
+    "ok": true,
+    "mode": "full_integrity_audit",
+    "expected_triggers": 154,
+    "row_rules": 139,
+    "definer_privileges_verified": false,
+    "issues": []
+  },
+  "backend_started": false
+}

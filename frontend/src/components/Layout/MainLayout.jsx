@@ -11,6 +11,7 @@ import {
   DropdownMenuSeparator, DropdownMenuLabel,
 } from "../ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
+import FooterPages from "./FooterPages";
 
 const MainLayout = ({ children }) => {
   const { user, logout, cartCount } = useAuth();
@@ -47,7 +48,7 @@ const MainLayout = ({ children }) => {
             <img src="/logo-meow.jpg" alt="Meow Eyes" className="h-11 w-11 rounded-full ring-2 ring-meow-amber/40 object-cover" />
             <div>
               <p className="font-heading font-black text-xl text-meow-midnight leading-none">Meow Eyes</p>
-              <p className="text-[10px] text-meow-gray tracking-widest uppercase">Catlux Marketplace</p>
+              {/* <p className="text-[10px] text-meow-gray tracking-widest uppercase">Catlux Marketplace</p> */}
             </div>
           </Link>
 
@@ -176,6 +177,8 @@ const MainLayout = ({ children }) => {
             <NavLink to="/new-arrival" className={({ isActive }) => `font-semibold ${isActive ? "text-meow-salmon" : "text-meow-midnight"}`} data-testid="nav-new-arrival">
               New Arrival
             </NavLink>
+            <a href="/meowsurement/" className="font-semibold text-meow-midnight" data-testid="nav-meowsurement">Meowsurement</a>
+            <NavLink to="/virtual-try-on" className="font-semibold text-meow-midnight hover:text-meow-salmon" data-testid="nav-virtual-try-on">Virtual Try-On</NavLink>
             <NavLink to="/our-product" className={({ isActive }) => `font-semibold ${isActive ? "text-meow-salmon" : "text-meow-midnight"}`} data-testid="nav-our-product">
               Our Product
             </NavLink>
@@ -187,9 +190,6 @@ const MainLayout = ({ children }) => {
             </NavLink>
             <NavLink to="/games" className="font-semibold text-meow-midnight hover:text-meow-amber" data-testid="nav-games">
               🎮 Games
-            </NavLink>
-            <NavLink to="/roulette" className="font-semibold text-meow-midnight hover:text-meow-amber" data-testid="nav-roulette">
-              🎯 Roulette
             </NavLink>
             <NavLink to="/contact" className={({ isActive }) => `font-semibold ml-auto ${isActive ? "text-meow-salmon" : "text-meow-midnight"}`} data-testid="nav-contact">
               Contact
@@ -218,8 +218,7 @@ const MainLayout = ({ children }) => {
             <ul className="space-y-2 text-white/70">
               <li><Link to="/faq" data-testid="footer-faq">FAQ</Link></li>
               <li><Link to="/contact" data-testid="footer-contact">Kontak</Link></li>
-              <li><Link to="/terms" data-testid="footer-terms">Syarat & Ketentuan</Link></li>
-              <li><Link to="/privacy" data-testid="footer-privacy">Privasi</Link></li>
+              <FooterPages />
             </ul>
           </div>
           <div>
@@ -227,11 +226,13 @@ const MainLayout = ({ children }) => {
             <ul className="space-y-2 text-white/70">
               <li><Link to="/shop-now">Shop Now</Link></li>
               <li><Link to="/new-arrival">New Arrival</Link></li>
-              <li><Link to="/category/frame-new-arrival">Frame New Arrival</Link></li>
+              <li><a href="/meowsurement/">Meowsurement</a></li>
+              <li><Link to="/new-arrival?product_type=frame">Frame New Arrival</Link></li>
               <li><Link to="/flash-sale">Flash Sale</Link></li>
               <li><Link to="/our-product">Our Product</Link></li>
               <li><Link to="/articles">Article</Link></li>
               <li><Link to="/games">Mini Games</Link></li>
+              <li><Link to="/virtual-try-on">Virtual Try-On</Link></li>
               <li><Link to="/roulette">Roulette Reward</Link></li>
             </ul>
           </div>

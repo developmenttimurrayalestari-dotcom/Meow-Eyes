@@ -1,0 +1,21 @@
+{
+  "revision": "20261112_0009",
+  "groups": [
+    {
+      "product_status": "active",
+      "products": 1,
+      "stock_variants": 0,
+      "stock": "0",
+      "reserved": "0"
+    },
+    {
+      "product_status": "deleted",
+      "products": 20,
+      "stock_variants": 29,
+      "stock": "713",
+      "reserved": "0"
+    }
+  ],
+  "orphaned_variants": 0,
+  "read_only": true
+}

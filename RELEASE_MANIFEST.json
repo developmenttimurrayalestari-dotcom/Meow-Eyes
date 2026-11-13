@@ -1,17 +1,27 @@
 {
-  "release": "2026-11-06-step-1-through-9",
+  "release": "2026-11-09-meowsurement-customer-integration",
   "database_target": "Oracle MySQL 5.7.24-log",
-  "alembic_head": "20261106_0002",
+  "alembic_head": "20261109_0003",
+  "application_tables": 79,
+  "meowsurement_added_tables": 11,
   "verification": {
-    "backend_passed": 251,
+    "frontend_passed": 124,
+    "frontend_suites": 15,
+    "backend_passed": 296,
     "backend_skipped": 1,
-    "frontend_passed": 11,
-    "customer_browser_passed": 11,
-    "admin_browser_passed": 11,
-    "production_build": "main.5e6c2ed9.js",
+    "backend_final_targeted_passed": 10,
+    "customer_meowsurement_browser_passed": 9,
+    "browser_page_errors": 0,
+    "production_build": "/static/js/main.60b34070.js",
     "live_mysql_executed": false,
-    "live_merchant_transactions_executed": false
+    "live_mongo_migration_executed": false,
+    "live_merchant_transactions_executed": false,
+    "physical_camera_tested": false,
+    "clinical_accuracy_validated": false
   },
+  "active_flow": "Existing Meow Eyes login -> customer profile and prescription -> administrator product/variant geometry -> server snapshot -> measurement revisions -> independent website review",
+  "migration_source": "20261106_0002",
+  "historical_local_vault": "Source preserved but not mounted; no IndexedDB deletion or automatic import.",
   "files": [
     {
       "path": ".emergent/cron/applied.hash",
@@ -54,14 +64,19 @@
       "sha256": "d52cb7130bf328d0574b767c6cda77071b8cad4e7e5ce048aa4f4de11db0e7cf"
     },
     {
+      "path": ".gitconfig",
+      "bytes": 61,
+      "sha256": "54697504ab97c049b54bee0f23c45296a0a4f5fd3cca1f69cb855356d145b55c"
+    },
+    {
       "path": ".gitignore",
-      "bytes": 1676,
-      "sha256": "d7747e8f686b8289618e7483b14765aff1f6cd7ff1f44d704d898480658ffcc1"
+      "bytes": 1777,
+      "sha256": "a554e5fedf62d7dca48610d1e192cfe7166bc1405c109183c55be1586062086b"
     },
     {
       "path": "README.md",
-      "bytes": 2222,
-      "sha256": "b3dc0b53ed91e7cc6eeef2a6e346a9de8bb7b7e13a91d3205be3dc50abccbb50"
+      "bytes": 2869,
+      "sha256": "bf559d5b4631648ab1e386edfd4efcfdfd9918922d1b968dce35841479365884"
     },
     {
       "path": "auth_testing.md",
@@ -70,8 +85,8 @@
     },
     {
       "path": "backend/.env.mysql.example",
-      "bytes": 4604,
-      "sha256": "7ee2c56cbeb4ee1060745fedac4a6ac038f18f0cc7c87d5513e81c6aedfdb42a"
+      "bytes": 4902,
+      "sha256": "1cd504cc30a166901973262d6ceda40d91efd88c1c7a36736c94d1105d560afa"
     },
     {
       "path": "backend/alembic.ini",
@@ -119,6 +134,11 @@
       "sha256": "ca4c6fb481c79065301c51489578fe8eea9c1e701a29e72e8359574e5cc7be98"
     },
     {
+      "path": "backend/meowsurement_schemas.py",
+      "bytes": 4226,
+      "sha256": "d932abae093ef3053374b0dd0e2fafe5fd6b341c447aa179cc5038c2fe2c32db"
+    },
+    {
       "path": "backend/migrations/README",
       "bytes": 1050,
       "sha256": "3bfb695cc932ad245230e94453dfa3e22784f9ca581e1751de08f25b9671cb18"
@@ -142,6 +162,11 @@
       "path": "backend/migrations/versions/20261106_0002_mysql57_integrity.py",
       "bytes": 28242,
       "sha256": "54068e89ed959673a73c80414119f28af0f3959388a223e8b633c1a4ee88fbca"
+    },
+    {
+      "path": "backend/migrations/versions/20261109_0003_customer_meowsurement.py",
+      "bytes": 40108,
+      "sha256": "303a391875e1a1ebfab6756a0e3c47391ccff12c3ad297b66cb3d5a7eb986378"
     },
     {
       "path": "backend/models.py",
@@ -170,8 +195,8 @@
     },
     {
       "path": "backend/mysql/check_integrity.py",
-      "bytes": 3165,
-      "sha256": "da9729d506d00171f0817d13f394d9937aa21389dd0017dd725518b8541deb1f"
+      "bytes": 4257,
+      "sha256": "87fedc5ac6de6ca35cc5ab03cbd95dcf50f978284136e1307f34304c2f8e24d4"
     },
     {
       "path": "backend/mysql/commerce.py",
@@ -186,7 +211,7 @@
     {
       "path": "backend/mysql/database.py",
       "bytes": 6730,
-      "sha256": "d211f29769f6163b4b0e63c4c46614afe1f0b2e8793ee2114f9c3344a41693ce"
+      "sha256": "f6a1b8b46b62f48fe6458e6c6c830ad9725d2ccbf204233035c95c9d236f70e6"
     },
     {
       "path": "backend/mysql/ddl.py",
@@ -224,9 +249,24 @@
       "sha256": "ddf8e7808c07c3bf5704677c4dc927d7e7a02279ae60b5e9ecc0e5c34de46f93"
     },
     {
+      "path": "backend/mysql/meowsurement.py",
+      "bytes": 45480,
+      "sha256": "54058c591ff9948cfe4095b97d64d216d030543a4af3ea29437b7f67ae4b8290"
+    },
+    {
+      "path": "backend/mysql/meowsurement_models.py",
+      "bytes": 16439,
+      "sha256": "ce8d4d8035b68d57ac4ee593b43e07d8cbcc1b2bca058fd1869bab296424b690"
+    },
+    {
+      "path": "backend/mysql/meowsurement_policy.py",
+      "bytes": 15749,
+      "sha256": "ad87c193726b58ce4f29075e750fdbbf021e8c4208dc08e9af4fdb7c219039c4"
+    },
+    {
       "path": "backend/mysql/models.py",
-      "bytes": 77899,
-      "sha256": "7e8d9e19eecdc3ef94859fb735acf66391bc6911bde0e221bdddb198c38c7ad0"
+      "bytes": 78315,
+      "sha256": "652b5ef345a5929fc7752dfbddfa7a0d3558c245c256526d7b0da5aac9ac1137"
     },
     {
       "path": "backend/mysql_bootstrap.py",
@@ -265,8 +305,8 @@
     },
     {
       "path": "backend/routes_admin_content.py",
-      "bytes": 36362,
-      "sha256": "d416e4b205aade139a8d8a0f656cbd70535d00a538b00b9657603861b9908e87"
+      "bytes": 36430,
+      "sha256": "4327c4c4ad2060f079e1eebe5f58fe835bf1de15419e7efd09abb48de5d7bad4"
     },
     {
       "path": "backend/routes_auth.py",
@@ -304,6 +344,11 @@
       "sha256": "250bb66fcf4c858229a9ac6c84d641e9dee613a39bf6801f176e47747e63f6b4"
     },
     {
+      "path": "backend/routes_meowsurement.py",
+      "bytes": 18318,
+      "sha256": "06a546d54a8d7faca1d2baf9898a3db59dd90cb65dadfb2af49a7e09322e8d62"
+    },
+    {
       "path": "backend/routes_orders.py",
       "bytes": 5733,
       "sha256": "ffc58e9118e5357f1fe0f7b700c262487c3b9d4b515891eff9471412a4a66ea7"
@@ -320,8 +365,8 @@
     },
     {
       "path": "backend/scheduler.py",
-      "bytes": 10229,
-      "sha256": "84223254d0fd01780dcff7ed72e02e20dd9be977260dcf307017c2d3cdf415d7"
+      "bytes": 10653,
+      "sha256": "626117d5116a29c066500f845b7bdc32a976c86a2213fef1c102b9a0d7ffbf92"
     },
     {
       "path": "backend/scripts/render_schema_reference.py",
@@ -345,8 +390,8 @@
     },
     {
       "path": "backend/server.py",
-      "bytes": 7224,
-      "sha256": "0ed6d1a72ee6496f8942b97b4d7b480f0f50dcc8f627cb9997799cc08d36ded5"
+      "bytes": 7457,
+      "sha256": "9ebe5a7d353d22d78d7d2c2f696bff5c84ccdfb1dcc0ae9c5efc187bab129f65"
     },
     {
       "path": "backend/services_excel.py",
@@ -367,6 +412,11 @@
       "path": "backend/sql/002_mysql57_compatibility.sql",
       "bytes": 48060,
       "sha256": "ded61a6458c2fc82196915f0806743e2f18f850318cb353d3d07fdb55e041621"
+    },
+    {
+      "path": "backend/sql/003_customer_meowsurement.sql",
+      "bytes": 33220,
+      "sha256": "46546c187860dcbe8189b8f3c788e2058287ee2607d7f9777318f1d8d8f08529"
     },
     {
       "path": "backend/sql/README.md",
@@ -459,19 +509,29 @@
       "sha256": "fc9876e862f2b6711e207d547a39662e352004204c5234cbf59ee5e61d0e4b12"
     },
     {
+      "path": "backend/tests_mysql/test_meowsurement.py",
+      "bytes": 33253,
+      "sha256": "d8fc20cf86fc93631e390a3dab09ef784d9b0e15ba027f3e2865e5a25e880386"
+    },
+    {
+      "path": "backend/tests_mysql/test_meowsurement_schema.py",
+      "bytes": 14708,
+      "sha256": "9086cda2a5d321b07b820b19ac2d27b1effbdd8a7ea8982240b81dc99d037f91"
+    },
+    {
       "path": "backend/tests_mysql/test_migrations.py",
-      "bytes": 6051,
-      "sha256": "3fabb6083d594f3c55995dff5bdc3c5016c1529cb10ae1010ab61459a266d32e"
+      "bytes": 6413,
+      "sha256": "227cdd2138f0c0af18fa7b7878630a906379d19f287a8f7310fcec406f037ff6"
     },
     {
       "path": "backend/tests_mysql/test_mysql57_guards.py",
-      "bytes": 9920,
-      "sha256": "acd5b2d943ac971c76570ceb872c1284af14b363d3f826b93de7494ed1317ea4"
+      "bytes": 9998,
+      "sha256": "868afdb075e495cd29cd35f9149ed211a04ec97e2a208f80b96e0455828bcea2"
     },
     {
       "path": "backend/tests_mysql/test_mysql_integration.py",
-      "bytes": 5803,
-      "sha256": "66bb166884873598b107eb5510b75916881445e57944fa82845a55984aef18dc"
+      "bytes": 9728,
+      "sha256": "e1c879e6b142b8ffc7fd9989ee142ae2b726b100af5ebfda36ecacd13b967a7f"
     },
     {
       "path": "backend/tests_mysql/test_optical_features.py",
@@ -489,11 +549,6 @@
       "sha256": "89e506f6356b5328008b8a263fc20b281792935eb9a0c35f6484388c84aeeb6c"
     },
     {
-      "path": "backend/uploads/2026-08/7ff2c4ece9e347e5.png",
-      "bytes": 68,
-      "sha256": "63ef318d96b5d0d0ceba6e04a4e622b1158335cdc67c49e27839132c6f655058"
-    },
-    {
       "path": "compose.mysql.yml",
       "bytes": 1482,
       "sha256": "a3dd003296cddcc9febaec6e81f57e5425bc5c6df24b1ad9ed9ef0359011517c"
@@ -505,8 +560,8 @@
     },
     {
       "path": "docs/FEATURES_AND_RELEASE.md",
-      "bytes": 12615,
-      "sha256": "025ab445dc32219d6efac6a555bb1278942384d6303b6da7ba5c36a9b619f863"
+      "bytes": 12685,
+      "sha256": "64ec10b776351fc1a7c5dc9bece468140ea79829574f9eb65536f8ccc25eaffc"
     },
     {
       "path": "docs/INTEGRATIONS.md",
@@ -535,8 +590,8 @@
     },
     {
       "path": "docs/mysql-migration/STEP_1.md",
-      "bytes": 22093,
-      "sha256": "272ce312dfbf39aec992914f4b4e8923974100a24adb967f3662fa3019001d2b"
+      "bytes": 22477,
+      "sha256": "d3260cae5834376bebc21d96390b42a776f2bd4f29c26fa4bae0c260514dfc40"
     },
     {
       "path": "docs/mysql-migration/STEP_2.md",
@@ -549,14 +604,99 @@
       "sha256": "d2d6612e119050241910094c4a1fad551e57e4f60fcfc3e3a23849edd873102f"
     },
     {
-      "path": "docs/qa/README.md",
-      "bytes": 872,
-      "sha256": "61f52b2ec35021a68ebcddea5451f190bdde69658cd37ef1d422d635c4b83dc0"
+      "path": "docs/optifit/BROWSER_VALIDATION.json",
+      "bytes": 3445,
+      "sha256": "cd49a6092f773df7fe61efe60839a125c9599c2fd0def2b423dfe2f78d02a0be"
     },
     {
-      "path": "docs/qa/admin-flash-sale.png",
-      "bytes": 113519,
-      "sha256": "0dedc775f3fc9dedd135bb8731f09f4d43b9662d409a63743b4561b60bf4c0c7"
+      "path": "docs/optifit/DESIGN.md",
+      "bytes": 8296,
+      "sha256": "4945bc6258ad640a98670871579fffddb56d127e82b2f514ff5dc42cb6ef3694"
+    },
+    {
+      "path": "docs/optifit/FIELD_VALIDATION_PROTOCOL.md",
+      "bytes": 17511,
+      "sha256": "a5b43609ccb6359658a858a59cdc943b4005dfe5684947c75356646966d15ab8"
+    },
+    {
+      "path": "docs/optifit/MEASUREMENTS.md",
+      "bytes": 15502,
+      "sha256": "ac68c1cf4a8247668d79fdf7bb1d3f6e4b0de5bb4d222abc2efc38422193593a"
+    },
+    {
+      "path": "docs/optifit/README.md",
+      "bytes": 3817,
+      "sha256": "eed4f52d560aea120c161bf7cac10bdc2944c75b0d70b24fa3a67903e60ff88e"
+    },
+    {
+      "path": "docs/optifit/RUNBOOK.md",
+      "bytes": 7353,
+      "sha256": "7be2e0640766d9d56ceef7136ede8d22fb1180bdf5d1ada0f05759b263cef362"
+    },
+    {
+      "path": "docs/optifit/SCHEMA.md",
+      "bytes": 18199,
+      "sha256": "1ef76fa4d1615896f77ad836da22e8ebf9ab92f36ec871a389b3bd95393911a4"
+    },
+    {
+      "path": "docs/optifit/SCHEMA_MYSQL57.sql",
+      "bytes": 33220,
+      "sha256": "46546c187860dcbe8189b8f3c788e2058287ee2607d7f9777318f1d8d8f08529"
+    },
+    {
+      "path": "docs/optifit/SECURITY.md",
+      "bytes": 7439,
+      "sha256": "f9cbdcf3080cf2c75ad3cf6978a7c05c44829b24ec57f4d0e44273dc23f39098"
+    },
+    {
+      "path": "docs/optifit/UI_WIREFRAMES.md",
+      "bytes": 3717,
+      "sha256": "e4bfbfeae3e571605196627cbc828ddb8b06d926126278cd987c9fe4995458bf"
+    },
+    {
+      "path": "docs/optifit/VALIDATION.md",
+      "bytes": 7180,
+      "sha256": "6da0494f755f62a34ff68a6f6bb0b5a25fc2dc8d38438087f5cee71f7e26975a"
+    },
+    {
+      "path": "docs/optifit/legacy-local-vault/BROWSER_VALIDATION.json",
+      "bytes": 3695,
+      "sha256": "6d6b213198038b0c8672db8bef9e671f487468117e5025fdf9db4116c88948d1"
+    },
+    {
+      "path": "docs/optifit/legacy-local-vault/DESIGN.md",
+      "bytes": 23899,
+      "sha256": "e09aa08887a7695b1dd9ae36605f44caba88b8b88f71b3b35923279f3d010541"
+    },
+    {
+      "path": "docs/optifit/legacy-local-vault/README.md",
+      "bytes": 6895,
+      "sha256": "da6457ad158640bd5282f5f5701ba6f038766d4a557567bd5d56ed730f851da8"
+    },
+    {
+      "path": "docs/optifit/legacy-local-vault/RUNBOOK.md",
+      "bytes": 19512,
+      "sha256": "62e4d2b376cd276524da7a7ad290159bf80bf37179c4d91cd70e04706fc1bb5a"
+    },
+    {
+      "path": "docs/optifit/legacy-local-vault/SECURITY.md",
+      "bytes": 10516,
+      "sha256": "e8863b315b9aa5dfd0f4edc7a7dc7848ee187badce832959a63c548009b09ba2"
+    },
+    {
+      "path": "docs/optifit/legacy-local-vault/UI_WIREFRAMES.md",
+      "bytes": 9393,
+      "sha256": "94f44fab5bfd53fd4e2ab4f87402074ff32f78d7699cc681a8e64ae474740496"
+    },
+    {
+      "path": "docs/optifit/legacy-local-vault/VALIDATION.md",
+      "bytes": 8636,
+      "sha256": "50d8ce520c5882e27705ab277095e33811e7b254e4b5fb8e4ebad8041e86ef7e"
+    },
+    {
+      "path": "docs/qa/README.md",
+      "bytes": 877,
+      "sha256": "4042621f8f602b2399ce97b66af95cec7bfd7c37e47d89664f3510024ea0109c"
     },
     {
       "path": "docs/qa/admin-results.json",
@@ -567,16 +707,6 @@
       "path": "docs/qa/customer-browser-results.json",
       "bytes": 3253,
       "sha256": "053110fe76a99d4a6a55a8bf37ad0e0de23ba16e0f9390961984e3123b57ea8b"
-    },
-    {
-      "path": "docs/qa/customer-checkout-mobile.png",
-      "bytes": 268166,
-      "sha256": "000ea9e725991cf3915bbfe73fdb308cf7327ed5690aa938c9467d353eb83b3e"
-    },
-    {
-      "path": "docs/qa/customer-try-on-glb.png",
-      "bytes": 161928,
-      "sha256": "892bf11482bf9decf714ea705a58b1318d08a812fa690995f839005d7bae877c"
     },
     {
       "path": "frontend/.env.example",
@@ -609,19 +739,34 @@
       "sha256": "c11e377c443ef3aa6bf03289e5ee2a2fd9934405610ce9f6699e1a253b377ac7"
     },
     {
+      "path": "frontend/e2e/meowsurement-customer-browser.cjs",
+      "bytes": 26002,
+      "sha256": "fd7c49f49027a4a15dcc3628ed641df94661963517b7d77705e93c6718501709"
+    },
+    {
+      "path": "frontend/e2e/meowsurement-server.py",
+      "bytes": 6084,
+      "sha256": "e1001deb0c4670400e7902b4a6f255cba6d0506a4ad3fc5aab5cbbb7028c36ce"
+    },
+    {
+      "path": "frontend/e2e/optifit-browser.cjs",
+      "bytes": 19854,
+      "sha256": "493814530e7709e218eda07fde941fc3ceb58aa86ba4054cd68e2847cd3e510c"
+    },
+    {
       "path": "frontend/jsconfig.json",
       "bytes": 116,
       "sha256": "696e14c6f246163a299d7ce3bd1003d52bc0fd4d97629ca468fbd38e8fe1f72f"
     },
     {
       "path": "frontend/package-lock.json",
-      "bytes": 769020,
-      "sha256": "f64173d58ba70e9e109128377245d6b08e7d3949cb7673d1df88ace986c0ab39"
+      "bytes": 775509,
+      "sha256": "1dfa2cea57938460b947d891cf5a60545c4199c4010e9b91d90eb4307b2f1e13"
     },
     {
       "path": "frontend/package.json",
-      "bytes": 3152,
-      "sha256": "9959120bb3b3a14692016dfe22bd045b8639bba8fcef3d476e1e7539bc23998c"
+      "bytes": 3216,
+      "sha256": "ccc1f08f6f43f375bb28fb9fba2f4dbd0cf457c2e6a3ad5dba651c1c5e1cfe16"
     },
     {
       "path": "frontend/plugins/health-check/health-endpoints.js",
@@ -640,13 +785,38 @@
     },
     {
       "path": "frontend/public/index.html",
-      "bytes": 6707,
-      "sha256": "75949a4fa3327d4444218d026b2c9cad8d3122879d649c8fb423a363ba2a0fa4"
+      "bytes": 640,
+      "sha256": "46de297ab1948a09e1ed1dfed9f215443defbcf8eeaa5ff6f664a0d2ed385cda"
     },
     {
       "path": "frontend/public/logo-meow.jpg",
       "bytes": 32426,
       "sha256": "27963b05535ba407d3c23bf4885c05c8a38269e24d9d77f9bae38a1d4a2bc20a"
+    },
+    {
+      "path": "frontend/public/meowsurement/fonts/DejaVuSans-Bold.ttf",
+      "bytes": 708920,
+      "sha256": "5c1247acef7f2b8522a31742c76d6adcb5569bacc0be7ceaa4dc39dd252ce895"
+    },
+    {
+      "path": "frontend/public/meowsurement/fonts/DejaVuSans.ttf",
+      "bytes": 759720,
+      "sha256": "ae7b7855e115a5966d8b1b3f80f254ccc117ec86f9965e202ee2940453837280"
+    },
+    {
+      "path": "frontend/public/meowsurement/fonts/LICENSE.txt",
+      "bytes": 3859,
+      "sha256": "63d3ba759d12804c5b31a9d5940d855c1820d1f5999e6b0872eb1c7ff045fbc9"
+    },
+    {
+      "path": "frontend/public/meowsurement/manifest.webmanifest",
+      "bytes": 517,
+      "sha256": "ac64a35a472a183964684810d5a0e0b16d074936cd0f1028f203bb74519f70b4"
+    },
+    {
+      "path": "frontend/scripts/build-optifit-offline.cjs",
+      "bytes": 3226,
+      "sha256": "062b1ecc58cc58ad20231d3298861b3f2360104b2aae90ed397b5643275c0586"
     },
     {
       "path": "frontend/src/App.css",
@@ -655,8 +825,8 @@
     },
     {
       "path": "frontend/src/App.js",
-      "bytes": 8189,
-      "sha256": "754d02a7369f347ee8f8988c877bfcfb7cea310c83f1e75bdd7c27dc9e526d1f"
+      "bytes": 8331,
+      "sha256": "6c9322141cb13fc498ad020bc19c9f6af10ac629a5fc69b9b83e084cad027b3a"
     },
     {
       "path": "frontend/src/components/AddressForm.jsx",
@@ -665,13 +835,23 @@
     },
     {
       "path": "frontend/src/components/AuthCallback.jsx",
-      "bytes": 1914,
-      "sha256": "7ddbfe06eea8d6e6d4647a1c7cb43bffedca7e699cbf78bfd316091f6fda1316"
+      "bytes": 2000,
+      "sha256": "631f131d010594a1163d7a3155c27a928ee216726a6cd54f5d219d765f8378f2"
     },
     {
       "path": "frontend/src/components/CatalogPagination.jsx",
       "bytes": 1949,
       "sha256": "a32d7c8179ef4a8d5374400a52badeb495a1aff0560cc6080dc0b080b3c89734"
+    },
+    {
+      "path": "frontend/src/components/CustomerProfileForm.jsx",
+      "bytes": 11330,
+      "sha256": "c24783a02831a6847ffce6781f97f95b9ecb772e259af4c3365dbf2721e9951a"
+    },
+    {
+      "path": "frontend/src/components/CustomerProfileForm.test.jsx",
+      "bytes": 6254,
+      "sha256": "6c9ad28d1555257709f91687bd6cbb1cc3b8a6ab29709e242452e4f2c83bad9e"
     },
     {
       "path": "frontend/src/components/FloatingWhatsApp.jsx",
@@ -690,13 +870,13 @@
     },
     {
       "path": "frontend/src/components/Layout/AdminLayout.jsx",
-      "bytes": 9280,
-      "sha256": "914421aaed9a6af53f610e7c54081a2328a077c0fc6c16cd604a1802a6501d22"
+      "bytes": 9520,
+      "sha256": "38fb391a4effb1684eb357ff8b6029c0b5af1e5e8c8e159ef1a28fb04b6e8dfe"
     },
     {
       "path": "frontend/src/components/Layout/MainLayout.jsx",
-      "bytes": 13969,
-      "sha256": "774cadacecda1cac86eb252ef6adaca7dbb110df1faa6fc1cf34d325410b3701"
+      "bytes": 14180,
+      "sha256": "e7301051a9e53b0a324c1d855fa71169a63c3aac69a25c3f0b863798ad670a59"
     },
     {
       "path": "frontend/src/components/PrescriptionForm.jsx",
@@ -709,9 +889,14 @@
       "sha256": "a7263bf867c50ba91fb5184e4483f9b58b6ee04e9928f918f4db68c5cc9fb1d8"
     },
     {
+      "path": "frontend/src/components/ProductMeowsurement.jsx",
+      "bytes": 3466,
+      "sha256": "cf2fe9440c70a29b148b9786c3c3357f3a3230efe56e7434e65997fc8181ffbf"
+    },
+    {
       "path": "frontend/src/components/ProtectedRoute.jsx",
-      "bytes": 938,
-      "sha256": "3d2feb36b1494875443a52a38070c3612f2828119b87ec6186af76f4642d48f0"
+      "bytes": 972,
+      "sha256": "e9945d05067b16ce26348fa8b4d836035336ddec6cb14e4ffa85fd00e9e4b788"
     },
     {
       "path": "frontend/src/components/PurchaseRatings.jsx",
@@ -995,13 +1180,13 @@
     },
     {
       "path": "frontend/src/index.css",
-      "bytes": 3983,
-      "sha256": "8d9370aedcc4e6e197c95616224519a6d0652aaa27a8790a2cf8b7741068d1c4"
+      "bytes": 3764,
+      "sha256": "cb18096d0a1a6834f8c08af1523d1e4b8d75d1b411054f95e9ac0326f220b75a"
     },
     {
       "path": "frontend/src/index.js",
-      "bytes": 555,
-      "sha256": "134613d942bfe37921682e2c972474b186dfc4f6f6b42dce14c6026067384472"
+      "bytes": 1924,
+      "sha256": "e8cff13601de7f3200ac767e29f58ba45c6f4b4801eab47f04a955fe3b3f9584"
     },
     {
       "path": "frontend/src/lib/api.js",
@@ -1009,9 +1194,219 @@
       "sha256": "33bd394540f2c75e4a456a20757d444779668954dd01d7a1871cedcd1e077af6"
     },
     {
+      "path": "frontend/src/lib/authReturn.js",
+      "bytes": 2938,
+      "sha256": "5de9fba156f3145b2d160c6fc6588b2d8faf210c1c56c56d88b6e7d0802af354"
+    },
+    {
+      "path": "frontend/src/lib/authReturn.test.js",
+      "bytes": 2542,
+      "sha256": "6836f37ddeb67dd5b8201c53396e8dfddead9c0e7d35d1b494e43eefb72abcd8"
+    },
+    {
+      "path": "frontend/src/lib/customerProfile.js",
+      "bytes": 3592,
+      "sha256": "c8bd378c798d4b26c8e75d42c19536854f1482af1d803d079f5ff12a5725863f"
+    },
+    {
       "path": "frontend/src/lib/utils.js",
       "bytes": 137,
       "sha256": "5ba0ae526d768600bbfb4a4d345c47f6208cb941adbf456de80804a4cf938350"
+    },
+    {
+      "path": "frontend/src/optifit/CustomerMeowsurementApp.jsx",
+      "bytes": 25606,
+      "sha256": "5ec41b5111899979bd34c4388d15ac98a54f042d734c7327d4203b3c722ffee1"
+    },
+    {
+      "path": "frontend/src/optifit/CustomerMeowsurementApp.test.jsx",
+      "bytes": 7236,
+      "sha256": "f0c980e98a778f5ad69d7faa80b948dd07ebbfef5074cf26389692d21da3db19"
+    },
+    {
+      "path": "frontend/src/optifit/OptiFitApp.jsx",
+      "bytes": 16068,
+      "sha256": "12b6e900eaab063820bf22ca51acf8ee313f7fd3f01a0af25eb3a9c52ad41bbd"
+    },
+    {
+      "path": "frontend/src/optifit/components/CaptureWorkflow.jsx",
+      "bytes": 35892,
+      "sha256": "15dbc0730720a081e094b4c68b4a1f9ea9e2a813e0e8679e36a4049c028a3cf5"
+    },
+    {
+      "path": "frontend/src/optifit/components/Patients.jsx",
+      "bytes": 14390,
+      "sha256": "767b816d0daa9cc5f86b1af426ea546e998230c0fe043f2b900add3724061c13"
+    },
+    {
+      "path": "frontend/src/optifit/components/Results.jsx",
+      "bytes": 26123,
+      "sha256": "1b7c7b01a3d1fa9b7ef69b7be9fc38b4c8c4bfd7604efdb744bd0f1f87937cca"
+    },
+    {
+      "path": "frontend/src/optifit/components/SessionDataForm.jsx",
+      "bytes": 11633,
+      "sha256": "4ef1e2d26f4d574c34f3cde1b24fee761c0fdc4f6163e3e7ca55870b95330ab2"
+    },
+    {
+      "path": "frontend/src/optifit/components/Settings.jsx",
+      "bytes": 17869,
+      "sha256": "f6b886fb73492a4da0f283c54457b039d0f711b7ee422cbfd8c5e749024a3cc7"
+    },
+    {
+      "path": "frontend/src/optifit/components/VaultGate.jsx",
+      "bytes": 7418,
+      "sha256": "a13e2f7526bc541c5c3df4af22d71ecabff1e7f45b2893f410beed80801a0ff1"
+    },
+    {
+      "path": "frontend/src/optifit/components/measurementContext.js",
+      "bytes": 128,
+      "sha256": "d619bca109f533374ee4036bb60c971e87cf055594d1a737767ed5d83fda1a01"
+    },
+    {
+      "path": "frontend/src/optifit/components/ui.jsx",
+      "bytes": 7142,
+      "sha256": "50966fe2726b956dfe120598409135a595dac7d7086de04194e6ff5a2ce251ae"
+    },
+    {
+      "path": "frontend/src/optifit/components/ui.test.jsx",
+      "bytes": 11572,
+      "sha256": "e120ab3a22053ffa6b6056affe27c374453a092efb3b04f49fa2fd336a0422fa"
+    },
+    {
+      "path": "frontend/src/optifit/customer.css",
+      "bytes": 2975,
+      "sha256": "87d96fb93986b4a4be3a1ca3b582090c922abb1827756453e6473abe823c8fac"
+    },
+    {
+      "path": "frontend/src/optifit/domain/measurementContext.js",
+      "bytes": 2302,
+      "sha256": "1e0d9ee019f6bd9cf25a91120d311589bc62e1c90e2973072c2c7136160b8ef6"
+    },
+    {
+      "path": "frontend/src/optifit/domain/workflow.js",
+      "bytes": 15575,
+      "sha256": "8fec1e658072a155a1940cb08ff8163bcdcb45cd8f800554e96580ef0d11889c"
+    },
+    {
+      "path": "frontend/src/optifit/domain/workflow.test.js",
+      "bytes": 7627,
+      "sha256": "908f63f4674dcc9f3575a73e0e44b311711e43520ab754c3fd04894caaa5f614"
+    },
+    {
+      "path": "frontend/src/optifit/entry.jsx",
+      "bytes": 2526,
+      "sha256": "3e82aa212498b1ec7e0125bc342b24f6b6c03e8108322c445dc968824e563e05"
+    },
+    {
+      "path": "frontend/src/optifit/integration.js",
+      "bytes": 2726,
+      "sha256": "5b8cd3290df3aa2b5ed541b337ebc1665172c8fd4b0bc0174be7ae755d4f06a0"
+    },
+    {
+      "path": "frontend/src/optifit/offline.js",
+      "bytes": 1313,
+      "sha256": "92bc7515205ba50d28bbdab79ea24ba2d80f9a77c5553365b0d0d8a373845f96"
+    },
+    {
+      "path": "frontend/src/optifit/optifit.css",
+      "bytes": 30975,
+      "sha256": "7e221923e89239f5a7090ab8cb638eea68dd367e5fe74cf7ec538b8ba193b8fb"
+    },
+    {
+      "path": "frontend/src/optifit/reports/index.js",
+      "bytes": 25058,
+      "sha256": "62dc67177c91b1c9bcab546a74369d7473b9503ff6192df8d4eacadc54835c41"
+    },
+    {
+      "path": "frontend/src/optifit/reports/reports.test.js",
+      "bytes": 6250,
+      "sha256": "e9e30d6b94285e90121f185ebfbfcb862379f310a1a95cb22ac92d0443d3bc7c"
+    },
+    {
+      "path": "frontend/src/optifit/storage/audit.js",
+      "bytes": 2326,
+      "sha256": "aa0907cea322a47636ebef7cf660c457348896d6fdaf2f9d76a8dcd3e457c5ce"
+    },
+    {
+      "path": "frontend/src/optifit/storage/crypto.js",
+      "bytes": 6549,
+      "sha256": "d120cc8d194071df620e8c7289e6769a9416e769f6eb211850cde0a470746d5c"
+    },
+    {
+      "path": "frontend/src/optifit/storage/idb.js",
+      "bytes": 6148,
+      "sha256": "cc4a9bbb5ba5eadb6ead69a87620b7781c9dbae67ffdfd5de04a488162774ffa"
+    },
+    {
+      "path": "frontend/src/optifit/storage/serverWorkspace.js",
+      "bytes": 10625,
+      "sha256": "ad42bdefd16bf653faa59576c2f701e8aa1e41a5eee5566d4d1a57c846d3138a"
+    },
+    {
+      "path": "frontend/src/optifit/storage/serverWorkspace.test.js",
+      "bytes": 6892,
+      "sha256": "0875dd0132e0a1c9f764d3be3fdfd639cfe0088002b5d8d75c6df4c67e77430c"
+    },
+    {
+      "path": "frontend/src/optifit/storage/vault.js",
+      "bytes": 48709,
+      "sha256": "11ee61feb53585a734ec4c744fa3de6338064d582d7d4c0394d83b992ead65c9"
+    },
+    {
+      "path": "frontend/src/optifit/storage/vault.test.js",
+      "bytes": 21659,
+      "sha256": "d8348217f09d549e5afafa74dc2f30c9c6639f07fe16f5351de37764b9f8fc0b"
+    },
+    {
+      "path": "frontend/src/optifit/storage/workspace.js",
+      "bytes": 457,
+      "sha256": "f9c1c10220cc9c60868ccfd59a96d7f433035e6f7fae8dc81c137fabce7bde69"
+    },
+    {
+      "path": "frontend/src/optifit/vision/CameraCapture.jsx",
+      "bytes": 16626,
+      "sha256": "ee858ed7c8209f3734072bde31beef40d38ec76063a81cea4495ff61673b4b1d"
+    },
+    {
+      "path": "frontend/src/optifit/vision/LandmarkEditor.jsx",
+      "bytes": 16903,
+      "sha256": "39bd5ebd36abc123991ee94833c270fc00abba9157a35af436fadf8200f269ee"
+    },
+    {
+      "path": "frontend/src/optifit/vision/components.test.jsx",
+      "bytes": 6184,
+      "sha256": "b303a7e3cce196e81dce89d97ead1c61eadfca8c9c0323cbcb892969661fef6e"
+    },
+    {
+      "path": "frontend/src/optifit/vision/constants.js",
+      "bytes": 2124,
+      "sha256": "3eff0c3e9f506ed188196fd0a0b7a52ec42574705da72503a52a5c996f426508"
+    },
+    {
+      "path": "frontend/src/optifit/vision/geometry.js",
+      "bytes": 10254,
+      "sha256": "7cdde04389ed3ce7ce9e2ceda9f2de22337654e4824cc11b0dbc4d5195f4830c"
+    },
+    {
+      "path": "frontend/src/optifit/vision/index.js",
+      "bytes": 507,
+      "sha256": "1abe8adba4cb364c3f2805134999beca8162a83fe06258f321d92aa94af527c4"
+    },
+    {
+      "path": "frontend/src/optifit/vision/measurements.js",
+      "bytes": 13386,
+      "sha256": "6ce39d01373564b691d157f65b9612666e93d87b5af0929d647e22d9555e2558"
+    },
+    {
+      "path": "frontend/src/optifit/vision/quality.js",
+      "bytes": 17084,
+      "sha256": "1efe4db5bdbbe865ab23196704e40cab0cb7c7f929b2e5bad8661db5a5a2dcb2"
+    },
+    {
+      "path": "frontend/src/optifit/vision/vision.test.js",
+      "bytes": 14563,
+      "sha256": "4c590e6a33de5f188279824304564c6692ef54dc0576d18647e8f72a03a1d8a8"
     },
     {
       "path": "frontend/src/pages/AddressesPage.jsx",
@@ -1070,8 +1465,8 @@
     },
     {
       "path": "frontend/src/pages/LoginPage.jsx",
-      "bytes": 5237,
-      "sha256": "edde6ef4a853d8b546f0ce830b1f8f69b474093712e02b0b28314ea8017ac38c"
+      "bytes": 5502,
+      "sha256": "8d57bed410824ff7fc3ab0545b1ab7731ad5435167da895ba19c857e76347959"
     },
     {
       "path": "frontend/src/pages/NewsletterPage.jsx",
@@ -1105,13 +1500,13 @@
     },
     {
       "path": "frontend/src/pages/ProductDetailPage.jsx",
-      "bytes": 24245,
-      "sha256": "f48cea85410253c73232e58ed9abe5577a81b964e4e2b6decf4c3d1406abf1ea"
+      "bytes": 24429,
+      "sha256": "596e6afe3c3a95bcecc82280fd1fa71ef86d2866362e446f3491505dede08b44"
     },
     {
       "path": "frontend/src/pages/ProductDetailPage.test.jsx",
-      "bytes": 4508,
-      "sha256": "c4fb4da47c8f58f15bde7bc9c597c22d2dd2533d602e9ba2597d9bc0aa5ab8da"
+      "bytes": 5508,
+      "sha256": "b7739f8300cc50f4db9a2a4ee4ecb8ea00143e2b4e9be4b91fadc642eaa36b74"
     },
     {
       "path": "frontend/src/pages/ProductsPage.jsx",
@@ -1120,13 +1515,13 @@
     },
     {
       "path": "frontend/src/pages/ProfilePage.jsx",
-      "bytes": 2871,
-      "sha256": "78b31a09880e889b160bb16fddb2e0899357dfecb869487be428db444ca46f39"
+      "bytes": 3332,
+      "sha256": "0285981ffb50016b9d5d55263e19de7963e4497c9fe292a35cc195dea03313be"
     },
     {
       "path": "frontend/src/pages/RegisterPage.jsx",
-      "bytes": 3143,
-      "sha256": "b1336501aa2ba39ce62e875ab85bbb993fae05279a25cb462d8c5431832ad809"
+      "bytes": 3564,
+      "sha256": "b2b64d7c0dd97a5461851ba84bd55f2807f8567e546a8d8d1f188b8c05beb2a7"
     },
     {
       "path": "frontend/src/pages/RoulettePage.jsx",
@@ -1199,14 +1594,24 @@
       "sha256": "7182dec3f25047e2e1d253ad9c963955a54035ed9665c822a231f40ae3742ca7"
     },
     {
+      "path": "frontend/src/pages/admin/AdminMeowsurement.jsx",
+      "bytes": 6163,
+      "sha256": "e283c1cfd2bcb60dbd66b8b24eee847ed4ca36221a4a1c42cb25677defb59fc2"
+    },
+    {
+      "path": "frontend/src/pages/admin/AdminMeowsurement.test.jsx",
+      "bytes": 2443,
+      "sha256": "128ac8a542d1f7898e9dd75d3968edf86d9fed8c139d103b4e3b74b3b11c8159"
+    },
+    {
       "path": "frontend/src/pages/admin/AdminOrders.jsx",
       "bytes": 12805,
       "sha256": "bce1450ed0433e6cb95cf55e62535f3c5355cc0dcf34263af2fa75c35ee46f68"
     },
     {
       "path": "frontend/src/pages/admin/AdminProducts.jsx",
-      "bytes": 14849,
-      "sha256": "0fe17275d42111cefa9e445e3cdfccfcdccf5e373250e77cd75bbffaa778cb90"
+      "bytes": 15466,
+      "sha256": "c4304d65a8a3883fd5d126a3da4cc81e4a2e3c04a7106783e5c23ba45913f68b"
     },
     {
       "path": "frontend/src/pages/admin/AdminPromos.jsx",
@@ -1217,6 +1622,16 @@
       "path": "frontend/src/pages/admin/AdminReports.jsx",
       "bytes": 2309,
       "sha256": "f46a5d7a4853c94c0df3d5c90cb91ba11f2581a207c9722d1317e30b18f40472"
+    },
+    {
+      "path": "frontend/src/pages/admin/FrameSpecificationEditor.jsx",
+      "bytes": 9847,
+      "sha256": "a789cc8f73038d10583e21ef4ea2e93c9f0344504d37be818234232a3e15eb37"
+    },
+    {
+      "path": "frontend/src/pages/admin/FrameSpecificationEditor.test.jsx",
+      "bytes": 4312,
+      "sha256": "582e57ca0f1a8088eaa0afd4bb020a8e22a240d9fcbc04aa38d40378fb01764e"
     },
     {
       "path": "frontend/src/pages/admin/PublicationButton.jsx",

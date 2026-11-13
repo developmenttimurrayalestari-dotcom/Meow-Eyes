@@ -96,6 +96,10 @@ class FakeEverpro:
             "duration_type": "day", "is_flat_rate": False, "is_use_wood_packing": False,
         }]}}
 
+    async def locations(self, postal_code):
+        return {'data': [{'postal_code': postal_code, 'province_name': 'DKI Jakarta', 'city_name': 'Jakarta',
+                          'district_name': 'Gambir', 'sub_district_name': 'Cideng', 'sub_district_id': 8839}]}
+
     async def create_shipment(self, payload):
         self.bookings.append(payload)
         self.remote[payload["client_order_no"]] = dict(payload)
@@ -135,6 +139,9 @@ def adapters(env, monkeypatch):
 
 async def prepared(adapters, *, points=0):
     fixture = await seed_commerce_fixture(bundle=False, quantity=1)
+    async with session_scope() as s:
+        address = await s.get(m.Address, fixture['address'])
+        address.district, address.subdistrict = 'Gambir', 'Cideng'
     options = await service.shipping_options(fixture["alice"], fixture["address"], [fixture["cart"]])
     option = options["options"][0]
     fixture["req"] = fixture["req"].model_copy(update={"courier_code": option["courier_code"],

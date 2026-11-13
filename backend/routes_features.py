@@ -29,7 +29,7 @@ from mysql.base import utcnow
 from mysql.catalog import apply_fields, flash_dict, get_or_404, safe_values, validate_payload
 from mysql.commerce import integer, lock_user, money, prescription_payload, save_prescription
 from mysql.features import (normalize_whatsapp_phone, order_can_be_reviewed, published_try_on_conditions,
-                            refresh_category_flash_sale, safe_web_url)
+                            refresh_category_flash_sale, safe_web_url, TRY_ON_PRODUCT_TYPES)
 
 router = APIRouter(tags=["optical-features"])
 PRIVATE_UPLOAD_ROOT = Path(os.environ.get("PRIVATE_UPLOAD_ROOT", str(Path(__file__).parent / "private_uploads"))).resolve()
@@ -185,6 +185,22 @@ async def prescription_download(upload_id: str, user: User = Depends(current_use
                                  "Content-Security-Policy": "default-src 'none'; sandbox"})
 
 
+@router.get("/cart/{cart_item_id}/lens-options")
+async def cart_lens_options(cart_item_id: str, user: User = Depends(current_user)):
+    from mysql.lenses import available_indexes, indexes_payload, product_lens_types
+    async with read_session() as s:
+        item = await s.scalar(select(m.CartItem).where(m.CartItem.id == cart_item_id, m.CartItem.user_id == user.user_id))
+        if item is None:
+            raise HTTPException(404, "Item keranjang tidak ditemukan")
+        product = await s.get(m.Product, item.product_id)
+        if product is None or product.deleted_at or not product.is_active:
+            raise HTTPException(422, "Produk sudah tidak tersedia")
+        types = await product_lens_types(s, product.id)
+        return {"items": await indexes_payload(s, await available_indexes(s, product)),
+                "included_in_package": product.product_type == 'package',
+                "lens_types": [{"id": row.id, "name": row.name} for row in types]}
+
+
 @router.patch("/cart/{cart_item_id}/prescription")
 async def update_cart_prescription(cart_item_id: str, payload: dict[str, Any], user: User = Depends(current_user)):
     async with session_scope() as s:
@@ -194,12 +210,29 @@ async def update_cart_prescription(cart_item_id: str, payload: dict[str, Any], u
         if item is None:
             raise HTTPException(404, "Item keranjang tidak ditemukan")
         product = await s.get(m.Product, item.product_id)
-        if product is None or product.product_type != "frame" or not item.lens_product_id:
-            raise HTTPException(422, "Resep tersedia untuk pembelian frame dan lensa")
-        prescription = await save_prescription(s, user.user_id, payload)
-        item.prescription_id = prescription.id if prescription else None
+        if product is None or product.deleted_at is not None or not product.is_active:
+            raise HTTPException(422, "Produk sudah tidak tersedia untuk pengisian resep")
+        frame_only = payload.get('frame_only', False)
+        if not isinstance(frame_only, bool) or (frame_only and product.product_type != 'frame'):
+            raise HTTPException(422, 'Pilihan beli frame saja hanya berlaku untuk produk Frame')
+        if frame_only:
+            if payload.get('lens_index_id') not in (None, ''):
+                raise HTTPException(422, 'Beli frame saja tidak dapat digabung dengan pilihan lensa')
+            item.lens_index_id = item.lens_variant_id = item.lens_product_id = None
+        elif 'lens_index_id' in payload:
+            from mysql.lenses import validate_index
+            index = await validate_index(s, product, payload['lens_index_id'], lock=True)
+            item.lens_index_id = index.id if index else None
+        prescription_fields = {key: value for key, value in payload.items() if key not in {'lens_index_id', 'frame_only'}}
+        if prescription_fields or not ({'lens_index_id', 'frame_only'} & payload.keys()):
+            prescription = await save_prescription(s, user.user_id, prescription_fields)
+            item.prescription_id = prescription.id if prescription else None
         await s.flush()
-        return {"ok": True, "prescription": await prescription_payload(s, item.prescription_id)}
+        from mysql.commerce import priced_cart
+        from routes_shopping import _cart_payload
+        priced, _ = await priced_cart(s, user.user_id, [item.id], require_stock=False)
+        return {"ok": True, "prescription": await prescription_payload(s, item.prescription_id),
+                "cart_item": await _cart_payload(s, priced[0])}
 
 
 @router.get("/orders/{order_id}/review-eligibility")
@@ -278,11 +311,11 @@ async def _validate_try_on(s, payload: dict) -> dict:
     data = validate_payload(TryOnInput, payload)
     if data["asset_type"] not in {"image", "glb", "gltf"} or data["status"] not in {"draft", "published", "archived"}:
         raise HTTPException(422, "Jenis aset atau status Virtual Try-On tidak valid")
-    if not await s.scalar(select(m.Product.id).where(m.Product.id == data["product_id"], m.Product.product_type == "frame")):
-        raise HTTPException(422, "Virtual Try-On hanya tersedia untuk produk frame")
+    if not await s.scalar(select(m.Product.id).where(m.Product.id == data["product_id"], m.Product.product_type.in_(TRY_ON_PRODUCT_TYPES), m.Product.deleted_at.is_(None))):
+        raise HTTPException(422, "Virtual Try-On hanya tersedia untuk produk Frame atau Paket yang belum dihapus")
     if data["variant_id"] and not await s.scalar(select(m.ProductVariant.id).where(
         m.ProductVariant.id == data["variant_id"], m.ProductVariant.product_id == data["product_id"])):
-        raise HTTPException(422, "Varian bukan milik produk frame ini")
+        raise HTTPException(422, "Varian bukan milik produk ini")
     data["upload_id"] = data["upload_id"] or None
     data["source_url"] = data["source_url"] or None
     if bool(data["upload_id"]) == bool(data["source_url"]):
@@ -329,7 +362,7 @@ async def _try_on_assets(s, assets):
 async def public_try_on(product_id: str, variant_id: str | None = None):
     async with read_session() as s:
         if not await s.scalar(select(m.Product.id).where(m.Product.id == product_id,
-            m.Product.is_active.is_(True), m.Product.product_type == "frame")):
+            m.Product.is_active.is_(True), m.Product.deleted_at.is_(None), m.Product.product_type.in_(TRY_ON_PRODUCT_TYPES))):
             raise HTTPException(404, "Frame tidak ditemukan")
         stmt = select(m.VirtualTryOnAsset).where(m.VirtualTryOnAsset.product_id == product_id,
                                                *published_try_on_conditions())
@@ -340,6 +373,21 @@ async def public_try_on(product_id: str, variant_id: str | None = None):
             stmt = stmt.where(or_(m.VirtualTryOnAsset.variant_id.is_(None), m.VirtualTryOnAsset.variant_id == variant_id))
         assets = (await s.scalars(stmt.order_by(m.VirtualTryOnAsset.sort_order, m.VirtualTryOnAsset.id).limit(50))).all()
         return {"assets": await _try_on_assets(s, assets)}
+
+@router.get('/try-on/catalog')
+async def try_on_catalog(q: str = '', offset: int = Query(0, ge=0)):
+    from mysql.features import public_products
+    async with read_session() as s:
+        supported = select(m.VirtualTryOnAsset.product_id).where(*published_try_on_conditions())
+        query = select(m.Product).where(m.Product.product_type.in_(TRY_ON_PRODUCT_TYPES), m.Product.is_active.is_(True), m.Product.deleted_at.is_(None), m.Product.id.in_(supported))
+        if q: query = query.where(m.Product.name.contains(q, autoescape=True) | m.Product.sku.contains(q, autoescape=True))
+        products = (await s.scalars(query.order_by(m.Product.name, m.Product.id).offset(offset).limit(30))).all()
+        data = await public_products(s, products)
+        if data:
+            rows = (await s.scalars(select(m.VirtualTryOnAsset).where(m.VirtualTryOnAsset.product_id.in_([p.id for p in products]), *published_try_on_conditions()).order_by(m.VirtualTryOnAsset.sort_order, m.VirtualTryOnAsset.id))).all()
+            assets = await _try_on_assets(s, rows)
+            for product in data: product['try_on_assets'] = [a for a in assets if a['product_id'] == product['id']]
+        return {'products': data, 'next_offset': offset + 30 if len(data) == 30 else None}
 
 
 @router.get("/admin/try-on-assets")
@@ -429,6 +477,9 @@ async def update_flash_sale(flash_id: str, payload: dict[str, Any], admin: User 
                 price = money(patch["flash_price"])
                 if price < 0:
                     raise HTTPException(422, "Harga Flash Sale tidak boleh negatif")
+                if item.flash_price != price:
+                    # An explicit admin price becomes a manual product override.
+                    item.source_category_id = None
                 item.flash_price = price
             if "quota" in patch:
                 quota = integer(patch["quota"], "Kuota")
@@ -446,7 +497,7 @@ async def update_flash_sale(flash_id: str, payload: dict[str, Any], admin: User 
 @router.post("/admin/flash-sales/{flash_id}/refresh-categories")
 async def refresh_flash_sale(flash_id: str, admin: User = Depends(current_admin)):
     async with session_scope() as s:
-        count = await refresh_category_flash_sale(s, flash_id)
+        count = await refresh_category_flash_sale(s, flash_id, reprice_existing=True)
         flash = await get_or_404(s, m.FlashSale, flash_id)
         return {"ok": True, "added_products": count,
                 "flash_sale": await flash_dict(s, flash, include_inactive=True)}

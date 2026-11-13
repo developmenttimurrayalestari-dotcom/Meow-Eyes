@@ -1,0 +1,13 @@
+{
+  "ok": true,
+  "api": "mocked; no store account/session writes",
+  "googleConsent": "mock SDK; real Google login requires store OAuth Client ID",
+  "nativeSignupAndPin": true,
+  "nativeLoginAndSafeReturn": true,
+  "backendErrorsVisible": true,
+  "missingConfigurationFallback": true,
+  "mobileNoOverflow": true,
+  "exchanges": 3,
+  "brokerRequests": [],
+  "errors": []
+}

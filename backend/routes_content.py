@@ -89,10 +89,11 @@ async def get_knowledge(slug: str):
 
 @router.get("/lens/indexes")
 async def list_lens_indexes():
+    from mysql.lenses import indexes_payload
     async with read_session() as s:
         rows = (await s.scalars(select(m.LensIndex).where(m.LensIndex.is_active.is_(True))
-            .order_by(m.LensIndex.sort_order, m.LensIndex.id).limit(20))).all()
-        return {"items": [row_dict(row) for row in rows]}
+            .order_by(m.LensIndex.sort_order, m.LensIndex.id))).all()
+        return {"items": await indexes_payload(s, rows)}
 
 
 @router.get("/lens/options-for-frame/{frame_product_id}")
@@ -187,6 +188,16 @@ async def list_faqs():
         items = (await s.scalars(select(m.FAQ).where(m.FAQ.is_active.is_(True))
             .order_by(m.FAQ.sort_order, m.FAQ.id).limit(200))).all()
         return {"categories": [row_dict(c) for c in categories], "items": [row_dict(i) for i in items]}
+
+
+@router.get("/pages")
+async def published_pages():
+    """Public navigation metadata only; drafts and full HTML stay out of the list."""
+    async with read_session() as s:
+        rows = (await s.execute(select(m.CMSPage.id, m.CMSPage.slug, m.CMSPage.title, m.CMSPage.page_type)
+            .where(m.CMSPage.status == "published")
+            .order_by(m.CMSPage.title, m.CMSPage.slug, m.CMSPage.id))).all()
+        return {"pages": [dict(row._mapping) for row in rows]}
 
 
 @router.get("/pages/{slug}")

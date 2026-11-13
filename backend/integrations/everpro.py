@@ -6,6 +6,8 @@ host and callback key are supplied by Everpro during merchant onboarding.
 from __future__ import annotations
 
 import asyncio
+from collections import OrderedDict
+from copy import deepcopy
 import time
 from typing import Any
 from urllib.parse import quote
@@ -21,6 +23,7 @@ class EverproClient:
         self.settings, self.transport = settings, transport
         self._token, self._expires = "", 0.0
         self._token_lock = asyncio.Lock()
+        self._locations_cache = OrderedDict()
 
     async def _send(self, method: str, target: str, *, payload: dict | None = None,
                     params: dict | None = None, token: str | None = None) -> tuple[int, dict]:
@@ -69,7 +72,54 @@ class EverproClient:
         return body
 
     async def locations(self, postal_code: str) -> dict:
-        return await self.request("POST", "/location/v1/postalcode", payload={"postal_code": postal_code})
+        return await self._location_request('POST', '/location/v1/postalcode', payload={'postal_code': postal_code})
+
+    async def _location_request(self, method, path, *, payload=None, params=None):
+        key = (path, tuple(sorted((payload or params or {}).items())))
+        cached = self._locations_cache.get(key)
+        if cached and cached[0] > time.monotonic():
+            self._locations_cache.move_to_end(key)
+            return deepcopy(cached[1])
+        try:
+            result = await self.request(method, path, payload=payload, params=params)
+        except ProviderError as exc:
+            if exc.code != 'not_found':
+                raise
+            result = {'data': []}
+        if not isinstance(result.get('data'), list):
+            raise ProviderError('everpro', 'invalid_locations_response')
+        self._locations_cache[key] = (time.monotonic() + 3600, deepcopy(result))
+        self._locations_cache.move_to_end(key)
+        while len(self._locations_cache) > 256:
+            self._locations_cache.popitem(last=False)
+        return result
+
+    async def regions(self, level: str, parent_id: str | None = None) -> list[dict]:
+        fields = {'provinces': ('provinces', 'province', None), 'cities': ('cities', 'city', 'province_id'),
+                  'districts': ('districts', 'district', 'city_id'), 'subdistricts': ('sub-districts', 'sub_district', 'district_id')}
+        path, prefix, parent = fields[level]
+        if parent and not parent_id:
+            raise ValueError('A parent region is required')
+        body = await self._location_request('GET', '/location/v1/' + path, params={parent: parent_id} if parent else None)
+        result, seen = [], set()
+        for row in body['data']:
+            if not isinstance(row, dict):
+                raise ProviderError('everpro', 'invalid_locations_response')
+            identity, name = row.get(prefix + '_id'), row.get(prefix + '_name')
+            if isinstance(identity, bool) or not isinstance(identity, (str, int)) or not str(identity).strip() or len(str(identity)) > 128 or not isinstance(name, str) or not 1 <= len(name.strip()) <= 128:
+                raise ProviderError('everpro', 'invalid_locations_response')
+            identity = str(identity)
+            if identity in seen:
+                raise ProviderError('everpro', 'invalid_locations_response')
+            seen.add(identity)
+            item = {'id': identity, 'name': name.strip()}
+            if level == 'subdistricts':
+                postal = str(row.get('postal_code', ''))
+                if len(postal) != 5 or not postal.isascii() or not postal.isdigit():
+                    raise ProviderError('everpro', 'invalid_locations_response')
+                item['postal_code'] = postal
+            result.append(item)
+        return sorted(result, key=lambda row: (row['name'].casefold(), row['id']))
 
     async def rates(self, payload: dict) -> dict:
         return await self.request("POST", "/shipment/v2/rates", payload=payload)

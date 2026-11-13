@@ -1,0 +1,22 @@
+{
+  "api": "mocked; no store database writes",
+  "viewport": "390x844",
+  "cards": 5,
+  "manualWithoutProductAndED": true,
+  "catalogWithoutED": true,
+  "fieldsScoped": true,
+  "cameraControlsAttached": true,
+  "customerCaptureDoesNotClaimOperatorVerification": true,
+  "captureAndAnnotation": true,
+  "illustratedGuides": {
+    "allFiveTypes": true,
+    "mobileAndDesktop": true,
+    "darkTheme": true,
+    "frameOnly": true,
+    "autoAForFront": true,
+    "autoBForSide": true,
+    "noExtraScaleInput": true,
+    "guideDoesNotInsertPhotoPoints": true
+  },
+  "errors": []
+}

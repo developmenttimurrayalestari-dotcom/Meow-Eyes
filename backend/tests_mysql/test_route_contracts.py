@@ -21,11 +21,17 @@ def _routes(path):
     return sorted(routes)
 
 
-def test_all_original_159_route_paths_and_methods_are_preserved():
+def test_original_routes_are_preserved_except_replaced_google_broker():
     expected = json.loads((BACKEND / "tests_mysql/fixtures/legacy_routes.json").read_text())
     for name, routes in expected.items():
         actual = {tuple(route) for route in _routes(BACKEND / name)}
-        assert {tuple(route) for route in routes}.issubset(actual), name
+        retired = {('POST', '/auth/google-session')} if name == 'routes_auth.py' else set()
+        # The Google authentication replacement explicitly retires the broker.
+        # Every other original API contract remains required by this fixture.
+        assert ({tuple(route) for route in routes} - retired).issubset(actual), name
+        assert not (actual & retired), name
+        if name == 'routes_auth.py':
+            assert {('GET', '/auth/google/config'), ('POST', '/auth/google')}.issubset(actual)
     assert sum(map(len, expected.values())) == 159
 
 

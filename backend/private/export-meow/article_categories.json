@@ -1,0 +1,7 @@
+[
+{"_id": {"$oid": "6adb149adb3269dbc6aa4c85"}, "id": "acat_009c491770594be0", "name": "Tips Kacamata", "slug": "tips-kacamata", "description": null, "is_active": true, "sort_order": {"$numberInt": "0"}, "created_at": "2026-10-23T08:02:34.122919+00:00"},
+{"_id": {"$oid": "6adb149adb3269dbc6aa4c86"}, "id": "acat_602dcfc180cb4af3", "name": "Fashion Eyewear", "slug": "fashion-eyewear", "description": null, "is_active": true, "sort_order": {"$numberInt": "1"}, "created_at": "2026-10-23T08:02:34.151182+00:00"},
+{"_id": {"$oid": "6adb149adb3269dbc6aa4c87"}, "id": "acat_fcb176f9b99a4779", "name": "Kesehatan Mata", "slug": "kesehatan-mata", "description": null, "is_active": true, "sort_order": {"$numberInt": "2"}, "created_at": "2026-10-23T08:02:34.177913+00:00"},
+{"_id": {"$oid": "6adb149adb3269dbc6aa4c88"}, "id": "acat_b4b83e879b5641f4", "name": "Promo & Event", "slug": "promo-event", "description": null, "is_active": true, "sort_order": {"$numberInt": "3"}, "created_at": "2026-10-23T08:02:34.208013+00:00"},
+{"_id": {"$oid": "6adb149adb3269dbc6aa4c89"}, "id": "acat_a3920640b41e4715", "name": "Panduan Belanja", "slug": "panduan-belanja", "description": null, "is_active": true, "sort_order": {"$numberInt": "4"}, "created_at": "2026-10-23T08:02:34.228877+00:00"}
+]

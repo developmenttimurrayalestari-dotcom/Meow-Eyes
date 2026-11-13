@@ -1,0 +1,4 @@
+
+INFO  [alembic.runtime.migration] Context impl MySQLImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade 20261112_0011 -> 20261112_0012, Enable Accessories in category/product guards without rewriting store data.

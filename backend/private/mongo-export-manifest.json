@@ -1,0 +1,234 @@
+{
+  "database": "meow_db",
+  "started_at": "2026-11-09T08:25:00.488741+00:00",
+  "format": "Extended JSON v2 canonical array",
+  "collections": {
+    "addresses": {
+      "documents": 0,
+      "source_collection_exists": false,
+      "bytes": 5,
+      "sha256": "2ba33ca0557f1bb5b7ba88d67f9d0093c7185a36ec51fe2b7bd9372d3e001d6d"
+    },
+    "article_categories": {
+      "documents": 5,
+      "source_collection_exists": true,
+      "bytes": 1276,
+      "sha256": "cd7a28bcaed522c1190204207b9f2307e937588e076c12e30cbaf4d124c16681"
+    },
+    "articles": {
+      "documents": 4,
+      "source_collection_exists": true,
+      "bytes": 5138,
+      "sha256": "2a5d61c5aa8cc3d5dd9b848b3bd9188647f7faf944d97b220116311101bcb162"
+    },
+    "banners_v2": {
+      "documents": 3,
+      "source_collection_exists": true,
+      "bytes": 1906,
+      "sha256": "6c38bab523453b35451ae2ac90e62d19920a94d86ecd6db543b37285e141eb94"
+    },
+    "brands": {
+      "documents": 6,
+      "source_collection_exists": true,
+      "bytes": 1449,
+      "sha256": "5cc6c8b5af39ee24c4d1d548fcd6f99125874c1394d65eb94ba42da0479a4bcb"
+    },
+    "cart_items": {
+      "documents": 0,
+      "source_collection_exists": true,
+      "bytes": 5,
+      "sha256": "2ba33ca0557f1bb5b7ba88d67f9d0093c7185a36ec51fe2b7bd9372d3e001d6d"
+    },
+    "categories": {
+      "documents": 62,
+      "source_collection_exists": true,
+      "bytes": 27389,
+      "sha256": "0dfbc6444344c9aa57bf9ce511c25c337b0fa0801a7e4351d751afc03898b538"
+    },
+    "cms_banners": {
+      "documents": 2,
+      "source_collection_exists": true,
+      "bytes": 710,
+      "sha256": "16f3a1c58ecb952de807a5c3174c9dedcaea2ac505839c3c8c40751ca47186cb"
+    },
+    "cms_pages": {
+      "documents": 5,
+      "source_collection_exists": true,
+      "bytes": 4143,
+      "sha256": "887d3a28aef5ed4756009343b805150a6b94ee904f02831117b60f5172ad283f"
+    },
+    "contact_messages": {
+      "documents": 0,
+      "source_collection_exists": false,
+      "bytes": 5,
+      "sha256": "2ba33ca0557f1bb5b7ba88d67f9d0093c7185a36ec51fe2b7bd9372d3e001d6d"
+    },
+    "contact_settings": {
+      "documents": 1,
+      "source_collection_exists": true,
+      "bytes": 636,
+      "sha256": "babffa19a722f92314139186097e1af21e6da827fb03dbae2f276c6dd4956e86"
+    },
+    "faq_categories": {
+      "documents": 4,
+      "source_collection_exists": true,
+      "bytes": 793,
+      "sha256": "67852385c9e3a8094b8962b84707dd7d702764de81b63501a47ba62321a85051"
+    },
+    "faqs": {
+      "documents": 6,
+      "source_collection_exists": true,
+      "bytes": 2243,
+      "sha256": "b92489c9ef5db23fd1f500cb75727f2b9acf9b4de7a2ee9f6770ac54469f2484"
+    },
+    "flash_sales": {
+      "documents": 2,
+      "source_collection_exists": true,
+      "bytes": 911,
+      "sha256": "fdef7e73ef3baa63958ecba974ac63c5b92d2e38925cf2d054843227e896940e"
+    },
+    "game_scores": {
+      "documents": 0,
+      "source_collection_exists": false,
+      "bytes": 5,
+      "sha256": "2ba33ca0557f1bb5b7ba88d67f9d0093c7185a36ec51fe2b7bd9372d3e001d6d"
+    },
+    "games": {
+      "documents": 3,
+      "source_collection_exists": true,
+      "bytes": 1166,
+      "sha256": "590d90b460ceefed0af195aeb0cd92a1e85aedaf8cc64e77caee8dcc5ca073db"
+    },
+    "lens_indexes": {
+      "documents": 5,
+      "source_collection_exists": true,
+      "bytes": 1812,
+      "sha256": "fd7aa43719009c7aec77c6b26cdac7070df1047b6ed5e7dee989ca22001418ca"
+    },
+    "newsletter_campaigns": {
+      "documents": 0,
+      "source_collection_exists": false,
+      "bytes": 5,
+      "sha256": "2ba33ca0557f1bb5b7ba88d67f9d0093c7185a36ec51fe2b7bd9372d3e001d6d"
+    },
+    "newsletter_subscribers": {
+      "documents": 0,
+      "source_collection_exists": true,
+      "bytes": 5,
+      "sha256": "2ba33ca0557f1bb5b7ba88d67f9d0093c7185a36ec51fe2b7bd9372d3e001d6d"
+    },
+    "order_status_logs": {
+      "documents": 0,
+      "source_collection_exists": false,
+      "bytes": 5,
+      "sha256": "2ba33ca0557f1bb5b7ba88d67f9d0093c7185a36ec51fe2b7bd9372d3e001d6d"
+    },
+    "orders": {
+      "documents": 0,
+      "source_collection_exists": true,
+      "bytes": 5,
+      "sha256": "2ba33ca0557f1bb5b7ba88d67f9d0093c7185a36ec51fe2b7bd9372d3e001d6d"
+    },
+    "payment_logs": {
+      "documents": 0,
+      "source_collection_exists": false,
+      "bytes": 5,
+      "sha256": "2ba33ca0557f1bb5b7ba88d67f9d0093c7185a36ec51fe2b7bd9372d3e001d6d"
+    },
+    "point_logs": {
+      "documents": 0,
+      "source_collection_exists": false,
+      "bytes": 5,
+      "sha256": "2ba33ca0557f1bb5b7ba88d67f9d0093c7185a36ec51fe2b7bd9372d3e001d6d"
+    },
+    "product_knowledges": {
+      "documents": 22,
+      "source_collection_exists": true,
+      "bytes": 16507,
+      "sha256": "f95423c6a4ab5dbb94c34d7b9fde2d01aa055d63147d4f3c7b29c00b8702efff"
+    },
+    "product_reviews": {
+      "documents": 0,
+      "source_collection_exists": false,
+      "bytes": 5,
+      "sha256": "2ba33ca0557f1bb5b7ba88d67f9d0093c7185a36ec51fe2b7bd9372d3e001d6d"
+    },
+    "product_subscriptions": {
+      "documents": 0,
+      "source_collection_exists": true,
+      "bytes": 5,
+      "sha256": "2ba33ca0557f1bb5b7ba88d67f9d0093c7185a36ec51fe2b7bd9372d3e001d6d"
+    },
+    "products": {
+      "documents": 20,
+      "source_collection_exists": true,
+      "bytes": 38112,
+      "sha256": "fb4a82cbe6efce83cf967b74c81a016239f69b6b8dd397bf16e4ecff6f1fc779"
+    },
+    "roulette_rewards": {
+      "documents": 8,
+      "source_collection_exists": true,
+      "bytes": 1919,
+      "sha256": "51e6a644c632ef726c1d39aa4b4a7e81c2d844acc8e97dc1b813abc409410b9f"
+    },
+    "roulette_spins": {
+      "documents": 0,
+      "source_collection_exists": false,
+      "bytes": 5,
+      "sha256": "2ba33ca0557f1bb5b7ba88d67f9d0093c7185a36ec51fe2b7bd9372d3e001d6d"
+    },
+    "shipment_logs": {
+      "documents": 0,
+      "source_collection_exists": false,
+      "bytes": 5,
+      "sha256": "2ba33ca0557f1bb5b7ba88d67f9d0093c7185a36ec51fe2b7bd9372d3e001d6d"
+    },
+    "stock_movements": {
+      "documents": 0,
+      "source_collection_exists": false,
+      "bytes": 5,
+      "sha256": "2ba33ca0557f1bb5b7ba88d67f9d0093c7185a36ec51fe2b7bd9372d3e001d6d"
+    },
+    "stock_reservations": {
+      "documents": 0,
+      "source_collection_exists": true,
+      "bytes": 5,
+      "sha256": "2ba33ca0557f1bb5b7ba88d67f9d0093c7185a36ec51fe2b7bd9372d3e001d6d"
+    },
+    "uploads": {
+      "documents": 0,
+      "source_collection_exists": false,
+      "bytes": 5,
+      "sha256": "2ba33ca0557f1bb5b7ba88d67f9d0093c7185a36ec51fe2b7bd9372d3e001d6d"
+    },
+    "user_sessions": {
+      "documents": 2,
+      "source_collection_exists": true,
+      "bytes": 613,
+      "sha256": "73decca3d30db9e01d29462e9235cf7625a43e38a58da69baed41e8f1c6c8c9b"
+    },
+    "users": {
+      "documents": 3,
+      "source_collection_exists": true,
+      "bytes": 1913,
+      "sha256": "9fe2c30cfd967327b23fd14f7a089310484f14bc47e320979af002d21f09ce8d"
+    },
+    "vouchers": {
+      "documents": 3,
+      "source_collection_exists": true,
+      "bytes": 1658,
+      "sha256": "7caa29c073b20042471bd6308a99e167d75cc0580c318dfd60553d0f7ba471a0"
+    },
+    "wishlists": {
+      "documents": 0,
+      "source_collection_exists": true,
+      "bytes": 5,
+      "sha256": "2ba33ca0557f1bb5b7ba88d67f9d0093c7185a36ec51fe2b7bd9372d3e001d6d"
+    }
+  },
+  "extra_source_collections": [],
+  "consistent_snapshot_guaranteed": false,
+  "status": "completed",
+  "completed_at": "2026-11-09T08:25:02.698994+00:00",
+  "total_documents": 166
+}

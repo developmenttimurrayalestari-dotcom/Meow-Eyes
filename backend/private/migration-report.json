@@ -1,0 +1,358 @@
+{
+  "ok": false,
+  "mode": "dry_run",
+  "plan": {
+    "format_version": 1,
+    "target": "MySQL 5.7.24-log",
+    "schema_revision": "20261109_0003",
+    "export_checksum": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "partial_dataset": false,
+    "ready_for_apply": false,
+    "warning_acknowledgement_required": false,
+    "source_records": 0,
+    "target_rows": 0,
+    "source_counts": {
+      "addresses": 0,
+      "article_categories": 0,
+      "articles": 0,
+      "banners_v2": 0,
+      "brands": 0,
+      "cart_items": 0,
+      "categories": 0,
+      "cms_banners": 0,
+      "cms_pages": 0,
+      "contact_messages": 0,
+      "contact_settings": 0,
+      "faq_categories": 0,
+      "faqs": 0,
+      "flash_sales": 0,
+      "game_scores": 0,
+      "games": 0,
+      "lens_indexes": 0,
+      "newsletter_campaigns": 0,
+      "newsletter_subscribers": 0,
+      "order_status_logs": 0,
+      "orders": 0,
+      "payment_logs": 0,
+      "point_logs": 0,
+      "product_knowledges": 0,
+      "product_reviews": 0,
+      "product_subscriptions": 0,
+      "products": 0,
+      "roulette_rewards": 0,
+      "roulette_spins": 0,
+      "shipment_logs": 0,
+      "stock_movements": 0,
+      "stock_reservations": 0,
+      "uploads": 0,
+      "user_sessions": 0,
+      "users": 0,
+      "vouchers": 0,
+      "wishlists": 0
+    },
+    "target_counts": {},
+    "errors": 37,
+    "warnings": 0,
+    "issues": [
+      {
+        "collection": "addresses",
+        "source_id": "inventory",
+        "field": "file",
+        "code": "missing_collection_file",
+        "severity": "error",
+        "explanation": "Supply an export file, including [] for an intentionally empty collection."
+      },
+      {
+        "collection": "article_categories",
+        "source_id": "inventory",
+        "field": "file",
+        "code": "missing_collection_file",
+        "severity": "error",
+        "explanation": "Supply an export file, including [] for an intentionally empty collection."
+      },
+      {
+        "collection": "articles",
+        "source_id": "inventory",
+        "field": "file",
+        "code": "missing_collection_file",
+        "severity": "error",
+        "explanation": "Supply an export file, including [] for an intentionally empty collection."
+      },
+      {
+        "collection": "banners_v2",
+        "source_id": "inventory",
+        "field": "file",
+        "code": "missing_collection_file",
+        "severity": "error",
+        "explanation": "Supply an export file, including [] for an intentionally empty collection."
+      },
+      {
+        "collection": "brands",
+        "source_id": "inventory",
+        "field": "file",
+        "code": "missing_collection_file",
+        "severity": "error",
+        "explanation": "Supply an export file, including [] for an intentionally empty collection."
+      },
+      {
+        "collection": "cart_items",
+        "source_id": "inventory",
+        "field": "file",
+        "code": "missing_collection_file",
+        "severity": "error",
+        "explanation": "Supply an export file, including [] for an intentionally empty collection."
+      },
+      {
+        "collection": "categories",
+        "source_id": "inventory",
+        "field": "file",
+        "code": "missing_collection_file",
+        "severity": "error",
+        "explanation": "Supply an export file, including [] for an intentionally empty collection."
+      },
+      {
+        "collection": "cms_banners",
+        "source_id": "inventory",
+        "field": "file",
+        "code": "missing_collection_file",
+        "severity": "error",
+        "explanation": "Supply an export file, including [] for an intentionally empty collection."
+      },
+      {
+        "collection": "cms_pages",
+        "source_id": "inventory",
+        "field": "file",
+        "code": "missing_collection_file",
+        "severity": "error",
+        "explanation": "Supply an export file, including [] for an intentionally empty collection."
+      },
+      {
+        "collection": "contact_messages",
+        "source_id": "inventory",
+        "field": "file",
+        "code": "missing_collection_file",
+        "severity": "error",
+        "explanation": "Supply an export file, including [] for an intentionally empty collection."
+      },
+      {
+        "collection": "contact_settings",
+        "source_id": "inventory",
+        "field": "file",
+        "code": "missing_collection_file",
+        "severity": "error",
+        "explanation": "Supply an export file, including [] for an intentionally empty collection."
+      },
+      {
+        "collection": "faq_categories",
+        "source_id": "inventory",
+        "field": "file",
+        "code": "missing_collection_file",
+        "severity": "error",
+        "explanation": "Supply an export file, including [] for an intentionally empty collection."
+      },
+      {
+        "collection": "faqs",
+        "source_id": "inventory",
+        "field": "file",
+        "code": "missing_collection_file",
+        "severity": "error",
+        "explanation": "Supply an export file, including [] for an intentionally empty collection."
+      },
+      {
+        "collection": "flash_sales",
+        "source_id": "inventory",
+        "field": "file",
+        "code": "missing_collection_file",
+        "severity": "error",
+        "explanation": "Supply an export file, including [] for an intentionally empty collection."
+      },
+      {
+        "collection": "game_scores",
+        "source_id": "inventory",
+        "field": "file",
+        "code": "missing_collection_file",
+        "severity": "error",
+        "explanation": "Supply an export file, including [] for an intentionally empty collection."
+      },
+      {
+        "collection": "games",
+        "source_id": "inventory",
+        "field": "file",
+        "code": "missing_collection_file",
+        "severity": "error",
+        "explanation": "Supply an export file, including [] for an intentionally empty collection."
+      },
+      {
+        "collection": "lens_indexes",
+        "source_id": "inventory",
+        "field": "file",
+        "code": "missing_collection_file",
+        "severity": "error",
+        "explanation": "Supply an export file, including [] for an intentionally empty collection."
+      },
+      {
+        "collection": "newsletter_campaigns",
+        "source_id": "inventory",
+        "field": "file",
+        "code": "missing_collection_file",
+        "severity": "error",
+        "explanation": "Supply an export file, including [] for an intentionally empty collection."
+      },
+      {
+        "collection": "newsletter_subscribers",
+        "source_id": "inventory",
+        "field": "file",
+        "code": "missing_collection_file",
+        "severity": "error",
+        "explanation": "Supply an export file, including [] for an intentionally empty collection."
+      },
+      {
+        "collection": "order_status_logs",
+        "source_id": "inventory",
+        "field": "file",
+        "code": "missing_collection_file",
+        "severity": "error",
+        "explanation": "Supply an export file, including [] for an intentionally empty collection."
+      },
+      {
+        "collection": "orders",
+        "source_id": "inventory",
+        "field": "file",
+        "code": "missing_collection_file",
+        "severity": "error",
+        "explanation": "Supply an export file, including [] for an intentionally empty collection."
+      },
+      {
+        "collection": "payment_logs",
+        "source_id": "inventory",
+        "field": "file",
+        "code": "missing_collection_file",
+        "severity": "error",
+        "explanation": "Supply an export file, including [] for an intentionally empty collection."
+      },
+      {
+        "collection": "point_logs",
+        "source_id": "inventory",
+        "field": "file",
+        "code": "missing_collection_file",
+        "severity": "error",
+        "explanation": "Supply an export file, including [] for an intentionally empty collection."
+      },
+      {
+        "collection": "product_knowledges",
+        "source_id": "inventory",
+        "field": "file",
+        "code": "missing_collection_file",
+        "severity": "error",
+        "explanation": "Supply an export file, including [] for an intentionally empty collection."
+      },
+      {
+        "collection": "product_reviews",
+        "source_id": "inventory",
+        "field": "file",
+        "code": "missing_collection_file",
+        "severity": "error",
+        "explanation": "Supply an export file, including [] for an intentionally empty collection."
+      },
+      {
+        "collection": "product_subscriptions",
+        "source_id": "inventory",
+        "field": "file",
+        "code": "missing_collection_file",
+        "severity": "error",
+        "explanation": "Supply an export file, including [] for an intentionally empty collection."
+      },
+      {
+        "collection": "products",
+        "source_id": "inventory",
+        "field": "file",
+        "code": "missing_collection_file",
+        "severity": "error",
+        "explanation": "Supply an export file, including [] for an intentionally empty collection."
+      },
+      {
+        "collection": "roulette_rewards",
+        "source_id": "inventory",
+        "field": "file",
+        "code": "missing_collection_file",
+        "severity": "error",
+        "explanation": "Supply an export file, including [] for an intentionally empty collection."
+      },
+      {
+        "collection": "roulette_spins",
+        "source_id": "inventory",
+        "field": "file",
+        "code": "missing_collection_file",
+        "severity": "error",
+        "explanation": "Supply an export file, including [] for an intentionally empty collection."
+      },
+      {
+        "collection": "shipment_logs",
+        "source_id": "inventory",
+        "field": "file",
+        "code": "missing_collection_file",
+        "severity": "error",
+        "explanation": "Supply an export file, including [] for an intentionally empty collection."
+      },
+      {
+        "collection": "stock_movements",
+        "source_id": "inventory",
+        "field": "file",
+        "code": "missing_collection_file",
+        "severity": "error",
+        "explanation": "Supply an export file, including [] for an intentionally empty collection."
+      },
+      {
+        "collection": "stock_reservations",
+        "source_id": "inventory",
+        "field": "file",
+        "code": "missing_collection_file",
+        "severity": "error",
+        "explanation": "Supply an export file, including [] for an intentionally empty collection."
+      },
+      {
+        "collection": "uploads",
+        "source_id": "inventory",
+        "field": "file",
+        "code": "missing_collection_file",
+        "severity": "error",
+        "explanation": "Supply an export file, including [] for an intentionally empty collection."
+      },
+      {
+        "collection": "user_sessions",
+        "source_id": "inventory",
+        "field": "file",
+        "code": "missing_collection_file",
+        "severity": "error",
+        "explanation": "Supply an export file, including [] for an intentionally empty collection."
+      },
+      {
+        "collection": "users",
+        "source_id": "inventory",
+        "field": "file",
+        "code": "missing_collection_file",
+        "severity": "error",
+        "explanation": "Supply an export file, including [] for an intentionally empty collection."
+      },
+      {
+        "collection": "vouchers",
+        "source_id": "inventory",
+        "field": "file",
+        "code": "missing_collection_file",
+        "severity": "error",
+        "explanation": "Supply an export file, including [] for an intentionally empty collection."
+      },
+      {
+        "collection": "wishlists",
+        "source_id": "inventory",
+        "field": "file",
+        "code": "missing_collection_file",
+        "severity": "error",
+        "explanation": "Supply an export file, including [] for an intentionally empty collection."
+      }
+    ],
+    "reconciliation": {},
+    "validation_scope": "Offline typed/FK/unique/CHECK and source accounting checks; target MySQL collation and runtime locking require server validation."
+  },
+  "error": "source_preflight_errors"
+}

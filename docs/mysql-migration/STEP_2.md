@@ -234,3 +234,87 @@ Frontend tetap seperti semula. Form checkout/rating baru, UI Flash Sale berbasis
 kategori, pagination 15 item, WhatsApp global, menu New Arrival, tombol share,
 CMS tambahan, Virtual Try-On, DOKU nyata dan Everpro nyata mengikuti urutan
 [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md), setelah konfirmasi pengguna.
+
+## Master kategori independen (0006)
+
+Pembaruan `20261112_0008`: Koleksi tidak lagi menjadi master aktif. Tab, filter,
+dan pilihan Koleksi pada produk dihapus; kategori lama menjadi arsip nonaktif
+dan tag produknya dilepas. Bagian Koleksi dalam penjelasan 0006 di bawah adalah
+catatan migrasi historis. Konfigurasi saat ini hanya memiliki lima grup master.
+Lihat [editor dan master produk terbaru](../FEATURES_AND_RELEASE.md#master-produk-dan-editor-deskripsi).
+
+Revisi `20261111_0006` mengganti kategori bertingkat dengan `categories.group_type`
+dan `categories.code`. Kolom `parent_id`, `level`, `category_type`, indeks parent,
+dan foreign key kategori ke dirinya sendiri dihapus. Relasi produk memakai pivot
+`product_categories(product_id, category_id)` yang sudah ada.
+
+Data awal terdiri dari 23 master:
+
+| Grup | Data awal |
+| --- | --- |
+| Jenis Produk (`product_type`) | Frame, Lensa, Paket |
+| Jenis Lensa (`lens_type`) | Single Vision, Bifocal, Progresif, Anti Radiasi (UV420), Photochromic |
+| Gender (`gender`) | Pria, Wanita, Anak-anak, Unisex |
+| Frame Shape (`frame_shape`) | Aviator, Cat Eye, Geometris, Rectangle, Rimless, Round, Square, Oval |
+| Material (`material`) | Acetate, Titanium, Metal |
+
+Admin **Kategori** menampilkan tab dan tabel datar dengan pencarian, pagination,
+Edit, Hapus, serta status Aktif. Master yang masih dipakai produk, promo, atau
+banner tidak dapat dihapus; nonaktifkan bila diperlukan. Grup dan kode tetap
+setelah dibuat supaya arti relasi tidak berubah. Nama tetap dapat diedit.
+
+Form tambah/edit **Produk** menggunakan satu pilihan Jenis Produk dan checkbox
+terpisah untuk grup lain. Backend menyelaraskan tag Jenis Produk dengan enum mesin
+`products.product_type`; ketidaksesuaian ditolak secara atomik. Penggantian tag
+tidak mengganti ID varian maupun stok reserved. `primary_category_id` dipertahankan
+sebagai field kompatibilitas tunggal, tanpa hubungan parent atau dropdown bertingkat.
+
+Filter katalog mengambil master aktif melalui `GET /api/categories`. Parameter
+`GET /api/products?category_ids=id1,id2,...` memakai **OR dalam grup yang sama**
+dan **AND antargrup**. Contoh Pria + Wanita + Titanium berarti produk untuk
+Pria/Wanita yang memiliki Material Titanium. Pilihan master yang sudah nonaktif
+atau hilang menghasilkan pesan filter tidak tersedia. Filter legacy
+`product_type`, `segment`, serta URL kategori tetap diterima.
+
+Migrasi mempertahankan seluruh ID/slug dan pivot lama. Keanggotaan ancestor lama
+disalin menjadi tag eksplisit sekali saat migrasi. Kombinasi lama seperti
+`Round → Pria` menjadi **Koleksi** datar `Round · Pria` dan memperoleh tag Gender
+Pria. Koleksi menjaga URL/banner dan cakupan promo lama. Promo kategori selanjutnya
+memilih keanggotaan tag langsung; tidak ada perluasan ke subkategori. Jenis lensa
+Blue Cut lama dipertahankan terpisah dari UV420. Material hanya diambil dari
+spesifikasi material frame yang eksplisit; rekomendasi bentuk wajah tidak dianggap
+sebagai bentuk frame. Produk lama dapat dilengkapi tag tambahan melalui form Produk.
+
+Jalankan dari direktori `backend`, setelah backup dan menghentikan backend/jobs:
+
+```powershell
+python -m mysql.check_integrity --preflight-only
+python -m alembic upgrade head
+python -m mysql.check_integrity
+```
+
+`0006` memerlukan koneksi online untuk membaca dan memetakan data sebelum ALTER;
+`alembic upgrade head --sql` sengaja ditolak. Jangan stamp revision untuk melewati
+migrasi. MySQL DDL melakukan commit implisit; jika gagal di tengah, periksa skema
+dan backup sebelum retry. Downgrade otomatis ditolak untuk menjaga relasi yang baru.
+Pemetaan kategori asli juga disimpan privat pada setting `taxonomy-0006-archive`.
+Seeder tambahan dapat dijalankan dengan `python -m mysql.seed_masters`; master
+yang sudah ada beserta perubahan nama/status admin tetap dipertahankan.
+
+Kolom Excel `main_category` menerima ID, slug, atau nama unik master. Gunakan ID
+atau slug bila nama sama pada beberapa grup. Untuk memilih banyak master, gunakan
+form Produk; format spreadsheet lama tetap menerima satu master dalam kolom itu.
+
+Setelah migrasi, jalankan kembali backend secara manual menggunakan perintah
+Uvicorn biasa. Migrasi tidak menyalakan proses server.
+
+Validasi perubahan 0006 pada 11 November 2026: 340 tes backend lulus, satu tes
+integrasi yang memerlukan database test kosong dilewati, dan dua tes filesystem
+symlink tidak dijalankan pada Windows ini. Seluruh 193 tes frontend lulus.
+Browser memverifikasi tab/CRUD master, tambah/edit produk, serta kombinasi filter
+desktop dan mobile. Audit MySQL sesudah migrasi memverifikasi 154 trigger dan
+139 aturan baris tanpa masalah. API juga diuji melalui ASGI dengan MySQL aktual,
+tanpa membuka port backend. Backup dan laporan lokal berada di
+`backend/private/backups/flat-masters-before-0006-*.sql` dan
+`backend/private/flat-master-migration-report.json`; data bisnis selain pemetaan
+kategori dibandingkan dengan hash sebelum/sesudah dan tidak berubah.

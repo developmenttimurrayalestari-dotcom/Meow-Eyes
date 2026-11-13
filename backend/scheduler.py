@@ -169,6 +169,25 @@ async def job_reconcile_payments() -> None:
             log.error("Scheduled DOKU reconciliation failed for order %s", order_id)
 
 
+async def job_expire_meowsurement_photos() -> None:
+    from routes_meowsurement import expire_private_photos
+    try:
+        await expire_private_photos()
+    except Exception:
+        # Never log file paths, face photos, prescriptions, or raw DB errors.
+        log.error("Scheduled Meowsurement photo retention cleanup failed")
+        raise
+
+
+async def job_expire_points() -> None:
+    from mysql.commerce import lock_user
+    from mysql.points import expire
+    async with read_session() as s:
+        ids = list((await s.scalars(select(m.PointLot.user_id).where(m.PointLot.remaining > 0, m.PointLot.expires_at <= utcnow()).distinct().order_by(m.PointLot.user_id).limit(500))).all())
+    for user_id in ids:
+        async with session_scope() as s:
+            await expire(s, await lock_user(s, user_id, active=False))
+
 def start_scheduler() -> None:
     defaults = {"max_instances": 1, "coalesce": True, "misfire_grace_time": 60}
     for job_id, handler, minutes in (
@@ -177,6 +196,8 @@ def start_scheduler() -> None:
         ("poll-shipments", job_poll_shipments, SHIPMENT_POLL_INTERVAL_MIN),
         ("auto-complete-orders", job_auto_complete_orders, ORDER_AUTO_COMPLETE_INTERVAL_MIN),
         ("reconcile-payments", job_reconcile_payments, ORDER_EXPIRE_INTERVAL_MIN),
+        ("expire-meowsurement-photos", job_expire_meowsurement_photos, 60),
+        ("expire-points", job_expire_points, 5),
     ):
         scheduler.add_job(handler, id=job_id, replace_existing=True,
                           trigger=IntervalTrigger(minutes=max(minutes, 1)), **defaults)

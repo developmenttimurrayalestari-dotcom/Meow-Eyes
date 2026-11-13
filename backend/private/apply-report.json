@@ -1,0 +1,440 @@
+{
+  "ok": true,
+  "mode": "apply",
+  "plan": {
+    "format_version": 1,
+    "target": "MySQL 5.7.24-log",
+    "schema_revision": "20261109_0003",
+    "export_checksum": "4d07e5eef8170f50c11db6d2f71b2213e004f7f3fd1731ac76c911c483ce9a66",
+    "partial_dataset": false,
+    "ready_for_apply": true,
+    "warning_acknowledgement_required": true,
+    "source_records": 166,
+    "target_rows": 397,
+    "source_counts": {
+      "addresses": 0,
+      "article_categories": 5,
+      "articles": 4,
+      "banners_v2": 3,
+      "brands": 6,
+      "cart_items": 0,
+      "categories": 62,
+      "cms_banners": 2,
+      "cms_pages": 5,
+      "contact_messages": 0,
+      "contact_settings": 1,
+      "faq_categories": 4,
+      "faqs": 6,
+      "flash_sales": 2,
+      "game_scores": 0,
+      "games": 3,
+      "lens_indexes": 5,
+      "newsletter_campaigns": 0,
+      "newsletter_subscribers": 0,
+      "order_status_logs": 0,
+      "orders": 0,
+      "payment_logs": 0,
+      "point_logs": 0,
+      "product_knowledges": 22,
+      "product_reviews": 0,
+      "product_subscriptions": 0,
+      "products": 20,
+      "roulette_rewards": 8,
+      "roulette_spins": 0,
+      "shipment_logs": 0,
+      "stock_movements": 0,
+      "stock_reservations": 0,
+      "uploads": 0,
+      "user_sessions": 2,
+      "users": 3,
+      "vouchers": 3,
+      "wishlists": 0
+    },
+    "target_counts": {
+      "article_categories": 5,
+      "articles": 4,
+      "banners": 5,
+      "brands": 6,
+      "categories": 62,
+      "cms_pages": 5,
+      "contact_settings": 1,
+      "faq_categories": 4,
+      "faqs": 6,
+      "flash_sale_items": 2,
+      "flash_sales": 2,
+      "games": 3,
+      "lens_indexes": 5,
+      "product_badges": 15,
+      "product_categories": 54,
+      "product_images": 60,
+      "product_knowledge_bullets": 44,
+      "product_knowledges": 22,
+      "product_segments": 20,
+      "product_variants": 29,
+      "products": 20,
+      "roulette_rewards": 8,
+      "user_permissions": 6,
+      "user_sessions": 2,
+      "users": 3,
+      "vouchers": 3,
+      "whatsapp_settings": 1
+    },
+    "errors": 0,
+    "warnings": 40,
+    "issues": [
+      {
+        "collection": "users",
+        "source_id": "6adb13922615a279f5cd92ae",
+        "field": "points_balance",
+        "code": "points_without_history",
+        "severity": "warning",
+        "explanation": "Account balance has no exported point history; preserved without generating earnings."
+      },
+      {
+        "collection": "products",
+        "source_id": "6adb139a2615a279f5cd92f5",
+        "field": "rating_count",
+        "code": "legacy_rating_cache_unreconciled",
+        "severity": "warning",
+        "explanation": "Cached rating count differs from approved exported reviews; original counters retained, no reviews invented."
+      },
+      {
+        "collection": "products",
+        "source_id": "6adb139a2615a279f5cd92f5",
+        "field": "sold_count",
+        "code": "legacy_sales_cache_unreconciled",
+        "severity": "warning",
+        "explanation": "Cached sold units differ from paid historical order lines; source counters retained, no purchases invented."
+      },
+      {
+        "collection": "products",
+        "source_id": "6adb139b2615a279f5cd9302",
+        "field": "rating_count",
+        "code": "legacy_rating_cache_unreconciled",
+        "severity": "warning",
+        "explanation": "Cached rating count differs from approved exported reviews; original counters retained, no reviews invented."
+      },
+      {
+        "collection": "products",
+        "source_id": "6adb139b2615a279f5cd9302",
+        "field": "sold_count",
+        "code": "legacy_sales_cache_unreconciled",
+        "severity": "warning",
+        "explanation": "Cached sold units differ from paid historical order lines; source counters retained, no purchases invented."
+      },
+      {
+        "collection": "products",
+        "source_id": "6adb139b2615a279f5cd9300",
+        "field": "rating_count",
+        "code": "legacy_rating_cache_unreconciled",
+        "severity": "warning",
+        "explanation": "Cached rating count differs from approved exported reviews; original counters retained, no reviews invented."
+      },
+      {
+        "collection": "products",
+        "source_id": "6adb139b2615a279f5cd9300",
+        "field": "sold_count",
+        "code": "legacy_sales_cache_unreconciled",
+        "severity": "warning",
+        "explanation": "Cached sold units differ from paid historical order lines; source counters retained, no purchases invented."
+      },
+      {
+        "collection": "products",
+        "source_id": "6adb139b2615a279f5cd92fd",
+        "field": "rating_count",
+        "code": "legacy_rating_cache_unreconciled",
+        "severity": "warning",
+        "explanation": "Cached rating count differs from approved exported reviews; original counters retained, no reviews invented."
+      },
+      {
+        "collection": "products",
+        "source_id": "6adb139b2615a279f5cd92fd",
+        "field": "sold_count",
+        "code": "legacy_sales_cache_unreconciled",
+        "severity": "warning",
+        "explanation": "Cached sold units differ from paid historical order lines; source counters retained, no purchases invented."
+      },
+      {
+        "collection": "products",
+        "source_id": "6adb139b2615a279f5cd92fa",
+        "field": "rating_count",
+        "code": "legacy_rating_cache_unreconciled",
+        "severity": "warning",
+        "explanation": "Cached rating count differs from approved exported reviews; original counters retained, no reviews invented."
+      },
+      {
+        "collection": "products",
+        "source_id": "6adb139b2615a279f5cd92fa",
+        "field": "sold_count",
+        "code": "legacy_sales_cache_unreconciled",
+        "severity": "warning",
+        "explanation": "Cached sold units differ from paid historical order lines; source counters retained, no purchases invented."
+      },
+      {
+        "collection": "products",
+        "source_id": "6adb139b2615a279f5cd92f9",
+        "field": "rating_count",
+        "code": "legacy_rating_cache_unreconciled",
+        "severity": "warning",
+        "explanation": "Cached rating count differs from approved exported reviews; original counters retained, no reviews invented."
+      },
+      {
+        "collection": "products",
+        "source_id": "6adb139b2615a279f5cd92f9",
+        "field": "sold_count",
+        "code": "legacy_sales_cache_unreconciled",
+        "severity": "warning",
+        "explanation": "Cached sold units differ from paid historical order lines; source counters retained, no purchases invented."
+      },
+      {
+        "collection": "products",
+        "source_id": "6adb139c2615a279f5cd9304",
+        "field": "rating_count",
+        "code": "legacy_rating_cache_unreconciled",
+        "severity": "warning",
+        "explanation": "Cached rating count differs from approved exported reviews; original counters retained, no reviews invented."
+      },
+      {
+        "collection": "products",
+        "source_id": "6adb139c2615a279f5cd9304",
+        "field": "sold_count",
+        "code": "legacy_sales_cache_unreconciled",
+        "severity": "warning",
+        "explanation": "Cached sold units differ from paid historical order lines; source counters retained, no purchases invented."
+      },
+      {
+        "collection": "products",
+        "source_id": "6adb139b2615a279f5cd92f6",
+        "field": "rating_count",
+        "code": "legacy_rating_cache_unreconciled",
+        "severity": "warning",
+        "explanation": "Cached rating count differs from approved exported reviews; original counters retained, no reviews invented."
+      },
+      {
+        "collection": "products",
+        "source_id": "6adb139b2615a279f5cd92f6",
+        "field": "sold_count",
+        "code": "legacy_sales_cache_unreconciled",
+        "severity": "warning",
+        "explanation": "Cached sold units differ from paid historical order lines; source counters retained, no purchases invented."
+      },
+      {
+        "collection": "products",
+        "source_id": "6adb139b2615a279f5cd92fc",
+        "field": "rating_count",
+        "code": "legacy_rating_cache_unreconciled",
+        "severity": "warning",
+        "explanation": "Cached rating count differs from approved exported reviews; original counters retained, no reviews invented."
+      },
+      {
+        "collection": "products",
+        "source_id": "6adb139b2615a279f5cd92fc",
+        "field": "sold_count",
+        "code": "legacy_sales_cache_unreconciled",
+        "severity": "warning",
+        "explanation": "Cached sold units differ from paid historical order lines; source counters retained, no purchases invented."
+      },
+      {
+        "collection": "products",
+        "source_id": "6adb139b2615a279f5cd9301",
+        "field": "rating_count",
+        "code": "legacy_rating_cache_unreconciled",
+        "severity": "warning",
+        "explanation": "Cached rating count differs from approved exported reviews; original counters retained, no reviews invented."
+      },
+      {
+        "collection": "products",
+        "source_id": "6adb139b2615a279f5cd9301",
+        "field": "sold_count",
+        "code": "legacy_sales_cache_unreconciled",
+        "severity": "warning",
+        "explanation": "Cached sold units differ from paid historical order lines; source counters retained, no purchases invented."
+      },
+      {
+        "collection": "products",
+        "source_id": "6adb139c2615a279f5cd9307",
+        "field": "rating_count",
+        "code": "legacy_rating_cache_unreconciled",
+        "severity": "warning",
+        "explanation": "Cached rating count differs from approved exported reviews; original counters retained, no reviews invented."
+      },
+      {
+        "collection": "products",
+        "source_id": "6adb139c2615a279f5cd9307",
+        "field": "sold_count",
+        "code": "legacy_sales_cache_unreconciled",
+        "severity": "warning",
+        "explanation": "Cached sold units differ from paid historical order lines; source counters retained, no purchases invented."
+      },
+      {
+        "collection": "products",
+        "source_id": "6adb139c2615a279f5cd9305",
+        "field": "rating_count",
+        "code": "legacy_rating_cache_unreconciled",
+        "severity": "warning",
+        "explanation": "Cached rating count differs from approved exported reviews; original counters retained, no reviews invented."
+      },
+      {
+        "collection": "products",
+        "source_id": "6adb139c2615a279f5cd9305",
+        "field": "sold_count",
+        "code": "legacy_sales_cache_unreconciled",
+        "severity": "warning",
+        "explanation": "Cached sold units differ from paid historical order lines; source counters retained, no purchases invented."
+      },
+      {
+        "collection": "products",
+        "source_id": "6adb139b2615a279f5cd9303",
+        "field": "rating_count",
+        "code": "legacy_rating_cache_unreconciled",
+        "severity": "warning",
+        "explanation": "Cached rating count differs from approved exported reviews; original counters retained, no reviews invented."
+      },
+      {
+        "collection": "products",
+        "source_id": "6adb139b2615a279f5cd9303",
+        "field": "sold_count",
+        "code": "legacy_sales_cache_unreconciled",
+        "severity": "warning",
+        "explanation": "Cached sold units differ from paid historical order lines; source counters retained, no purchases invented."
+      },
+      {
+        "collection": "products",
+        "source_id": "6adb139b2615a279f5cd92ff",
+        "field": "rating_count",
+        "code": "legacy_rating_cache_unreconciled",
+        "severity": "warning",
+        "explanation": "Cached rating count differs from approved exported reviews; original counters retained, no reviews invented."
+      },
+      {
+        "collection": "products",
+        "source_id": "6adb139b2615a279f5cd92ff",
+        "field": "sold_count",
+        "code": "legacy_sales_cache_unreconciled",
+        "severity": "warning",
+        "explanation": "Cached sold units differ from paid historical order lines; source counters retained, no purchases invented."
+      },
+      {
+        "collection": "products",
+        "source_id": "6adb139c2615a279f5cd9306",
+        "field": "rating_count",
+        "code": "legacy_rating_cache_unreconciled",
+        "severity": "warning",
+        "explanation": "Cached rating count differs from approved exported reviews; original counters retained, no reviews invented."
+      },
+      {
+        "collection": "products",
+        "source_id": "6adb139c2615a279f5cd9306",
+        "field": "sold_count",
+        "code": "legacy_sales_cache_unreconciled",
+        "severity": "warning",
+        "explanation": "Cached sold units differ from paid historical order lines; source counters retained, no purchases invented."
+      },
+      {
+        "collection": "products",
+        "source_id": "6adb139b2615a279f5cd92f8",
+        "field": "rating_count",
+        "code": "legacy_rating_cache_unreconciled",
+        "severity": "warning",
+        "explanation": "Cached rating count differs from approved exported reviews; original counters retained, no reviews invented."
+      },
+      {
+        "collection": "products",
+        "source_id": "6adb139b2615a279f5cd92f8",
+        "field": "sold_count",
+        "code": "legacy_sales_cache_unreconciled",
+        "severity": "warning",
+        "explanation": "Cached sold units differ from paid historical order lines; source counters retained, no purchases invented."
+      },
+      {
+        "collection": "products",
+        "source_id": "6adb139b2615a279f5cd92f7",
+        "field": "rating_count",
+        "code": "legacy_rating_cache_unreconciled",
+        "severity": "warning",
+        "explanation": "Cached rating count differs from approved exported reviews; original counters retained, no reviews invented."
+      },
+      {
+        "collection": "products",
+        "source_id": "6adb139b2615a279f5cd92f7",
+        "field": "sold_count",
+        "code": "legacy_sales_cache_unreconciled",
+        "severity": "warning",
+        "explanation": "Cached sold units differ from paid historical order lines; source counters retained, no purchases invented."
+      },
+      {
+        "collection": "products",
+        "source_id": "6adb139b2615a279f5cd92fb",
+        "field": "rating_count",
+        "code": "legacy_rating_cache_unreconciled",
+        "severity": "warning",
+        "explanation": "Cached rating count differs from approved exported reviews; original counters retained, no reviews invented."
+      },
+      {
+        "collection": "products",
+        "source_id": "6adb139b2615a279f5cd92fb",
+        "field": "sold_count",
+        "code": "legacy_sales_cache_unreconciled",
+        "severity": "warning",
+        "explanation": "Cached sold units differ from paid historical order lines; source counters retained, no purchases invented."
+      },
+      {
+        "collection": "products",
+        "source_id": "6adb139a2615a279f5cd92f4",
+        "field": "rating_count",
+        "code": "legacy_rating_cache_unreconciled",
+        "severity": "warning",
+        "explanation": "Cached rating count differs from approved exported reviews; original counters retained, no reviews invented."
+      },
+      {
+        "collection": "products",
+        "source_id": "6adb139b2615a279f5cd92fe",
+        "field": "rating_count",
+        "code": "legacy_rating_cache_unreconciled",
+        "severity": "warning",
+        "explanation": "Cached rating count differs from approved exported reviews; original counters retained, no reviews invented."
+      },
+      {
+        "collection": "products",
+        "source_id": "6adb139b2615a279f5cd92fe",
+        "field": "sold_count",
+        "code": "legacy_sales_cache_unreconciled",
+        "severity": "warning",
+        "explanation": "Cached sold units differ from paid historical order lines; source counters retained, no purchases invented."
+      }
+    ],
+    "reconciliation": {
+      "orders": 0,
+      "order_total": "0",
+      "order_subtotal": "0",
+      "stock_units": 715,
+      "reserved_units": 0,
+      "active_reservation_units": 0,
+      "user_points": 500,
+      "point_delta": 0,
+      "voucher_used": 0,
+      "note": "Aggregates describe the supplied export only; verified row checksums and totals are checked again on apply/resume."
+    },
+    "validation_scope": "Offline typed/FK/unique/CHECK and source accounting checks; target MySQL collation and runtime locking require server validation."
+  },
+  "target": {
+    "run_id": "imp_3f3bbcc2fc835f8990adadc20e4776e8",
+    "status": "completed",
+    "source_records": 166,
+    "verified_target_rows": 397,
+    "resumed_rows": 0,
+    "export_checksum": "4d07e5eef8170f50c11db6d2f71b2213e004f7f3fd1731ac76c911c483ce9a66",
+    "reconciliation": {
+      "orders": 0,
+      "order_total": "0",
+      "order_subtotal": "0",
+      "stock_units": 715,
+      "reserved_units": 0,
+      "active_reservation_units": 0,
+      "user_points": 500,
+      "point_delta": 0,
+      "voucher_used": 0,
+      "note": "Aggregates describe the supplied export only; verified row checksums and totals are checked again on apply/resume."
+    }
+  }
+}

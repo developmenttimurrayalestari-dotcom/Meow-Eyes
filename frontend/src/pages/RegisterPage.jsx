@@ -1,12 +1,15 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Cat } from "lucide-react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { toast } from "sonner";
+import GoogleAuthButton from "../components/GoogleAuthButton";
+import { authDestination, navigateAfterAuthentication, requestedAuthReturn, usesCustomerMeasurementFlow } from "../lib/authReturn";
 
 const RegisterPage = () => {
   const { register } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const returnTo = requestedAuthReturn(location);
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [loading, setLoading] = useState(false);
 
@@ -20,9 +23,9 @@ const RegisterPage = () => {
     }
     setLoading(true);
     try {
-      await register(form);
-      toast.success("Pendaftaran berhasil! Yuk atur PIN keamanan.");
-      navigate("/setup-pin", { replace: true });
+      const user = await register(form);
+      toast.success(usesCustomerMeasurementFlow(returnTo) ? "Akun berhasil dibuat. Lengkapi profil dan resep untuk Meowsurement." : "Pendaftaran berhasil! Yuk atur PIN keamanan.");
+      navigateAfterAuthentication(authDestination(returnTo, user?.has_pin), navigate);
     } catch (err) {
       toast.error(err?.response?.data?.detail || "Pendaftaran gagal");
     } finally {
@@ -61,9 +64,14 @@ const RegisterPage = () => {
           </button>
         </form>
 
+        <div className="my-6 flex items-center gap-2 text-xs text-meow-gray">
+          <div className="h-px bg-meow-gray/30 flex-1" /><span>atau</span><div className="h-px bg-meow-gray/30 flex-1" />
+        </div>
+        <GoogleAuthButton signup returnTo={returnTo} disabled={loading} />
+
         <p className="text-center text-sm text-meow-gray mt-6">
           Sudah punya akun?{" "}
-          <Link to="/login" className="text-meow-salmon font-bold" data-testid="login-link">Masuk</Link>
+          <Link to={returnTo ? "/login?returnTo=" + encodeURIComponent(returnTo) : "/login"} className="text-meow-salmon font-bold" data-testid="login-link">Masuk</Link>
         </p>
       </div>
     </div>

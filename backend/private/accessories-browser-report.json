@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "api": "mocked; no real category/product/stock writes",
+  "categoryCreation": true,
+  "productCreation": true,
+  "publicCatalogFilter": true,
+  "nativeOptionMarkup": true,
+  "errors": []
+}

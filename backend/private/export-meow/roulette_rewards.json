@@ -1,0 +1,10 @@
+[
+{"_id": {"$oid": "6adb139c2615a279f5cd930c"}, "id": "rwd_1baa16f859764bc6", "label": "50 Poin", "type": "points", "value": {"$numberDouble": "50.0"}, "color": "#FCA311", "probability": {"$numberDouble": "0.25"}, "is_active": true},
+{"_id": {"$oid": "6adb139c2615a279f5cd930d"}, "id": "rwd_eb0b0638a4834350", "label": "100 Poin", "type": "points", "value": {"$numberDouble": "100.0"}, "color": "#FFD166", "probability": {"$numberDouble": "0.15"}, "is_active": true},
+{"_id": {"$oid": "6adb139c2615a279f5cd930e"}, "id": "rwd_4976e36c072049d3", "label": "Gratis Ongkir", "type": "free_shipping", "value": {"$numberDouble": "0.0"}, "color": "#06D6A0", "probability": {"$numberDouble": "0.15"}, "is_active": true},
+{"_id": {"$oid": "6adb139c2615a279f5cd930f"}, "id": "rwd_ce18ba551b1345d4", "label": "Diskon Rp 25.000", "type": "discount", "value": {"$numberDouble": "25000.0"}, "color": "#FF8FA3", "probability": {"$numberDouble": "0.15"}, "is_active": true},
+{"_id": {"$oid": "6adb139c2615a279f5cd9310"}, "id": "rwd_792cc587a2f04196", "label": "Diskon Rp 50.000", "type": "discount", "value": {"$numberDouble": "50000.0"}, "color": "#FF6B6B", "probability": {"$numberDouble": "0.1"}, "is_active": true},
+{"_id": {"$oid": "6adb139d2615a279f5cd9311"}, "id": "rwd_2ab2dd591fb7425d", "label": "Diskon Rp 100.000", "type": "discount", "value": {"$numberDouble": "100000.0"}, "color": "#2A9D8F", "probability": {"$numberDouble": "0.05"}, "is_active": true},
+{"_id": {"$oid": "6adb139d2615a279f5cd9312"}, "id": "rwd_724c88a8a5224216", "label": "200 Poin", "type": "points", "value": {"$numberDouble": "200.0"}, "color": "#0B192C", "probability": {"$numberDouble": "0.05"}, "is_active": true},
+{"_id": {"$oid": "6adb139d2615a279f5cd9313"}, "id": "rwd_143704cb36864730", "label": "Coba Lagi", "type": "nothing", "value": {"$numberDouble": "0.0"}, "color": "#94A3B8", "probability": {"$numberDouble": "0.1"}, "is_active": true}
+]

@@ -67,12 +67,25 @@ def build_demo_documents(*, include_core: bool = True, include_content: bool = T
                  points_balance=500 if role == "customer" else 0,
                  permissions=["article.view", "article.create", "article.update", "article.delete", "review.view", "review.moderate"] if role == "staff" else [])
 
+        category_ids_seen = set()
         def category(name, parent=None, kind="product", slug=None, order=0, featured=False):
+            if not parent and kind in ('frame','lens','package'):
+                group, code = 'product_type', kind
+            elif name in core['segments']:
+                group, code = 'gender', slugify(name)
+                slug = code
+            elif kind == 'lens':
+                group, code = 'lens_type', slugify(name)
+            elif kind == 'frame' and name in ('Aviator','Cat Eye','Geometris','Rectangle','Rimless','Round','Square','Oval'):
+                group, code = 'frame_shape', slugify(name)
+            else:
+                return parent
             slug = slug or slugify(name)
             identity = demo_id("cat", slug)
-            parents = {v["id"]: v for v in docs["categories"]}
-            dump("categories", DTO.Category, id=identity, parent_id=parent, name=name, slug=slug,
-                 category_type=kind, level=parents[parent]["level"] + 1 if parent else 0,
+            if identity in category_ids_seen: return identity
+            category_ids_seen.add(identity)
+            dump("categories", DTO.Category, id=identity, name=name, slug=slug,
+                 group_type=group, code=code,
                  sort_order=order, is_featured=featured)
             return identity
 
@@ -95,6 +108,7 @@ def build_demo_documents(*, include_core: bool = True, include_content: bool = T
         for i, (name, kind, sub, brand, segment, price, discount, badges, variants) in enumerate(core["products_data"]):
             slug, pid = slugify(name), demo_id("product", slugify(name))
             categories = [frame, sub_ids[sub], segment_ids[(sub, segment)]] if kind == "frame" else [lens, lens_ids[sub]] if kind == "lens" else [package, package_ids[sub]]
+            categories = list(dict.fromkeys(categories))
             variant_models = [DTO.ProductVariant(id=demo_id("variant", v["sku"]), **{**v, "stock": v.get("stock", 25)}) for v in variants]
             product = dump("products", DTO.Product, id=pid, name=name, slug=slug,
                  # Fix duplicate truncated SKUs only in the demo fixture. Real

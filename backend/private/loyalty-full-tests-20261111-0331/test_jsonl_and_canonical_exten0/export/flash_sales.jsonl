@@ -1,0 +1,1 @@
+{"id": "flash", "name": "Sale", "start_at": "2026-11-01T00:00:00+00:00", "end_at": "2026-11-07T00:00:00+00:00", "created_at": "2026-11-01T00:00:00+00:00", "items": [{"product_id": "product", "flash_price": "80.00", "quota": 10, "sold": 0}]}

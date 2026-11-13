@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { api, imageSrc } from "../../lib/api";
 import ImagePicker from "../../components/ImagePicker";
 import { adminError, inputClass } from "./adminUtils";
+import { isTryOnProduct } from '../../lib/tryOnProducts';
 
 function Field({ label, children, hint }) {
   const id = useId();
@@ -53,6 +54,9 @@ const emptyAsset = () => ({ product_id: "", variant_id: "", asset_type: "image",
 export function AdminTryOn() {
   const [assets, setAssets] = useState([]);
   const [products, setProducts] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(true);
+  const [productsError, setProductsError] = useState('');
+  const [productsReload, setProductsReload] = useState(0);
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -68,15 +72,18 @@ export function AdminTryOn() {
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
     const controller = new AbortController();
+    setProductsLoading(true); setProductsError('');
     const timer = setTimeout(async () => {
       try {
-        const { data } = await api.get("/admin/products", { params: { q: query, limit: 100, product_type: "frame" }, signal: controller.signal });
-        setProducts((data.products || []).filter(p => p.product_type === "frame"));
-      } catch (err) { if (!controller.signal.aborted) setError(adminError(err, "Daftar frame belum dapat dimuat.")); }
+        const { data } = await api.get("/admin/products", { params: { q: query, limit: 100, try_on_eligible: true }, signal: controller.signal });
+        if (!controller.signal.aborted) setProducts((data.products || []).filter(isTryOnProduct));
+      } catch (err) { if (!controller.signal.aborted) { setProducts([]); setProductsError(adminError(err, "Daftar frame belum dapat dimuat.")); } }
+      finally { if (!controller.signal.aborted) setProductsLoading(false); }
     }, 200);
     return () => { clearTimeout(timer); controller.abort(); };
-  }, [query]);
+  }, [query, productsReload]);
   const open = (asset) => {
+    setQuery(''); setProductsReload(value => value + 1);
     setEditing(asset ? { ...emptyAsset(), ...asset, variant_id: asset.variant_id || "" } : emptyAsset());
     setCalibration(asset?.calibration ? JSON.stringify(asset.calibration, null, 2) : ""); setError("");
   };
@@ -109,15 +116,17 @@ export function AdminTryOn() {
     {editing && <div className="fixed inset-0 z-50 bg-black/60 grid place-items-center p-4" onClick={() => !saving && setEditing(null)}><form onSubmit={submit} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="tryon-form-title" className="max-w-2xl w-full max-h-[90vh] overflow-y-auto bg-white rounded-3xl p-6 space-y-4">
       <div className="flex justify-between items-center"><h2 id="tryon-form-title" className="text-xl font-heading font-bold">{editing.id ? "Edit" : "Tambah"} aset Virtual Try-On</h2><button type="button" aria-label="Tutup" disabled={saving} onClick={() => setEditing(null)}><X /></button></div>
       {error && <p role="alert" className="bg-red-50 text-red-700 p-3 rounded-xl text-sm">{error}</p>}
-      <Field label="Cari frame"><input value={query} onChange={e => setQuery(e.target.value)} className={inputClass} placeholder="Nama atau SKU frame" /></Field>
-      <Field label="Produk frame"><select required value={editing.product_id} onChange={e => setEditing({ ...editing, product_id: e.target.value, variant_id: "" })} className={inputClass}><option value="">Pilih frame</option>{editing.product_id && !selected && <option value={editing.product_id}>{editing.product_name || editing.product_id}</option>}{products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></Field>
+      <Field label="Cari Frame / Paket"><input value={query} onChange={e => setQuery(e.target.value)} className={inputClass} placeholder="Nama atau SKU Frame / Paket" /></Field>
+      {productsError && <div role="alert" className="text-sm text-red-700">{productsError}<button type="button" onClick={() => setProductsReload(value => value + 1)} className="underline ml-2">Muat ulang frame</button></div>}
+      {!productsLoading && !productsError && products.length === 0 && <p role="status" className="rounded-xl bg-amber-50 p-3 text-sm">{query.trim() ? 'Frame atau Paket tidak ditemukan. Coba nama atau SKU lain.' : 'Belum ada produk berjenis Frame atau Paket yang tersedia. Produk Lensa dan produk yang sudah dihapus tidak masuk daftar ini.'} <Link to="/admin/products" className="font-bold underline">Kelola Produk</Link></p>}
+      <Field label="Produk Frame / Paket"><select required disabled={productsLoading || Boolean(productsError)} value={editing.product_id} onChange={e => setEditing({ ...editing, product_id: e.target.value, variant_id: "" })} className={inputClass}><option value="">{productsLoading ? 'Memuat Frame / Paket...' : 'Pilih Frame / Paket'}</option>{editing.product_id && !selected && <option value={editing.product_id}>{editing.product_name || editing.product_id}</option>}{products.map(p => <option key={p.id} value={p.id}>{p.name}{p.sku ? ` · ${p.sku}` : ''} · {p.product_type === 'package' ? 'Paket' : 'Frame'}{p.is_active === false ? ' (nonaktif)' : ''}</option>)}</select></Field>
       <Field label="Varian"><select value={editing.variant_id || ""} onChange={e => setEditing({ ...editing, variant_id: e.target.value })} className={inputClass}><option value="">Semua varian produk ini</option>{editing.variant_id && !selected?.variants?.some(v => v.id === editing.variant_id) && <option value={editing.variant_id}>{editing.variant_id}</option>}{(selected?.variants || []).map(v => <option key={v.id} value={v.id}>{[v.color, v.size, v.sku].filter(Boolean).join(" · ")}</option>)}</select></Field>
       <div className="grid sm:grid-cols-2 gap-4"><Field label="Format aset"><select value={editing.asset_type} onChange={e => setEditing({ ...editing, asset_type: e.target.value })} className={inputClass}><option value="image">Gambar transparan</option><option value="glb">Model GLB</option><option value="gltf">Model GLTF</option></select></Field><Field label="Status"><select value={editing.status} onChange={e => setEditing({ ...editing, status: e.target.value })} className={inputClass}><option value="draft">Draft</option><option value="published">Published</option><option value="archived">Archived</option></select></Field></div>
       {editing.asset_type === "image" ? <ImagePicker label="Gambar frame (PNG / WebP transparan)" value={editing.source_url || ""} onChange={url => setEditing({ ...editing, source_url: url })} testId="tryon-image" /> : <Field label="URL model 3D" hint="Gunakan URL HTTPS yang dapat diakses browser. Server aset harus mengizinkan CORS; berkas tekstur GLTF harus tersedia pada lokasi yang sama."><input required type="url" value={editing.source_url || ""} onChange={e => setEditing({ ...editing, source_url: e.target.value })} className={inputClass} placeholder="https://cdn.toko.id/frames/model.glb" /></Field>}
       <ImagePicker label="Gambar pratinjau (opsional)" value={editing.preview_url || ""} onChange={url => setEditing({ ...editing, preview_url: url })} testId="tryon-preview" />
       <details className="rounded-2xl border p-4"><summary className="font-bold text-sm cursor-pointer">Posisi dan kalibrasi awal</summary><p className="text-xs text-meow-gray mt-2">Skala adalah pengali lebar frame. Offset X/Y berupa proporsi lebar/tinggi area. Rotasi dalam derajat. Pelanggan dapat menyesuaikan posisi saat mencoba frame.</p><div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-3">{["scale", "offset_x", "offset_y", "offset_z", "rotation_x", "rotation_y", "rotation_z"].map(key => <Field key={key} label={key.replaceAll("_", " ")}><input required type="number" step="0.001" min={key === "scale" ? "0.01" : key.startsWith("offset") ? "-10" : "-360"} max={key === "scale" || key.startsWith("offset") ? "10" : "360"} value={editing[key]} onChange={e => setEditing({ ...editing, [key]: e.target.value === "" ? "" : Number(e.target.value) })} className={inputClass} /></Field>)}</div><div className="mt-3"><Field label="Metadata kalibrasi (opsional)" hint="JSON ini disimpan sebagai catatan. Preview memakai nilai skala, offset, dan rotasi di atas."><textarea value={calibration} onChange={e => setCalibration(e.target.value)} rows={3} className={`${inputClass} font-mono`} placeholder='{"frame_width_mm": 138}' /></Field></div></details>
       <Field label="Urutan tampilan"><input type="number" step="1" min="0" required value={editing.sort_order} onChange={e => setEditing({ ...editing, sort_order: Number(e.target.value) })} className={inputClass} /></Field>
-      <div className="flex justify-end gap-3"><button type="button" disabled={saving} onClick={() => setEditing(null)} className="btn-secondary">Batal</button><button disabled={saving} className="btn-primary disabled:opacity-50">{saving ? "Menyimpan…" : "Simpan aset"}</button></div>
+      <div className="flex justify-end gap-3"><button type="button" disabled={saving} onClick={() => setEditing(null)} className="btn-secondary">Batal</button><button disabled={saving || productsLoading || Boolean(productsError) || !editing.product_id} className="btn-primary disabled:opacity-50">{saving ? "Menyimpan…" : "Simpan aset"}</button></div>
     </form></div>}
   </div>;
 }

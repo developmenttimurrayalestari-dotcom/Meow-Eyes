@@ -30,6 +30,8 @@ async def seed_commerce_fixture(*, stock: int = 5, bundle: bool = True,
     )}
     now = utcnow()
     async with session_scope() as s:
+        from mysql.taxonomy import seed_masters
+        await seed_masters(s)
         for key in ("alice", "bob", "admin"):
             s.add(m.User(user_id=ids[key], email=ids[key] + "@example.com", name=key,
                          points_balance=100, is_active=True, role="admin" if key == "admin" else "customer"))

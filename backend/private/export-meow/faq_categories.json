@@ -1,0 +1,6 @@
+[
+{"_id": {"$oid": "6adb149bdb3269dbc6aa4ca4"}, "id": "fqc_b887263bb8694cf7", "name": "Pemesanan", "slug": "pemesanan", "description": null, "is_active": true, "sort_order": {"$numberInt": "0"}},
+{"_id": {"$oid": "6adb149bdb3269dbc6aa4ca5"}, "id": "fqc_47ce480bad944c1b", "name": "Pembayaran", "slug": "pembayaran", "description": null, "is_active": true, "sort_order": {"$numberInt": "1"}},
+{"_id": {"$oid": "6adb149bdb3269dbc6aa4ca6"}, "id": "fqc_3eb115998c8f4323", "name": "Pengiriman", "slug": "pengiriman", "description": null, "is_active": true, "sort_order": {"$numberInt": "2"}},
+{"_id": {"$oid": "6adb149bdb3269dbc6aa4ca7"}, "id": "fqc_02dbe523cec2494f", "name": "Garansi & Retur", "slug": "garansi-retur", "description": null, "is_active": true, "sort_order": {"$numberInt": "3"}}
+]

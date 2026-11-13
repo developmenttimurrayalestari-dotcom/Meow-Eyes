@@ -8,7 +8,9 @@ from database import read_session
 from mysql import models as m
 from mysql.api import product_dict, products_dict, row_dict
 from mysql.base import utcnow
-from mysql.catalog import (banner_dict, category_breadcrumb, category_descendants,
+from mysql.taxonomy_definitions import GROUPS, GroupType
+from mysql.taxonomy import master_filter_conditions
+from mysql.catalog import (banner_dict, category_breadcrumb,
                            flash_dict, reviews_dict, slugify)
 from mysql.features import (NEW_ARRIVAL_CATEGORY_SLUG, active_flash_conditions,
                             active_flash_product_ids, effective_catalog_price, new_arrival_conditions, public_products)
@@ -17,34 +19,29 @@ router = APIRouter(tags=["catalog"])
 
 
 @router.get("/categories")
-async def list_categories(is_active: Optional[bool] = True):
+async def list_categories(is_active: Optional[bool] = True, group_type: GroupType | None = None):
     async with read_session() as s:
-        stmt = select(m.Category)
+        stmt = select(m.Category).where(m.Category.group_type != 'collection')
+        if group_type: stmt = stmt.where(m.Category.group_type == group_type)
         if is_active is not None:
             stmt = stmt.where(m.Category.is_active == is_active)
         rows = (await s.scalars(stmt.order_by(m.Category.sort_order, m.Category.id))).all()
-        return {"categories": [row_dict(row) for row in rows]}
+        return {"categories": [row_dict(row) for row in rows], "groups": list(GROUPS)}
 
 
 @router.get("/categories/tree")
 async def category_tree():
     async with read_session() as s:
-        rows = (await s.scalars(select(m.Category).where(m.Category.is_active.is_(True))
+        rows = (await s.scalars(select(m.Category).where(m.Category.is_active.is_(True), m.Category.group_type != 'collection')
             .order_by(m.Category.sort_order, m.Category.id))).all()
-        by_id = {c.id: {**row_dict(c), "children": []} for c in rows}
-        roots = []
-        for c in rows:
-            if c.parent_id and c.parent_id in by_id:
-                by_id[c.parent_id]["children"].append(by_id[c.id])
-            else:
-                roots.append(by_id[c.id])
-        return {"tree": roots}
+        # Legacy URL retained as a flat alias; category ancestry no longer exists.
+        return {"tree": [row_dict(row) for row in rows], "groups": list(GROUPS)}
 
 
 @router.get("/categories/{slug}")
 async def get_category(slug: str):
     async with read_session() as s:
-        category = await s.scalar(select(m.Category).where(m.Category.slug == slug))
+        category = await s.scalar(select(m.Category).where(m.Category.slug == slug, m.Category.group_type != 'collection'))
         if category is None:
             raise HTTPException(404, "Kategori tidak ditemukan")
         return {"category": row_dict(category), "breadcrumb": await category_breadcrumb(s, category.id)}
@@ -76,11 +73,13 @@ async def list_products(
     max_price: Optional[Decimal] = Query(None, ge=0),
     badge: Optional[str] = None, sort: str = "newest", new_arrival: Optional[bool] = None,
     page: int = Query(1, ge=1), limit: int = Query(15, ge=1, le=100),
+    category_ids: Optional[str] = None,
 ):
     async with read_session() as s:
         conditions = [m.Product.is_active.is_(True)]
         if q:
             conditions.append(m.Product.name.icontains(q, autoescape=True))
+        conditions.extend(await master_filter_conditions(s, category_ids))
         if category_id:
             category = await s.scalar(select(m.Category).where(m.Category.id == category_id,
                 m.Category.is_active.is_(True)))
@@ -97,7 +96,7 @@ async def list_products(
             elif category is None:
                 conditions.append(false())
             else:
-                ids = await category_descendants(s, category.id)
+                ids = {category.id}
                 conditions.append(m.Product.id.in_(select(m.ProductCategory.product_id)
                     .where(m.ProductCategory.category_id.in_(ids))))
         if brand_id:

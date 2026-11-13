@@ -1,18 +1,21 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { CheckCircle2, FileImage, Upload, Save, X } from "lucide-react";
 import { toast } from "sonner";
-import { api, apiError } from "../lib/api";
+import { api, apiError, formatIDR } from "../lib/api";
 
 const fields = ["od_sph", "od_cyl", "od_axis", "od_add", "os_sph", "os_cyl", "os_axis", "os_add", "pd_total", "pd_right", "pd_left"];
+const EXISTING_LENS = '__existing_lens__';
+const selectedLens = item => item.lens_index?.id || (item.lens_product ? EXISTING_LENS : '');
 export const prescriptionValues = (source = {}) => ({
   ...Object.fromEntries(fields.map((key) => [key, source?.[key] ?? (key === "pd_total" ? source?.pd : "") ?? ""])),
   notes: source?.notes || "", attachment_upload_id: source?.attachment_upload_id || null,
 });
 
-export function PrescriptionFields({ value, onChange, idPrefix, disabled = false }) {
+export function PrescriptionFields({ value, onChange, idPrefix, disabled = false, showMeasurements = true }) {
   const [pdMode, setPdMode] = useState(value.pd_right !== "" && value.pd_right != null ? "pair" : "total");
   const set = (key, val) => onChange({ ...value, [key]: val });
   return <fieldset disabled={disabled} className="space-y-4 min-w-0 max-w-full">
+    {showMeasurements && <>
     <div className="overflow-x-auto">
       <table className="w-full text-sm border-separate border-spacing-1">
         <caption className="sr-only">Resep kacamata untuk mata kanan dan kiri</caption>
@@ -45,6 +48,7 @@ export function PrescriptionFields({ value, onChange, idPrefix, disabled = false
         </label>)}
       </div>
     </div>
+    </>}
     <label className="block text-xs font-semibold">Catatan resep (opsional)
       <textarea value={value.notes} maxLength={10000} rows={2} onChange={(event) => set("notes", event.target.value)}
         className="block w-full mt-1 px-3 py-2 rounded-xl bg-meow-bg border border-meow-midnight/10 outline-none focus:border-meow-salmon" />
@@ -52,14 +56,33 @@ export function PrescriptionFields({ value, onChange, idPrefix, disabled = false
   </fieldset>;
 }
 
-export default function PrescriptionForm({ item, onDirtyChange, onSaved, disabled = false }) {
+export default function PrescriptionForm({ item, onDirtyChange, onSaved, disabled = false, showMeasurements = true, selectLens = false }) {
   const [value, setValue] = useState(() => prescriptionValues(item.prescription));
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+  const canSelectLens = selectLens && ['frame', 'package'].includes(item.product?.product_type);
+  const isPackage = item.product?.product_type === 'package';
+  const isFrame = item.product?.product_type === 'frame';
+  const [lensIndexId, setLensIndexId] = useState(() => selectedLens(item));
+  const saved = useRef({ value: prescriptionValues(item.prescription), lens: selectedLens(item) });
+  const [lensOptions, setLensOptions] = useState(null);
+  const [lensError, setLensError] = useState('');
+  useEffect(() => {
+    if (!canSelectLens) return undefined;
+    const controller = new AbortController();
+    setLensOptions(null); setLensError('');
+    api.get(`/cart/${item.id}/lens-options`, { signal: controller.signal })
+      .then(({ data }) => { if (!controller.signal.aborted) setLensOptions(data); })
+      .catch(err => { if (!controller.signal.aborted) setLensError(apiError(err, 'Pilihan lensa belum dapat dimuat. Silakan muat ulang halaman.')); });
+    return () => controller.abort();
+  }, [item.id, canSelectLens]);
   const [filename, setFilename] = useState(item.prescription?.attachment_upload_id ? "Foto resep tersimpan" : "");
-  const edit = (next) => { setValue(next); setDirty(true); setError(""); onDirtyChange?.(item.id, true); };
+  const edit = (next, lens = lensIndexId) => {
+    const changed = JSON.stringify(next) !== JSON.stringify(saved.current.value) || (canSelectLens && lens !== saved.current.lens);
+    setValue(next); setDirty(changed); setError(''); onDirtyChange?.(item.id, changed);
+  };
   const upload = async (event) => {
     const file = event.target.files?.[0];
     event.target.value = "";
@@ -82,15 +105,22 @@ export default function PrescriptionForm({ item, onDirtyChange, onSaved, disable
   };
   const save = async (event) => {
     event.preventDefault();
-    if ((value.pd_right !== "") !== (value.pd_left !== "")) { setError("Isi PD kanan dan kiri, atau pilih PD total."); return; }
+    if (showMeasurements && (value.pd_right !== "") !== (value.pd_left !== "")) { setError("Isi PD kanan dan kiri, atau pilih PD total."); return; }
     setSaving(true); setError("");
     try {
       const payload = { ...value, ...Object.fromEntries(fields.map((key) => [key, value[key] === "" ? null : Number(value[key])])) };
+      if (canSelectLens) {
+        payload.lens_index_id = lensIndexId && lensIndexId !== EXISTING_LENS ? lensIndexId : null;
+        if (isFrame && !lensIndexId && item.lens_product) payload.frame_only = true;
+      }
       const { data } = await api.patch(`/cart/${item.id}/prescription`, payload);
-      setValue(prescriptionValues(data.prescription));
+      const next = prescriptionValues(data.prescription);
+      const lens = data.cart_item ? selectedLens(data.cart_item) : lensIndexId;
+      saved.current = { value: next, lens };
+      setValue(next); setLensIndexId(lens);
       setDirty(false);
       onDirtyChange?.(item.id, false);
-      onSaved?.(item.id, data.prescription);
+      onSaved?.(item.id, data.prescription, data.cart_item);
       toast.success("Resep tersimpan untuk produk ini");
     } catch (err) { setError(apiError(err, "Resep belum berhasil disimpan.")); }
     finally { setSaving(false); }
@@ -104,8 +134,31 @@ export default function PrescriptionForm({ item, onDirtyChange, onSaved, disable
     } catch { toast.error("Lampiran belum dapat diunduh."); }
   };
   return <form onSubmit={save} className="border border-meow-midnight/10 rounded-2xl p-4 space-y-3" data-testid={`prescription-${item.id}`}>
-    <div><p className="font-bold text-sm">{item.product?.name}</p><p className="text-xs text-meow-gray">+ {item.lens_product?.name}</p></div>
-    <PrescriptionFields value={value} onChange={edit} idPrefix={`rx-${item.id}`} disabled={disabled || saving || uploading} />
+    <div>
+      <p className="font-bold text-sm">{item.product?.name}</p>
+      {item.variant?.sku && <p className="text-xs text-meow-gray">SKU: {item.variant.sku}</p>}
+      {item.lens_product && <p className="text-xs text-meow-gray">+ {item.lens_product.name}</p>}
+      {item.quantity > 1 && <p className="text-xs text-meow-gray mt-1">Satu resep berlaku untuk seluruh {item.quantity} produk pada baris ini.</p>}
+    </div>
+    {canSelectLens && <div className="space-y-2">
+      <label htmlFor={`rx-lens-${item.id}`} className="block text-xs font-semibold">Lens Index (opsional)</label>
+      <select id={`rx-lens-${item.id}`} data-testid={`rx-lens-${item.id}`} value={lensIndexId}
+        disabled={disabled || saving || uploading || !lensOptions}
+        onChange={event => { const lens = event.target.value; setLensIndexId(lens); edit(value, lens); }}
+        className="w-full px-3 py-2 rounded-xl bg-meow-bg border border-meow-midnight/10 text-sm">
+        <option value="">{lensOptions ? (isFrame ? 'Beli frame saja (tanpa lensa)' : 'Tanpa pilihan Lens Index') : 'Memuat pilihan lensa…'}</option>
+        {isFrame && item.lens_product && <option value={EXISTING_LENS}>{`${item.lens_product.name} — tanpa tambahan Lens Index`}</option>}
+        {lensIndexId && lensIndexId !== EXISTING_LENS && lensOptions && !lensOptions.items?.some(index => index.id === lensIndexId) && <option value={lensIndexId} disabled>Pilihan lama tidak tersedia — pilih kembali</option>}
+        {/* Native options need a single text expression; development visual editing wraps mixed text in spans. */}
+        {(lensOptions?.items || []).map(index => <option key={index.id} value={index.id}>{`${index.name} — ${isPackage ? 'Termasuk harga paket' : `+${formatIDR(index.additional_price)} / produk`}`}</option>)}
+      </select>
+      <p className="text-xs text-meow-gray">{isPackage
+        ? `Pilihan mengikuti Jenis Lensa paket${lensOptions?.lens_types?.length ? `: ${lensOptions.lens_types.map(type => type.name).join(', ')}` : ''}. Harga lensa sudah termasuk dalam harga paket.`
+        : 'Beli frame saja: lensa dan resep boleh dikosongkan. Anda bisa langsung checkout tanpa Simpan Resep. Jika menambah atau menghapus lensa, simpan perubahan untuk memperbarui harga.'}</p>
+      {lensOptions && !lensOptions.items?.length && <p className="text-xs text-amber-700">Pilihan lensa untuk produk ini belum tersedia. Hubungi toko untuk bantuan.</p>}
+      {lensError && <p role="alert" className="text-xs text-red-600">{lensError}</p>}
+    </div>}
+    <PrescriptionFields value={value} onChange={edit} idPrefix={`rx-${item.id}`} disabled={disabled || saving || uploading} showMeasurements={showMeasurements} />
     <div className="rounded-xl border border-dashed border-meow-midnight/20 p-3 text-xs space-y-2">
       <label className={`inline-flex items-center gap-2 font-bold text-meow-salmon cursor-pointer ${uploading ? "opacity-60" : ""}`}>
         <Upload className="h-4 w-4" /> {uploading ? "Mengunggah foto…" : "Lampirkan foto resep (opsional)"}
@@ -119,7 +172,7 @@ export default function PrescriptionForm({ item, onDirtyChange, onSaved, disable
     </div>
     {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
     <div className="flex flex-wrap items-center justify-between gap-2">
-      <p className={`text-xs ${dirty ? "text-amber-700" : "text-meow-gray"}`}>{dirty ? "Perubahan resep belum disimpan." : item.prescription ? "Resep tersimpan." : "Isi sesuai resep Anda. Kolom yang tidak tercantum boleh dikosongkan."}</p>
+      <p className={`text-xs ${dirty ? "text-amber-700" : "text-meow-gray"}`}>{dirty ? "Perubahan resep belum disimpan." : item.prescription ? "Resep tersimpan." : item.lens_index ? "Pilihan lensa tersimpan." : showMeasurements ? "Isi sesuai resep Anda. Kolom yang tidak tercantum boleh dikosongkan." : "Lampirkan foto resep dan tambahkan catatan jika diperlukan."}</p>
       <button type="submit" disabled={disabled || saving || uploading || !dirty} className="inline-flex items-center gap-1.5 rounded-full bg-meow-midnight text-white text-xs font-bold px-4 py-2 disabled:opacity-40">
         {dirty ? <Save className="h-3.5 w-3.5" /> : <CheckCircle2 className="h-3.5 w-3.5" />}{saving ? "Menyimpan…" : "Simpan Resep"}
       </button>

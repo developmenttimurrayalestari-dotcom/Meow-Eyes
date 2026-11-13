@@ -4,15 +4,16 @@ from datetime import timedelta
 from decimal import Decimal, InvalidOperation
 from typing import Any, Dict, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, or_, select
+from sqlalchemy import delete, func, or_, select
 from database import read_session, session_scope
 from auth import current_admin, require_permission
-from models import (User, ProductCreate, ProductUpdate, CategoryCreate, BrandCreate,
+from models import (User, ProductCreate, ProductUpdate, ProductBulkAction, CategoryCreate, BrandCreate,
                     Voucher as VoucherDTO, FlashSale as FlashSaleDTO,
                     RouletteReward as RouletteRewardDTO, BannerV2)
 from mysql import models as m
 from mysql.api import order_dict, product_dict, products_dict, row_dict, user_dict
 from mysql.base import utcnow
+from mysql.taxonomy_definitions import PRODUCT_TYPES, PRODUCT_TYPE_OPTIONS
 from mysql.catalog import (apply_fields, banner_dict, banner_values, flash_dict,
                            get_or_404, safe_values, slugify, unique_slug,
                            validate_payload, write_product)
@@ -126,11 +127,19 @@ async def roulette_chart(admin: User = Depends(current_admin)):
 @router.get("/products")
 async def admin_list_products(q: Optional[str] = None, page: int = Query(1, ge=1),
                              limit: int = Query(50, ge=1, le=200), product_type: Optional[str] = None,
+                             try_on_eligible: bool = False,
                              admin: User = Depends(require_permission("product.view"))):
     async with read_session() as s:
-        conditions = [m.Product.name.icontains(q, autoescape=True)] if q else []
+        conditions = [m.Product.deleted_at.is_(None)]
+        if q:
+            conditions.append(or_(m.Product.name.icontains(q, autoescape=True),
+                m.Product.sku.icontains(q, autoescape=True),
+                m.Product.id.in_(select(m.ProductVariant.product_id).where(m.ProductVariant.sku.icontains(q, autoescape=True)))))
         if product_type:
             conditions.append(m.Product.product_type == product_type)
+        if try_on_eligible:
+            from mysql.features import TRY_ON_PRODUCT_TYPES
+            conditions.append(m.Product.product_type.in_(TRY_ON_PRODUCT_TYPES))
         rows = (await s.scalars(select(m.Product).where(*conditions)
             .order_by(m.Product.created_at.desc(), m.Product.id).offset((page - 1) * limit).limit(limit))).all()
         return {"products": await products_dict(s, rows, include_inactive_variants=True),
@@ -147,138 +156,116 @@ async def create_product(req: ProductCreate, admin: User = Depends(current_admin
         return {"ok": True, "product": await product_dict(s, product, include_inactive_variants=True)}
 
 
+@router.post("/products/bulk-actions")
+async def bulk_product_action(req: ProductBulkAction, admin: User = Depends(current_admin)):
+    from mysql.product_management import apply_product_action
+    async with session_scope() as s:
+        return await apply_product_action(s, req.product_ids, req.action)
+
+
+async def _managed_product(s, pid, *, lock=False):
+    product = await get_or_404(s, m.Product, pid, "Produk tidak ditemukan", lock=lock)
+    if product.deleted_at is not None:
+        raise HTTPException(404, 'Produk sudah dihapus dari katalog')
+    return product
+
+
 @router.get("/products/{pid}")
 async def admin_get_product(pid: str, admin: User = Depends(require_permission("product.view"))):
     async with read_session() as s:
-        product = await get_or_404(s, m.Product, pid, "Produk tidak ditemukan")
+        product = await _managed_product(s, pid)
         return {"product": await product_dict(s, product, include_inactive_variants=True)}
 
 
 @router.put("/products/{pid}")
 async def update_product(pid: str, req: ProductUpdate, admin: User = Depends(current_admin)):
     async with session_scope() as s:
-        product = await get_or_404(s, m.Product, pid, "Produk tidak ditemukan", lock=True)
+        product = await _managed_product(s, pid, lock=True)
         # Explicit nulls clear optional prices/category/brand; omitted fields stay unchanged.
         await write_product(s, req.model_dump(exclude_unset=True), product=product, admin_id=admin.user_id)
     return {"ok": True}
 
 
+@router.post("/products/{pid}/duplicate")
+async def duplicate_catalog_product(pid: str, admin: User = Depends(current_admin)):
+    from mysql.product_management import duplicate_product
+    async with session_scope() as s:
+        source = await _managed_product(s, pid, lock=True)
+        product = await duplicate_product(s, source, admin.user_id)
+        return {"ok": True, "product": await product_dict(s, product, include_inactive_variants=True)}
+
+
 @router.delete("/products/{pid}")
 async def delete_product(pid: str, admin: User = Depends(current_admin)):
+    from mysql.product_management import apply_product_action
     async with session_scope() as s:
-        product = await get_or_404(s, m.Product, pid, "Produk tidak ditemukan", lock=True)
-        product.is_active = False
-        product.updated_at = utcnow()
-    return {"ok": True}
+        return await apply_product_action(s, [pid], 'delete')
 
 
 @router.post("/products/{pid}/stock")
 async def adjust_stock(pid: str, payload: Dict[str, Any], admin: User = Depends(current_admin)):
-    variant_id = payload.get("variant_id")
-    if not variant_id:
-        raise HTTPException(422, "variant_id wajib diisi")
-    try:
-        raw = payload.get("delta", 0)
-        delta = int(raw)
-        if isinstance(raw, bool) or Decimal(str(raw)) != delta or delta == 0:
-            raise ValueError
-    except (ValueError, TypeError, InvalidOperation, OverflowError):
-        raise HTTPException(422, "delta harus bilangan bulat bukan nol") from None
+    from mysql.inventory import adjust_inventory
     async with session_scope() as s:
-        await get_or_404(s, m.Product, pid, "Produk tidak ditemukan", lock=True)
-        variant = await s.scalar(select(m.ProductVariant).where(
-            m.ProductVariant.product_id == pid, m.ProductVariant.id == variant_id).with_for_update())
-        if variant is None:
-            raise HTTPException(404, "Varian produk tidak ditemukan")
-        if variant.stock + delta < variant.reserved:
-            raise HTTPException(409, "Stok tidak boleh kurang dari stok reserved")
-        variant.stock += delta
-        s.add(m.StockMovement(id=m.new_id(), product_id=pid, variant_id=variant_id,
-            type="stock_in" if delta > 0 else "stock_out", quantity=abs(delta), delta=delta,
-            reserved_delta=0, stock_after=variant.stock, reserved_after=variant.reserved,
-            note=str(payload.get("note") or ""), admin_id=admin.user_id))
-    return {"ok": True}
+        product = await _managed_product(s, pid, lock=True)
+        return await adjust_inventory(s, product, payload, admin.user_id)
 
 
 @router.get("/categories")
-async def admin_list_categories(admin: User = Depends(current_admin)):
+async def admin_list_categories(group_type: str | None = None, admin: User = Depends(current_admin)):
+    from mysql.taxonomy_definitions import GROUPS
+    if group_type and group_type not in {group['key'] for group in GROUPS}: raise HTTPException(422, 'Grup master tidak dikenal')
     async with read_session() as s:
-        rows = (await s.scalars(select(m.Category).order_by(m.Category.sort_order, m.Category.id))).all()
-        return {"categories": [row_dict(c) for c in rows]}
+        query = select(m.Category).where(m.Category.group_type != 'collection')
+        if group_type: query = query.where(m.Category.group_type == group_type)
+        rows = (await s.scalars(query.order_by(m.Category.group_type, m.Category.sort_order, m.Category.name, m.Category.id))).all()
+        return {'categories': [row_dict(row) for row in rows], 'groups': list(GROUPS),
+                'product_types': list(PRODUCT_TYPE_OPTIONS)}
 
+def _master_values(req):
+    from mysql.taxonomy_definitions import GROUPS
+    data = req.model_dump(); data['name'] = data['name'].strip()
+    if data['group_type'] not in {group['key'] for group in GROUPS}: raise HTTPException(422, 'Grup Koleksi sudah tidak digunakan. Pilih grup master lain.')
+    if not data['name']: raise HTTPException(422, 'Nama master wajib diisi')
+    if data['group_type'] == 'gender' and len(data['name']) > 64: raise HTTPException(422, 'Nama Gender maksimal 64 karakter')
+    data['code'] = data['code'] or slugify(data['name'])[:64]
+    if len(data['code']) > 64 or not data['code'].strip(): raise HTTPException(422, 'Kode master tidak valid')
+    if data['group_type'] == 'product_type' and data['code'] not in PRODUCT_TYPES:
+        raise HTTPException(422, 'Jenis Produk yang didukung: ' + ', '.join(item['name'] for item in PRODUCT_TYPE_OPTIONS))
+    return data
 
-async def _category_rows_locked(s):
-    return list((await s.scalars(select(m.Category).order_by(m.Category.id).with_for_update())).all())
-
-
-def _validate_category_parent(rows, category_id, parent_id):
-    by_id = {c.id: c for c in rows}
-    if parent_id and parent_id not in by_id:
-        raise HTTPException(422, "Kategori induk tidak ditemukan")
-    seen = {category_id}
-    current = parent_id
-    while current:
-        if current in seen:
-            raise HTTPException(422, "Kategori induk membentuk siklus")
-        seen.add(current)
-        current = by_id[current].parent_id
-    return by_id
-
-
-def _refresh_levels(rows):
-    by_id = {c.id: c for c in rows}
-    for category in rows:
-        parent, depth, seen = category.parent_id, 0, {category.id}
-        while parent:
-            if parent in seen or parent not in by_id:
-                raise HTTPException(409, "Hierarki kategori tidak valid")
-            seen.add(parent)
-            depth += 1
-            parent = by_id[parent].parent_id
-        category.level = depth
-
-
-@router.post("/categories")
+@router.post('/categories')
 async def create_category(req: CategoryCreate, admin: User = Depends(current_admin)):
     async with session_scope() as s:
-        rows = await _category_rows_locked(s)
-        cid = m.new_id()
-        _validate_category_parent(rows, cid, req.parent_id)
-        data = req.model_dump()
-        data["slug"] = await unique_slug(s, m.Category, req.slug or slugify(req.name))
-        category = m.Category(id=cid, **safe_values(m.Category, data))
-        s.add(category)
-        _refresh_levels([*rows, category])
-        await s.flush()
-        return {"ok": True, "category": row_dict(category)}
+        data = _master_values(req)
+        if await s.scalar(select(m.Category.id).where(m.Category.group_type == data['group_type'], m.Category.code == data['code'])): raise HTTPException(409, 'Master data sudah ada pada grup ini')
+        if await s.scalar(select(m.Category.id).where(m.Category.group_type == data['group_type'], func.lower(m.Category.name) == data['name'].lower())): raise HTTPException(409, 'Nama master sudah ada pada grup ini')
+        data['slug'] = await unique_slug(s, m.Category, req.slug or data['group_type'].replace('_','-') + '-' + slugify(req.name))
+        category = m.Category(id=m.new_id(), **safe_values(m.Category, data)); s.add(category); await s.flush()
+        return {'ok': True, 'category': row_dict(category)}
 
-
-@router.put("/categories/{cid}")
+@router.put('/categories/{cid}')
 async def update_category(cid: str, req: CategoryCreate, admin: User = Depends(current_admin)):
     async with session_scope() as s:
-        rows = await _category_rows_locked(s)
-        category = next((c for c in rows if c.id == cid), None)
-        if category is None:
-            raise HTTPException(404, "Kategori tidak ditemukan")
-        _validate_category_parent(rows, cid, req.parent_id)
-        data = req.model_dump()
-        data["slug"] = req.slug or category.slug
-        apply_fields(category, data, set(CategoryCreate.model_fields))
-        _refresh_levels(rows)
-    return {"ok": True}
+        category = await get_or_404(s, m.Category, cid, lock=True)
+        data = _master_values(req.model_copy(update={'code': req.code or category.code}))
+        if data['code'] != category.code or data['group_type'] != category.group_type: raise HTTPException(422, 'Grup dan kode master yang sudah dibuat tidak dapat diubah')
+        if await s.scalar(select(m.Category.id).where(m.Category.id != cid, m.Category.group_type == data['group_type'], func.lower(m.Category.name) == data['name'].lower())): raise HTTPException(409, 'Nama master sudah ada pada grup ini')
+        data['slug'] = req.slug or category.slug
+        apply_fields(category, data, set(CategoryCreate.model_fields)); await s.flush()
+        return {'ok': True, 'category': row_dict(category)}
 
-
-@router.delete("/categories/{cid}")
+@router.delete('/categories/{cid}')
 async def delete_category(cid: str, admin: User = Depends(current_admin)):
     async with session_scope() as s:
         category = await get_or_404(s, m.Category, cid, lock=True)
-        if await _count(s, m.ProductCategory, m.ProductCategory.category_id == cid) or await _count(
-                s, m.Product, m.Product.primary_category_id == cid):
-            raise HTTPException(409, "Kategori masih digunakan produk")
-        if await _count(s, m.Category, m.Category.parent_id == cid):
-            raise HTTPException(409, "Kategori masih memiliki sub-kategori")
+        used = await _count(s, m.ProductCategory, m.ProductCategory.category_id == cid) or await _count(s, m.Product, m.Product.primary_category_id == cid)
+        used = used or await _count(s, m.FlashSaleCategory, m.FlashSaleCategory.category_id == cid) or await _count(s, m.FlashSaleItem, m.FlashSaleItem.source_category_id == cid)
+        used = used or await _count(s, m.Banner, m.Banner.link_category_id == cid)
+        used = used or await _count(s, m.LensIndexType, m.LensIndexType.category_id == cid)
+        if category.group_type == 'product_type': used = used or await _count(s, m.Product, m.Product.product_type == category.code)
+        if used: raise HTTPException(409, 'Master data masih digunakan produk, Lens Index, promo, atau banner. Gunakan Nonaktifkan jika masih diperlukan sebagai riwayat.')
         await s.delete(category)
-    return {"ok": True}
+    return {'ok': True}
 
 
 @router.get("/brands")
@@ -341,17 +328,24 @@ async def admin_set_order_status(oid: str, payload: Dict[str, Any], admin: User 
 @router.get("/inventory")
 async def admin_inventory(admin: User = Depends(current_admin)):
     async with read_session() as s:
-        products = (await s.scalars(select(m.Product).order_by(m.Product.name, m.Product.id))).all()
-        rows = []
-        for product in await products_dict(s, products, include_inactive_variants=True):
-            variants = product["variants"] or [None]
-            for v in variants:
-                rows.append({"product_id": product["id"], "variant_id": v["id"] if v else None,
-                    "sku": v["sku"] if v else product["sku"], "name": product["name"],
-                    "variant_label": " / ".join(x for x in (v.get("color"), v.get("size"), v.get("lens_type")) if x) or "-" if v else "-",
-                    "stock": v["stock"] if v else 0, "reserved": v["reserved"] if v else 0,
-                    "min_alert": product["min_stock_alert"]})
-        return {"items": rows}
+        # LEFT JOIN keeps new products visible before their first stock variant
+        # exists, and uses the parent deletion marker for every retained variant.
+        joined = (await s.execute(select(m.Product, m.ProductVariant)
+            .outerjoin(m.ProductVariant, m.ProductVariant.product_id == m.Product.id)
+            .order_by(m.Product.created_at.desc(), m.Product.name, m.Product.id,
+                      m.ProductVariant.sort_order, m.ProductVariant.id))).all()
+        rows, deleted_rows = [], []
+        for product, variant in joined:
+            target = deleted_rows if product.deleted_at is not None else rows
+            target.append({"deleted_at": product.deleted_at, "product_active": product.is_active,
+                "variant_active": variant.is_active if variant else True,
+                "can_adjust": product.deleted_at is None and (variant.is_active if variant else True),
+                "product_id": product.id, "variant_id": variant.id if variant else None,
+                "sku": variant.sku if variant else product.sku, "name": product.name,
+                "variant_label": (" / ".join(x for x in (variant.color, variant.size, variant.lens_type) if x) or "-") if variant else "-",
+                "stock": variant.stock if variant else 0, "reserved": variant.reserved if variant else 0,
+                "min_alert": product.min_stock_alert})
+        return {"items": rows, "deleted_items": deleted_rows}
 
 
 @router.get("/vouchers")
@@ -400,8 +394,23 @@ async def create_flash_sale(payload: Dict[str, Any], admin: User = Depends(curre
 @router.delete("/flash-sales/{fid}")
 async def delete_flash_sale(fid: str, admin: User = Depends(current_admin)):
     async with session_scope() as s:
+        product_ids = (await s.scalars(select(m.FlashSaleItem.product_id).where(m.FlashSaleItem.flash_sale_id == fid))).all()
+        if product_ids:
+            await s.scalars(select(m.Product).where(m.Product.id.in_(product_ids)).order_by(m.Product.id).with_for_update())
         flash = await get_or_404(s, m.FlashSale, fid, lock=True)
-        flash.is_active = False
+        items = (await s.scalars(select(m.FlashSaleItem).where(m.FlashSaleItem.flash_sale_id == fid)
+            .order_by(m.FlashSaleItem.id).with_for_update())).all()
+        item_ids = [item.id for item in items]
+        history = await s.scalar(select(m.FlashSaleReservation.id).where(
+            m.FlashSaleReservation.flash_sale_item_id.in_(item_ids)).limit(1)) if item_ids else None
+        banner = await s.scalar(select(m.Banner.id).where(m.Banner.link_flash_sale_id == fid).limit(1))
+        if history or any(item.sold or item.reserved for item in items):
+            raise HTTPException(409, "Flash Sale memiliki riwayat transaksi atau reservasi. Gunakan Nonaktifkan untuk menghentikan promo.")
+        if banner:
+            raise HTTPException(409, "Flash Sale masih ditautkan pada banner. Ubah atau hapus tautan banner terlebih dahulu.")
+        await s.execute(delete(m.FlashSaleItem).where(m.FlashSaleItem.flash_sale_id == fid))
+        await s.execute(delete(m.FlashSaleCategory).where(m.FlashSaleCategory.flash_sale_id == fid))
+        await s.delete(flash)
     return {"ok": True}
 
 
@@ -415,6 +424,9 @@ async def admin_list_rewards(admin: User = Depends(current_admin)):
 async def create_reward(payload: Dict[str, Any], admin: User = Depends(current_admin)):
     data = validate_payload(RouletteRewardDTO, {k: v for k, v in payload.items() if k in RouletteRewardDTO.model_fields and k != "id"})
     async with session_scope() as s:
+        rule = await s.get(m.GameRule, 'roulette', with_for_update=True)
+        if rule and data.get('type') == 'points' and data.get('value', 0) > rule.max_points:
+            raise HTTPException(422, 'Hadiah melebihi batas poin Roulette. Ubah batas poin di Manage Games terlebih dahulu.')
         reward = m.RouletteReward(**safe_values(m.RouletteReward, data))
         s.add(reward)
         await s.flush()

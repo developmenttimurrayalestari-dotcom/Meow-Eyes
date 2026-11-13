@@ -1,0 +1,132 @@
+{
+  "date": "2026-11-09",
+  "scope": "Synthetic local browser software validation; no human clinical validation",
+  "browser": "Chromium 153.0.8010.0",
+  "platform": "Linux",
+  "unit_tests": 92,
+  "unit_suites": 9,
+  "browser_passed": 10,
+  "uncaught_errors": [],
+  "scenarios": [
+    {
+      "name": "Private entry loads without API, analytics or third-party assets",
+      "status": "passed",
+      "durationMs": 199
+    },
+    {
+      "name": "Native IndexedDB vault, separate reviewer and synthetic patient",
+      "status": "passed",
+      "durationMs": 729,
+      "detail": {
+        "encryptedPatient": true,
+        "localRoles": true
+      }
+    },
+    {
+      "name": "Manual prescription, unequal PD and original revision survive encrypted round-trip",
+      "status": "passed",
+      "durationMs": 1141
+    },
+    {
+      "name": "JSON and CSV retain scope, provenance, independent PD and no image bytes",
+      "status": "passed",
+      "durationMs": 405,
+      "detail": {
+        "status": "approved",
+        "rightMm": 31,
+        "leftMm": 33,
+        "photoIncluded": false
+      }
+    },
+    {
+      "name": "Offline reload, encrypted unlock and real PDF generation use cached local assets",
+      "status": "passed",
+      "durationMs": 725,
+      "detail": {
+        "cachedStaticAssets": 22,
+        "pdfBytes": 155855
+      }
+    },
+    {
+      "name": "Responsive light/dark results layout has no horizontal page overflow",
+      "status": "passed",
+      "durationMs": 299
+    },
+    {
+      "name": "Changing frame invalidates current results and preserves approved historical revision",
+      "status": "passed",
+      "durationMs": 712,
+      "detail": {
+        "revisions": 3
+      }
+    },
+    {
+      "name": "Camera requires consent, stores encrypted burst, and stops tracks on lock",
+      "status": "passed",
+      "durationMs": 1342,
+      "detail": {
+        "encryptedPhotos": 3
+      }
+    },
+    {
+      "name": "Encrypted backup restores a native vault and rejects the wrong passphrase",
+      "status": "passed",
+      "durationMs": 1422
+    },
+    {
+      "name": "No uncaught browser errors or clinical network uploads",
+      "status": "passed",
+      "durationMs": 1,
+      "detail": {
+        "uncaughtErrors": 0,
+        "requests": 68
+      }
+    }
+  ],
+  "pdf": {
+    "pages": 3,
+    "format": "A4",
+    "out_of_bounds_words": 0,
+    "rendered_and_inspected": true
+  },
+  "live_mysql": false,
+  "physical_camera": false,
+  "clinical_accuracy_validated": false,
+  "storefront_bootstrap_smoke": {
+    "status": "passed",
+    "testedAt": "2026-11-09T05:42:46.383Z",
+    "scope": "Production storefront bootstrap, failed optional font dependencies, controlled API503 rendering, and full-document navigation into the private gate. Commerce and live backend behavior are outside scope.",
+    "storefront": {
+      "path": "/shop-now",
+      "navigationVisible": true,
+      "optifitLinkVisible": true,
+      "controlledApiErrorVisible": true,
+      "catalogLimit15": true,
+      "optionalFontFailuresTolerated": true
+    },
+    "privateGate": {
+      "path": "/meowsurement/",
+      "setupGateVisible": true,
+      "freshDocument": true,
+      "storefrontNavigationAbsent": true,
+      "usernameFieldVisible": true,
+      "privateApiRequests": [],
+      "privateExternalRequests": []
+    },
+    "navigationDocuments": [
+      "/shop-now",
+      "/meowsurement/"
+    ],
+    "apiResponses": {
+      "status": 503,
+      "requests": [
+        "/api/products?limit=15&page=1",
+        "/api/brands",
+        "/api/settings/whatsapp",
+        "/api/auth/me"
+      ]
+    },
+    "blockedOptionalFontStylesheets": 2,
+    "uncaughtJavaScriptErrors": []
+  }
+}

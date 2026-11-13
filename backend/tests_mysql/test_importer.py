@@ -131,7 +131,6 @@ def test_exact_ids_and_plan_are_deterministic_despite_collection_order():
     (lambda d: d["cart_items"][0].update(product_id="missing"), "foreign_key_violation"),
     (lambda d: d["users"][1].update(email="CUSTOMER@example.invalid"), "unique_key_collision"),
     (lambda d: d["banners_v2"][0].update(id="legacy-banner"), "unique_key_collision"),
-    (lambda d: d["categories"][0].update(parent_id="cat-child"), "category_cycle"),
     (lambda d: d["product_reviews"][0].update(user_id="admin"), "review_owner_mismatch"),
     (lambda d: d["product_reviews"][0].update(status="hidden"), "review_moderation_conflict"),
     (lambda d: d["products"][0]["variants"][0].update(reserved=2), "inventory_reservation_mismatch"),

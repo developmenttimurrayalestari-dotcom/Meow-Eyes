@@ -12,18 +12,21 @@ from sqlalchemy import CheckConstraint
 from sqlalchemy.exc import IntegrityError
 
 from mysql.base import Base
-from mysql.check_integrity import load_revision
+from mysql.check_integrity import load_revision, load_accessories_revision
 from mysql.config import STRICT_SQL_MODE
 from tests_mysql.test_schema import NOW, add, connection  # noqa: F401: reuse isolated fixture
 
 
 def test_frozen_rules_cover_every_metadata_check_without_changing_literals():
     revision = load_revision()
+    # 0012 supersedes the product-kind guard; the historical file stays frozen.
+    revision.RULES['products'] = load_accessories_revision().RULES['products']
     expected = {str(check.name): (table.name, str(check.sqltext))
-                for table in Base.metadata.tables.values() for check in table.constraints
+                for table in Base.metadata.tables.values() if table.name in revision.ALL_TABLES and table.name != "categories" for check in table.constraints
                 if isinstance(check, CheckConstraint)}
     actual = {}
     for table, rules in revision.RULES.items():
+        if table == "categories": continue  # Replaced by frozen 0006 guards.
         columns = Base.metadata.tables[table].columns
         for name, predicate, new_predicate in rules:
             actual[name] = (table, predicate.replace("`", ""))
@@ -32,9 +35,10 @@ def test_frozen_rules_cover_every_metadata_check_without_changing_literals():
             assert refs
             assert all(column in columns and columns[column].computed is None for column in refs)
     assert actual == expected
-    assert len(actual) == 97
+    assert len(actual) == 95
     assert len(revision.RULES) == 45
-    assert set(revision.ALL_TABLES) == set(Base.metadata.tables)
+    assert len(revision.ALL_TABLES) == 68
+    assert set(revision.ALL_TABLES) < set(Base.metadata.tables)
     assert revision.EXPECTED_SQL_MODES == set(STRICT_SQL_MODE.split(","))
     definitions = revision.trigger_definitions()
     assert len(definitions) == 90

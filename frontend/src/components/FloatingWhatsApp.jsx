@@ -1,10 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { MessageCircle } from "lucide-react";
+import { useLocation } from "react-router-dom";
 import { api } from "../lib/api";
 
 export default function FloatingWhatsApp() {
+  const { pathname } = useLocation();
+  const isAdmin = /^\/admin(?:\/|$)/i.test(pathname);
   const [settings, setSettings] = useState(null);
   useEffect(() => {
+    if (isAdmin) return;
     let active = true;
     const load = () => api.get("/settings/whatsapp").then(({ data }) => { if (active) setSettings(data); }).catch(() => {});
     load();
@@ -15,9 +19,9 @@ export default function FloatingWhatsApp() {
       window.removeEventListener("focus", load);
       window.removeEventListener("meow:whatsapp-updated", load);
     };
-  }, []);
+  }, [isAdmin]);
   const phone = String(settings?.phone_number || "").replace(/\D/g, "");
-  if (!settings?.enabled || !/^[1-9]\d{6,14}$/.test(phone)) return null;
+  if (isAdmin || !settings?.enabled || !/^[1-9]\d{6,14}$/.test(phone)) return null;
   const href = `https://wa.me/${phone}?text=${encodeURIComponent(settings.default_text || "")}`;
   return (
     <a href={href} target="_blank" rel="noopener noreferrer" aria-label="Hubungi toko melalui WhatsApp" title="Chat WhatsApp"

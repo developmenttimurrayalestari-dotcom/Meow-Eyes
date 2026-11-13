@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useSearchParams, useParams, useLocation, Link } from "react-router-dom";
 import { api, apiError } from "../lib/api";
+import MasterCatalogFilters from "../components/MasterCatalogFilters";
 import ProductCard from "../components/ProductCard";
 import { Filter, X, ChevronRight } from "lucide-react";
 import CatalogPagination, { catalogPage, PAGE_SIZE } from "../components/CatalogPagination";
@@ -13,53 +14,9 @@ const SORTS = [
   { value: "rating", label: "Rating Terbaik" },
   { value: "discount", label: "Diskon Terbesar" },
 ];
-const SEGMENTS = ["Pria", "Wanita", "Anak-anak", "Unisex"];
-const TYPES = ["frame", "lens", "package"];
-
-const FilterPanel = ({ params, setParam, brands }) => (
+const FilterPanel = ({ params, setParam, brands, categories, setMasterFilter }) => (
   <div className="space-y-6 text-sm">
-    <div>
-      <p className="font-bold mb-2 text-xs uppercase tracking-wider text-meow-salmon">Tipe Produk</p>
-      <div className="space-y-1">
-        {TYPES.map((t) => (
-          <label key={t} className="flex items-center gap-2 capitalize cursor-pointer">
-            <input
-              type="radio" name="product_type" value={t}
-              checked={params.product_type === t}
-              onChange={(e) => setParam("product_type", e.target.value)}
-              data-testid={`filter-type-${t}`}
-            />
-            {t === "package" ? "Paket" : t === "lens" ? "Lensa" : "Frame"}
-          </label>
-        ))}
-        {params.product_type && (
-          <button onClick={() => setParam("product_type", null)} className="text-xs underline" data-testid="clear-type">
-            Hapus filter tipe
-          </button>
-        )}
-      </div>
-    </div>
-    <div>
-      <p className="font-bold mb-2 text-xs uppercase tracking-wider text-meow-salmon">Segmentasi</p>
-      <div className="space-y-1">
-        {SEGMENTS.map((s) => (
-          <label key={s} className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio" name="segment" value={s}
-              checked={params.segment === s}
-              onChange={(e) => setParam("segment", e.target.value)}
-              data-testid={`filter-segment-${s.toLowerCase()}`}
-            />
-            {s}
-          </label>
-        ))}
-        {params.segment && (
-          <button onClick={() => setParam("segment", null)} className="text-xs underline" data-testid="clear-segment">
-            Hapus filter segmentasi
-          </button>
-        )}
-      </div>
-    </div>
+    <MasterCatalogFilters categories={categories} params={params} onChange={setMasterFilter} />
     <div>
       <p className="font-bold mb-2 text-xs uppercase tracking-wider text-meow-salmon">Brand</p>
       <div className="space-y-1 max-h-48 overflow-y-auto">
@@ -101,6 +58,8 @@ const ProductsPage = ({ title, intro, badge: fixedBadge, children }) => {
   const [products, setProducts] = useState([]);
   const [total, setTotal] = useState(0);
   const [brands, setBrands] = useState([]);
+  const [masterCategories, setMasterCategories] = useState([]);
+  const [masterError, setMasterError] = useState("");
   const [category, setCategory] = useState(null);
   const [breadcrumb, setBreadcrumb] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -119,6 +78,19 @@ const ProductsPage = ({ title, intro, badge: fixedBadge, children }) => {
     next.set("page", "1");
     setSearch(next);
   };
+
+  const setMasterFilter = ids => {
+    const next = new URLSearchParams(search);
+    next.delete('product_type'); next.delete('segment');
+    if (ids.length) next.set('category_ids', ids.join(',')); else next.delete('category_ids');
+    next.set('page', '1'); setSearch(next);
+  };
+  useEffect(() => {
+    const controller = new AbortController(); setMasterError('');
+    api.get('/categories', { signal: controller.signal }).then(({ data }) => setMasterCategories(data.categories || []))
+      .catch(e => { if (!controller.signal.aborted) setMasterError(apiError(e, 'Filter master belum dapat dimuat.')); });
+    return () => controller.abort();
+  }, [reload]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -203,7 +175,7 @@ const ProductsPage = ({ title, intro, badge: fixedBadge, children }) => {
           </h1>
           <p className="text-meow-gray text-sm mt-1" aria-live="polite">{loading ? "Memuat produk…" : `${total} produk ditemukan`}</p>
           {(intro || isNewArrival) && <p className="text-sm text-meow-gray mt-2 max-w-xl">{intro || "Temukan koleksi terbaru yang dipilih untuk Anda."}</p>}
-          {isNewArrival && <Link to="/category/frame-new-arrival" className="inline-block mt-3 text-sm font-bold text-meow-salmon underline">Category New Arrival · Frame →</Link>}
+          {isNewArrival && <Link to="/new-arrival?product_type=frame" className="inline-block mt-3 text-sm font-bold text-meow-salmon underline">New Arrival · Frame →</Link>}
         </div>
         <div className="flex items-center gap-3">
           <button onClick={() => setShowMobileFilter(true)} className="md:hidden flex items-center gap-2 px-4 py-2 bg-meow-midnight text-white rounded-full text-sm" data-testid="open-filter-mobile">
@@ -220,22 +192,23 @@ const ProductsPage = ({ title, intro, badge: fixedBadge, children }) => {
         </div>
       </div>
 
+      {masterError && <p role="alert" className="bg-amber-50 p-3 rounded-xl my-3 text-sm">{masterError} <button className="underline" onClick={() => setReload(value => value + 1)}>Muat ulang filter</button></p>}
       {children}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
         {/* Sidebar */}
         <aside className="hidden md:block md:col-span-3 bg-white rounded-3xl p-6 self-start sticky top-40" data-testid="filter-sidebar">
-          <FilterPanel params={params} setParam={setParam} brands={brands} />
+          <FilterPanel params={params} setParam={setParam} brands={brands} categories={masterCategories} setMasterFilter={setMasterFilter} />
         </aside>
 
         {/* Mobile drawer */}
         {showMobileFilter && (
-          <div className="md:hidden fixed inset-0 bg-black/50 z-40" onClick={() => setShowMobileFilter(false)}>
+          <div className="md:hidden fixed inset-0 bg-black/50 z-[70]" onClick={() => setShowMobileFilter(false)}>
             <div className="absolute right-0 top-0 bottom-0 w-80 bg-white p-6 overflow-y-auto" onClick={(e) => e.stopPropagation()}>
               <div className="flex justify-between items-center mb-6">
                 <p className="font-heading font-black text-xl">Filter</p>
                 <button onClick={() => setShowMobileFilter(false)} data-testid="close-filter-mobile"><X className="h-5 w-5" /></button>
               </div>
-              <FilterPanel params={params} setParam={setParam} brands={brands} />
+              <FilterPanel params={params} setParam={setParam} brands={brands} categories={masterCategories} setMasterFilter={setMasterFilter} />
             </div>
           </div>
         )}

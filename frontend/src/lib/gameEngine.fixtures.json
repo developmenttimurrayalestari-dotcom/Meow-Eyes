@@ -1,0 +1,389 @@
+[
+  {
+    "seed": 1,
+    "config": {
+      "max_duration_seconds": 180,
+      "max_points": 50,
+      "points_per_unit": 2
+    },
+    "ticks": 1400,
+    "y": 9400,
+    "lives": 3,
+    "kills": 4,
+    "serial": 32,
+    "enemies": [
+      {
+        "id": 28,
+        "x": 0,
+        "y": 5874,
+        "kind": 2,
+        "dead": false
+      },
+      {
+        "id": 29,
+        "x": 3320,
+        "y": 5396,
+        "kind": 0,
+        "dead": false
+      },
+      {
+        "id": 30,
+        "x": 6640,
+        "y": 2742,
+        "kind": 0,
+        "dead": false
+      },
+      {
+        "id": 31,
+        "x": 9960,
+        "y": 7288,
+        "kind": 2,
+        "dead": false
+      },
+      {
+        "id": 32,
+        "x": 13280,
+        "y": 4282,
+        "kind": 0,
+        "dead": false
+      }
+    ],
+    "bullets": [
+      {
+        "x": 16450,
+        "y": 9400,
+        "dead": false
+      },
+      {
+        "x": 14770,
+        "y": 9400,
+        "dead": false
+      },
+      {
+        "x": 13090,
+        "y": 9400,
+        "dead": false
+      },
+      {
+        "x": 11410,
+        "y": 9400,
+        "dead": false
+      },
+      {
+        "x": 9730,
+        "y": 9400,
+        "dead": false
+      },
+      {
+        "x": 8050,
+        "y": 9400,
+        "dead": false
+      },
+      {
+        "x": 6370,
+        "y": 9400,
+        "dead": false
+      },
+      {
+        "x": 4690,
+        "y": 9400,
+        "dead": false
+      },
+      {
+        "x": 3010,
+        "y": 9400,
+        "dead": false
+      }
+    ],
+    "board": [
+      3,
+      5,
+      8,
+      6,
+      0,
+      11,
+      10,
+      9,
+      1,
+      2,
+      7,
+      4
+    ],
+    "deck": [
+      0,
+      3,
+      7,
+      0,
+      1,
+      6,
+      5,
+      3,
+      2,
+      6,
+      5,
+      4,
+      1,
+      2,
+      7,
+      4
+    ]
+  },
+  {
+    "seed": 123456,
+    "config": {
+      "max_duration_seconds": 180,
+      "max_points": 50,
+      "points_per_unit": 2
+    },
+    "ticks": 1400,
+    "y": 9400,
+    "lives": 2,
+    "kills": 4,
+    "serial": 32,
+    "enemies": [
+      {
+        "id": 28,
+        "x": 0,
+        "y": 5501,
+        "kind": 2,
+        "dead": false
+      },
+      {
+        "id": 29,
+        "x": 3320,
+        "y": 8711,
+        "kind": 1,
+        "dead": false
+      },
+      {
+        "id": 30,
+        "x": 6640,
+        "y": 8241,
+        "kind": 2,
+        "dead": false
+      },
+      {
+        "id": 31,
+        "x": 9960,
+        "y": 5147,
+        "kind": 0,
+        "dead": false
+      },
+      {
+        "id": 32,
+        "x": 13280,
+        "y": 1541,
+        "kind": 0,
+        "dead": false
+      }
+    ],
+    "bullets": [
+      {
+        "x": 16450,
+        "y": 9400,
+        "dead": false
+      },
+      {
+        "x": 14770,
+        "y": 9400,
+        "dead": false
+      },
+      {
+        "x": 13090,
+        "y": 9400,
+        "dead": false
+      },
+      {
+        "x": 11410,
+        "y": 9400,
+        "dead": false
+      },
+      {
+        "x": 9730,
+        "y": 9400,
+        "dead": false
+      },
+      {
+        "x": 8050,
+        "y": 9400,
+        "dead": false
+      },
+      {
+        "x": 6370,
+        "y": 9400,
+        "dead": false
+      },
+      {
+        "x": 4690,
+        "y": 9400,
+        "dead": false
+      },
+      {
+        "x": 3010,
+        "y": 9400,
+        "dead": false
+      }
+    ],
+    "board": [
+      1,
+      9,
+      2,
+      8,
+      5,
+      3,
+      0,
+      7,
+      10,
+      6,
+      4,
+      11
+    ],
+    "deck": [
+      2,
+      6,
+      1,
+      4,
+      0,
+      3,
+      2,
+      4,
+      5,
+      7,
+      0,
+      5,
+      6,
+      3,
+      1,
+      7
+    ]
+  },
+  {
+    "seed": 4294967295,
+    "config": {
+      "max_duration_seconds": 180,
+      "max_points": 50,
+      "points_per_unit": 2
+    },
+    "ticks": 1400,
+    "y": 9400,
+    "lives": 3,
+    "kills": 4,
+    "serial": 32,
+    "enemies": [
+      {
+        "id": 28,
+        "x": 0,
+        "y": 888,
+        "kind": 0,
+        "dead": false
+      },
+      {
+        "id": 29,
+        "x": 3320,
+        "y": 8250,
+        "kind": 0,
+        "dead": false
+      },
+      {
+        "id": 30,
+        "x": 6640,
+        "y": 2524,
+        "kind": 0,
+        "dead": false
+      },
+      {
+        "id": 31,
+        "x": 9960,
+        "y": 7182,
+        "kind": 2,
+        "dead": false
+      },
+      {
+        "id": 32,
+        "x": 13280,
+        "y": 2352,
+        "kind": 1,
+        "dead": false
+      }
+    ],
+    "bullets": [
+      {
+        "x": 16450,
+        "y": 9400,
+        "dead": false
+      },
+      {
+        "x": 14770,
+        "y": 9400,
+        "dead": false
+      },
+      {
+        "x": 13090,
+        "y": 9400,
+        "dead": false
+      },
+      {
+        "x": 11410,
+        "y": 9400,
+        "dead": false
+      },
+      {
+        "x": 9730,
+        "y": 9400,
+        "dead": false
+      },
+      {
+        "x": 8050,
+        "y": 9400,
+        "dead": false
+      },
+      {
+        "x": 6370,
+        "y": 9400,
+        "dead": false
+      },
+      {
+        "x": 4690,
+        "y": 9400,
+        "dead": false
+      },
+      {
+        "x": 3010,
+        "y": 9400,
+        "dead": false
+      }
+    ],
+    "board": [
+      7,
+      11,
+      5,
+      8,
+      2,
+      10,
+      4,
+      9,
+      3,
+      0,
+      1,
+      6
+    ],
+    "deck": [
+      5,
+      3,
+      1,
+      6,
+      1,
+      6,
+      4,
+      7,
+      0,
+      3,
+      5,
+      2,
+      4,
+      0,
+      7,
+      2
+    ]
+  }
+]

@@ -1,0 +1,10 @@
+{
+  "ok": true,
+  "api": "mocked; no store writes or orders",
+  "emptyLensAndRecipeAllowCheckout": true,
+  "revertingOptionalEditsAllowsCheckout": true,
+  "noSaveOrUploadRequired": true,
+  "frameOnlyRemovesIndexAndBundleCharges": true,
+  "desktopAndMobile": true,
+  "errors": []
+}

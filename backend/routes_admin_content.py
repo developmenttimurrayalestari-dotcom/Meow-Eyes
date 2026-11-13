@@ -7,19 +7,21 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import StreamingResponse
 from openpyxl import Workbook, load_workbook
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, or_, select
 from database import read_session, session_scope
 from auth import current_admin, require_permission
 from models import (User, Article as ArticleDTO, ArticleCategory as ArticleCategoryDTO,
                     ProductKnowledge as KnowledgeDTO, FAQItem, FAQCategory as FAQCategoryDTO,
-                    CMSPage as PageDTO, ContactSetting as ContactDTO, BannerV2, LensIndex as LensDTO)
+                    CMSPage as PageDTO, ContactSetting as ContactDTO, BannerV2, LensIndexInput as LensDTO)
 from mysql import models as m
 from mysql.api import row_dict, user_dict
 from mysql.base import utcnow
+from mysql.taxonomy_definitions import PRODUCT_TYPES
 from mysql.catalog import (apply_fields, article_dict, articles_dict, banner_dict, banner_values,
     contact_dict, get_or_404, knowledge_dict, knowledges_dict, replace_article_tags, replace_knowledge_children,
     reviews_dict, safe_values, slugify, strings, unique_slug, validate_payload, write_product)
 from mysql.features import normalize_whatsapp_phone
+from mysql.lenses import indexes_payload, replace_index_types
 
 router = APIRouter(prefix="/admin", tags=["admin-content"])
 
@@ -178,7 +180,9 @@ async def kn_delete(kid: str, admin: User = Depends(require_permission("article.
 
 @router.get("/lens/indexes")
 async def li_list(admin: User = Depends(require_permission("product.view"))):
-    return {"items": await _simple_list(m.LensIndex, (m.LensIndex.sort_order, m.LensIndex.id), 50)}
+    async with read_session() as s:
+        rows = (await s.scalars(select(m.LensIndex).order_by(m.LensIndex.sort_order, m.LensIndex.id))).all()
+        return {"items": await indexes_payload(s, rows)}
 
 
 @router.post("/lens/indexes")
@@ -188,15 +192,18 @@ async def li_create(payload: Dict[str, Any], admin: User = Depends(require_permi
         item = m.LensIndex(**safe_values(m.LensIndex, data))
         s.add(item)
         await s.flush()
-        return {"ok": True, "item": row_dict(item)}
+        await replace_index_types(s, item.id, data['lens_type_ids'])
+        return {"ok": True, "item": (await indexes_payload(s, [item]))[0]}
 
 
 @router.put("/lens/indexes/{lid}")
 async def li_update(lid: str, payload: Dict[str, Any], admin: User = Depends(require_permission("product.update"))):
     async with session_scope() as s:
         item = await get_or_404(s, m.LensIndex, lid, lock=True)
-        data = validate_payload(LensDTO, {**row_dict(item), **_subset(payload, LENS_FIELDS)})
-        apply_fields(item, data, LENS_FIELDS)
+        existing = (await indexes_payload(s, [item]))[0]
+        data = validate_payload(LensDTO, {**existing, **_subset(payload, LENS_FIELDS)})
+        apply_fields(item, data, LENS_FIELDS - {'lens_type_ids'})
+        await replace_index_types(s, item.id, data['lens_type_ids'])
     return {"ok": True}
 
 
@@ -428,6 +435,7 @@ PERMISSION_CATALOG = [
     ("banner.delete", "Hapus Banner", "banner"), ("report.view", "Lihat Laporan", "report"),
     ("report.export", "Export Laporan", "report"), ("setting.view", "Lihat Setting", "setting"),
     ("setting.update", "Update Setting", "setting"),
+    ("meowsurement.review", "Review Meowsurement", "meowsurement"),
 ]
 
 
@@ -605,8 +613,8 @@ def _workbook_rows(data: bytes) -> list[dict]:
             errors = []
             if not str(record.get("product_name") or "").strip():
                 errors.append("product_name kosong")
-            if record.get("product_type") not in ("frame", "lens", "package"):
-                errors.append("product_type harus frame/lens/package")
+            if record.get("product_type") not in PRODUCT_TYPES:
+                errors.append("product_type harus " + '/'.join(PRODUCT_TYPES))
             sku = str(record.get("variant_sku") or "").strip()
             if not sku:
                 errors.append("variant_sku kosong")
@@ -680,9 +688,13 @@ async def import_commit(file: UploadFile = File(...), admin: User = Depends(requ
             cname = str(first.get("main_category") or "").strip()
             category_ids = []
             if cname:
-                matches = (await s.scalars(select(m.Category).where(m.Category.name == cname))).all()
+                # Names can repeat across independent groups. IDs/slugs are
+                # unambiguous identifiers in the existing spreadsheet column.
+                matches = (await s.scalars(select(m.Category).where(or_(m.Category.id == cname, m.Category.slug == cname)))).all()
+                if not matches:
+                    matches = (await s.scalars(select(m.Category).where(m.Category.name == cname))).all()
                 if len(matches) != 1:
-                    raise HTTPException(422, "main_category harus cocok dengan satu kategori yang sudah ada")
+                    raise HTTPException(422, "main_category harus cocok dengan satu master; gunakan ID atau slug jika nama sama")
                 category_ids = [matches[0].id]
             variants = [{"sku": str(rec["variant_sku"]).strip(),
                 "color": str(rec.get("variant_color") or "").strip() or None,

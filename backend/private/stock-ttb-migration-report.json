@@ -1,0 +1,19 @@
+{
+  "ok": true,
+  "revision": "20261112_0009",
+  "backup": "private\\backups\\stock-ttb-before-0009-20261112T050355Z.sql",
+  "backup_sha256": "200f2ed58066e679f377990d63cdd414961b169e5e9b6b2894bb9e33c71704a8",
+  "existing_product_data_unchanged": true,
+  "before_product_count": 21,
+  "after_product_count": 21,
+  "deleted_product_count": 20,
+  "integrity": {
+    "ok": true,
+    "mode": "full_integrity_audit",
+    "expected_triggers": 154,
+    "row_rules": 139,
+    "definer_privileges_verified": false,
+    "issues": []
+  },
+  "backend_started": false
+}

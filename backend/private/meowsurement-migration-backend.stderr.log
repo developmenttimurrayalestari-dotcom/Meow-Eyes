@@ -1,0 +1,39 @@
+INFO:     Started server process [10960]
+INFO:     Waiting for application startup.
+2026-11-10 11:06:33,302 - meow - INFO - MySQL schema is ready
+2026-11-10 11:06:33,371 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-11-10 11:06:33,392 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-11-10 11:06:33,418 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-11-10 11:06:33,442 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-11-10 11:06:33,444 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-11-10 11:06:33,445 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-11-10 11:06:33,447 - apscheduler.scheduler - INFO - Added job "job_expire_pending_orders" to job store "default"
+2026-11-10 11:06:33,448 - apscheduler.scheduler - INFO - Added job "job_activate_flash_sales" to job store "default"
+2026-11-10 11:06:33,449 - apscheduler.scheduler - INFO - Added job "job_poll_shipments" to job store "default"
+2026-11-10 11:06:33,449 - apscheduler.scheduler - INFO - Added job "job_auto_complete_orders" to job store "default"
+2026-11-10 11:06:33,450 - apscheduler.scheduler - INFO - Added job "job_reconcile_payments" to job store "default"
+2026-11-10 11:06:33,451 - apscheduler.scheduler - INFO - Added job "job_expire_meowsurement_photos" to job store "default"
+2026-11-10 11:06:33,451 - apscheduler.scheduler - INFO - Scheduler started
+2026-11-10 11:06:33,452 - meow.scheduler - INFO - Maintenance scheduler started
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+2026-11-10 11:07:33,406 - apscheduler.executors.default - INFO - Running job "job_activate_flash_sales (trigger: interval[0:01:00], next run at: 2026-11-10 11:08:33 +07)" (scheduled at 2026-11-10 11:07:33.392294+07:00)
+2026-11-10 11:07:33,497 - apscheduler.executors.default - INFO - Job "job_activate_flash_sales (trigger: interval[0:01:00], next run at: 2026-11-10 11:08:33 +07)" executed successfully
+2026-11-10 11:08:33,406 - apscheduler.executors.default - INFO - Running job "job_activate_flash_sales (trigger: interval[0:01:00], next run at: 2026-11-10 11:09:33 +07)" (scheduled at 2026-11-10 11:08:33.392294+07:00)
+2026-11-10 11:08:33,423 - apscheduler.executors.default - INFO - Job "job_activate_flash_sales (trigger: interval[0:01:00], next run at: 2026-11-10 11:09:33 +07)" executed successfully
+2026-11-10 11:09:33,407 - apscheduler.executors.default - INFO - Running job "job_activate_flash_sales (trigger: interval[0:01:00], next run at: 2026-11-10 11:10:33 +07)" (scheduled at 2026-11-10 11:09:33.392294+07:00)
+2026-11-10 11:09:33,420 - apscheduler.executors.default - INFO - Job "job_activate_flash_sales (trigger: interval[0:01:00], next run at: 2026-11-10 11:10:33 +07)" executed successfully
+2026-11-10 11:10:33,392 - apscheduler.executors.default - INFO - Running job "job_activate_flash_sales (trigger: interval[0:01:00], next run at: 2026-11-10 11:11:33 +07)" (scheduled at 2026-11-10 11:10:33.392294+07:00)
+2026-11-10 11:10:33,403 - apscheduler.executors.default - INFO - Job "job_activate_flash_sales (trigger: interval[0:01:00], next run at: 2026-11-10 11:11:33 +07)" executed successfully
+2026-11-10 11:11:33,382 - apscheduler.executors.default - INFO - Running job "job_expire_pending_orders (trigger: interval[0:05:00], next run at: 2026-11-10 11:16:33 +07)" (scheduled at 2026-11-10 11:11:33.371589+07:00)
+2026-11-10 11:11:33,392 - apscheduler.executors.default - INFO - Running job "job_activate_flash_sales (trigger: interval[0:01:00], next run at: 2026-11-10 11:12:33 +07)" (scheduled at 2026-11-10 11:11:33.392294+07:00)
+2026-11-10 11:11:33,414 - apscheduler.executors.default - INFO - Job "job_expire_pending_orders (trigger: interval[0:05:00], next run at: 2026-11-10 11:16:33 +07)" executed successfully
+2026-11-10 11:11:33,423 - apscheduler.executors.default - INFO - Job "job_activate_flash_sales (trigger: interval[0:01:00], next run at: 2026-11-10 11:12:33 +07)" executed successfully
+2026-11-10 11:11:33,445 - apscheduler.executors.default - INFO - Running job "job_reconcile_payments (trigger: interval[0:05:00], next run at: 2026-11-10 11:16:33 +07)" (scheduled at 2026-11-10 11:11:33.443697+07:00)
+2026-11-10 11:11:33,456 - apscheduler.executors.default - INFO - Job "job_reconcile_payments (trigger: interval[0:05:00], next run at: 2026-11-10 11:16:33 +07)" executed successfully
+2026-11-10 11:12:33,397 - apscheduler.executors.default - INFO - Running job "job_activate_flash_sales (trigger: interval[0:01:00], next run at: 2026-11-10 11:13:33 +07)" (scheduled at 2026-11-10 11:12:33.392294+07:00)
+2026-11-10 11:12:33,409 - apscheduler.executors.default - INFO - Job "job_activate_flash_sales (trigger: interval[0:01:00], next run at: 2026-11-10 11:13:33 +07)" executed successfully
+2026-11-10 11:13:33,408 - apscheduler.executors.default - INFO - Running job "job_activate_flash_sales (trigger: interval[0:01:00], next run at: 2026-11-10 11:14:33 +07)" (scheduled at 2026-11-10 11:13:33.392294+07:00)
+2026-11-10 11:13:33,419 - apscheduler.executors.default - INFO - Job "job_activate_flash_sales (trigger: interval[0:01:00], next run at: 2026-11-10 11:14:33 +07)" executed successfully
+2026-11-10 11:14:33,403 - apscheduler.executors.default - INFO - Running job "job_activate_flash_sales (trigger: interval[0:01:00], next run at: 2026-11-10 11:15:33 +07)" (scheduled at 2026-11-10 11:14:33.392294+07:00)
+2026-11-10 11:14:33,415 - apscheduler.executors.default - INFO - Job "job_activate_flash_sales (trigger: interval[0:01:00], next run at: 2026-11-10 11:15:33 +07)" executed successfully

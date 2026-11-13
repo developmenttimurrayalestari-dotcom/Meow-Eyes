@@ -1,0 +1,12 @@
+{
+  "desktop768": true,
+  "desktop1280": true,
+  "desktop1920": true,
+  "desktop2560": true,
+  "horizontalArrowWorks": true,
+  "cameraPreserved": true,
+  "searchWorks": true,
+  "mobileFullscreenAndFloatingCatalog": true,
+  "errors": [],
+  "api": "mocked; no backend or store writes"
+}

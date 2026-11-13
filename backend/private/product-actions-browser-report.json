@@ -1,0 +1,11 @@
+{
+  "cancelPreservesSelection": true,
+  "bulkDeactivation": true,
+  "bulkDeletion": true,
+  "singleDeletion": true,
+  "singleDeactivation": true,
+  "errorPreservesSelection": true,
+  "mobileActions": true,
+  "browserErrors": [],
+  "ok": true
+}

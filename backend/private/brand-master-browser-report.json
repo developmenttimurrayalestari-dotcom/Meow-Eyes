@@ -1,0 +1,14 @@
+{
+  "flatMasterTabsAndCreate": true,
+  "brandTab": true,
+  "editProductMasterGroups": true,
+  "brandEdit": true,
+  "richDescriptionEdit": true,
+  "createProductMasterGroups": true,
+  "brandCreate": true,
+  "richDescriptionCreate": true,
+  "catalogCombinedFilters": true,
+  "mobileMasterFilters": true,
+  "browserErrors": [],
+  "ok": true
+}

@@ -1,0 +1,959 @@
+{
+  "revision": "20261111_0005",
+  "categories": [
+    {
+      "id": "cat_021c207590d34a14",
+      "parent_id": "cat_ca9d440a48d64e4b",
+      "name": "Anak-anak",
+      "slug": "kids-frame-anak-anak",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    },
+    {
+      "id": "cat_2b4c108059d64203",
+      "parent_id": "cat_b3f1b68fb5a64695",
+      "name": "Anak-anak",
+      "slug": "oversized-anak-anak",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    },
+    {
+      "id": "cat_2b537e48483a4811",
+      "parent_id": "cat_6a0f0bacaa6c4ee8",
+      "name": "Anak-anak",
+      "slug": "half-rim-anak-anak",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    },
+    {
+      "id": "cat_8a7fd6fddc5341fa",
+      "parent_id": "cat_deabeef8b42b4551",
+      "name": "Anak-anak",
+      "slug": "cat-eye-anak-anak",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    },
+    {
+      "id": "cat_a15c84a7ca154e17",
+      "parent_id": "cat_4ab3c4baea774537",
+      "name": "Anak-anak",
+      "slug": "rimless-anak-anak",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    },
+    {
+      "id": "cat_bbe67449c51b4ecd",
+      "parent_id": "cat_7c376dc73fc34a3f",
+      "name": "Anak-anak",
+      "slug": "round-anak-anak",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    },
+    {
+      "id": "cat_d64afabb5cd74370",
+      "parent_id": "cat_2278c39968f74d39",
+      "name": "Anak-anak",
+      "slug": "full-rim-anak-anak",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    },
+    {
+      "id": "cat_da3988e651d349bb",
+      "parent_id": "cat_2770f9ae4fb747c5",
+      "name": "Anak-anak",
+      "slug": "square-anak-anak",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    },
+    {
+      "id": "cat_e286907b48cb4e53",
+      "parent_id": "cat_64cac2c66f40435e",
+      "name": "Anak-anak",
+      "slug": "sport-frame-anak-anak",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    },
+    {
+      "id": "cat_f4e07e43d00145b7",
+      "parent_id": "cat_67fb4e6c624a4ce0",
+      "name": "Anak-anak",
+      "slug": "leinz-anak-anak",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    },
+    {
+      "id": "cat_86849a3a92084a57",
+      "parent_id": "cat_1e21dafc7f3c4850",
+      "name": "Anti Radiasi (Blue Cut)",
+      "slug": "anti-radiasi-blue-cut",
+      "category_type": "lens",
+      "level": 1,
+      "is_active": true
+    },
+    {
+      "id": "cat_af51edff4e9841ff",
+      "parent_id": "cat_1e21dafc7f3c4850",
+      "name": "Bifokal",
+      "slug": "bifokal",
+      "category_type": "lens",
+      "level": 1,
+      "is_active": true
+    },
+    {
+      "id": "cat_deabeef8b42b4551",
+      "parent_id": "cat_f9a1ff0356e24b14",
+      "name": "Cat Eye",
+      "slug": "cat-eye",
+      "category_type": "frame",
+      "level": 1,
+      "is_active": true
+    },
+    {
+      "id": "cat_f9a1ff0356e24b14",
+      "parent_id": null,
+      "name": "Frame",
+      "slug": "frame",
+      "category_type": "frame",
+      "level": 0,
+      "is_active": true
+    },
+    {
+      "id": "cat_2278c39968f74d39",
+      "parent_id": "cat_f9a1ff0356e24b14",
+      "name": "Full Rim",
+      "slug": "full-rim",
+      "category_type": "frame",
+      "level": 1,
+      "is_active": true
+    },
+    {
+      "id": "cat_6a0f0bacaa6c4ee8",
+      "parent_id": "cat_f9a1ff0356e24b14",
+      "name": "Half Rim",
+      "slug": "half-rim",
+      "category_type": "frame",
+      "level": 1,
+      "is_active": true
+    },
+    {
+      "id": "cat_ca9d440a48d64e4b",
+      "parent_id": "cat_f9a1ff0356e24b14",
+      "name": "Kids Frame",
+      "slug": "kids-frame",
+      "category_type": "frame",
+      "level": 1,
+      "is_active": true
+    },
+    {
+      "id": "cat_67fb4e6c624a4ce0",
+      "parent_id": "cat_f9a1ff0356e24b14",
+      "name": "Leinz",
+      "slug": "leinz",
+      "category_type": "frame",
+      "level": 1,
+      "is_active": true
+    },
+    {
+      "id": "cat_1e21dafc7f3c4850",
+      "parent_id": null,
+      "name": "Lensa",
+      "slug": "lensa",
+      "category_type": "lens",
+      "level": 0,
+      "is_active": true
+    },
+    {
+      "id": "cat_b3f1b68fb5a64695",
+      "parent_id": "cat_f9a1ff0356e24b14",
+      "name": "Oversized",
+      "slug": "oversized",
+      "category_type": "frame",
+      "level": 1,
+      "is_active": true
+    },
+    {
+      "id": "cat_3502c02ad4ac4d8d",
+      "parent_id": "cat_8e2e391496d84aba",
+      "name": "Paket Anak",
+      "slug": "paket-anak",
+      "category_type": "package",
+      "level": 1,
+      "is_active": true
+    },
+    {
+      "id": "cat_8e2e391496d84aba",
+      "parent_id": null,
+      "name": "Paket Frame + Lensa",
+      "slug": "paket-frame-lensa",
+      "category_type": "package",
+      "level": 0,
+      "is_active": true
+    },
+    {
+      "id": "cat_71b46a9ac639436a",
+      "parent_id": "cat_8e2e391496d84aba",
+      "name": "Paket Hemat",
+      "slug": "paket-hemat",
+      "category_type": "package",
+      "level": 1,
+      "is_active": true
+    },
+    {
+      "id": "cat_d1cf64ed5dbe41af",
+      "parent_id": "cat_8e2e391496d84aba",
+      "name": "Paket Premium",
+      "slug": "paket-premium",
+      "category_type": "package",
+      "level": 1,
+      "is_active": true
+    },
+    {
+      "id": "cat_a57421c7ee3b4826",
+      "parent_id": "cat_1e21dafc7f3c4850",
+      "name": "Photochromic",
+      "slug": "photochromic",
+      "category_type": "lens",
+      "level": 1,
+      "is_active": true
+    },
+    {
+      "id": "cat_faefff9a71944a61",
+      "parent_id": "cat_1e21dafc7f3c4850",
+      "name": "Polarized",
+      "slug": "polarized",
+      "category_type": "lens",
+      "level": 1,
+      "is_active": true
+    },
+    {
+      "id": "cat_22a34c693a8842d3",
+      "parent_id": "cat_b3f1b68fb5a64695",
+      "name": "Pria",
+      "slug": "oversized-pria",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    },
+    {
+      "id": "cat_263c673054d14d28",
+      "parent_id": "cat_64cac2c66f40435e",
+      "name": "Pria",
+      "slug": "sport-frame-pria",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    },
+    {
+      "id": "cat_3bf714e989974562",
+      "parent_id": "cat_2770f9ae4fb747c5",
+      "name": "Pria",
+      "slug": "square-pria",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    },
+    {
+      "id": "cat_40be3187b63b4230",
+      "parent_id": "cat_7c376dc73fc34a3f",
+      "name": "Pria",
+      "slug": "round-pria",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    },
+    {
+      "id": "cat_4bb0610322c04fae",
+      "parent_id": "cat_67fb4e6c624a4ce0",
+      "name": "Pria",
+      "slug": "leinz-pria",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    },
+    {
+      "id": "cat_57160db9e3b14d10",
+      "parent_id": "cat_2278c39968f74d39",
+      "name": "Pria",
+      "slug": "full-rim-pria",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    },
+    {
+      "id": "cat_60c7baaf72ae4567",
+      "parent_id": "cat_6a0f0bacaa6c4ee8",
+      "name": "Pria",
+      "slug": "half-rim-pria",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    },
+    {
+      "id": "cat_c67d33f78ebb4d52",
+      "parent_id": "cat_4ab3c4baea774537",
+      "name": "Pria",
+      "slug": "rimless-pria",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    },
+    {
+      "id": "cat_e0992e7915e44e55",
+      "parent_id": "cat_deabeef8b42b4551",
+      "name": "Pria",
+      "slug": "cat-eye-pria",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    },
+    {
+      "id": "cat_e1997c95480c4340",
+      "parent_id": "cat_ca9d440a48d64e4b",
+      "name": "Pria",
+      "slug": "kids-frame-pria",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    },
+    {
+      "id": "cat_0882be6403ac4ec8",
+      "parent_id": "cat_1e21dafc7f3c4850",
+      "name": "Progresif",
+      "slug": "progresif",
+      "category_type": "lens",
+      "level": 1,
+      "is_active": true
+    },
+    {
+      "id": "cat_4ab3c4baea774537",
+      "parent_id": "cat_f9a1ff0356e24b14",
+      "name": "Rimless",
+      "slug": "rimless",
+      "category_type": "frame",
+      "level": 1,
+      "is_active": true
+    },
+    {
+      "id": "cat_7c376dc73fc34a3f",
+      "parent_id": "cat_f9a1ff0356e24b14",
+      "name": "Round",
+      "slug": "round",
+      "category_type": "frame",
+      "level": 1,
+      "is_active": true
+    },
+    {
+      "id": "cat_7af8d1b347834588",
+      "parent_id": "cat_1e21dafc7f3c4850",
+      "name": "Single Vision",
+      "slug": "single-vision",
+      "category_type": "lens",
+      "level": 1,
+      "is_active": true
+    },
+    {
+      "id": "cat_64cac2c66f40435e",
+      "parent_id": "cat_f9a1ff0356e24b14",
+      "name": "Sport Frame",
+      "slug": "sport-frame",
+      "category_type": "frame",
+      "level": 1,
+      "is_active": true
+    },
+    {
+      "id": "cat_2770f9ae4fb747c5",
+      "parent_id": "cat_f9a1ff0356e24b14",
+      "name": "Square",
+      "slug": "square",
+      "category_type": "frame",
+      "level": 1,
+      "is_active": true
+    },
+    {
+      "id": "cat_080745e860734087",
+      "parent_id": "cat_2278c39968f74d39",
+      "name": "Unisex",
+      "slug": "full-rim-unisex",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    },
+    {
+      "id": "cat_189e70b2854142af",
+      "parent_id": "cat_7c376dc73fc34a3f",
+      "name": "Unisex",
+      "slug": "round-unisex",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    },
+    {
+      "id": "cat_5812461f3eca431b",
+      "parent_id": "cat_deabeef8b42b4551",
+      "name": "Unisex",
+      "slug": "cat-eye-unisex",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    },
+    {
+      "id": "cat_5895ef68d51c4d2e",
+      "parent_id": "cat_67fb4e6c624a4ce0",
+      "name": "Unisex",
+      "slug": "leinz-unisex",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    },
+    {
+      "id": "cat_6e7e4df78fbf4fff",
+      "parent_id": "cat_b3f1b68fb5a64695",
+      "name": "Unisex",
+      "slug": "oversized-unisex",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    },
+    {
+      "id": "cat_90943cf30dee4098",
+      "parent_id": "cat_2770f9ae4fb747c5",
+      "name": "Unisex",
+      "slug": "square-unisex",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    },
+    {
+      "id": "cat_b9c108beb0fd4d03",
+      "parent_id": "cat_64cac2c66f40435e",
+      "name": "Unisex",
+      "slug": "sport-frame-unisex",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    },
+    {
+      "id": "cat_ed2ac43616284c5e",
+      "parent_id": "cat_6a0f0bacaa6c4ee8",
+      "name": "Unisex",
+      "slug": "half-rim-unisex",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    },
+    {
+      "id": "cat_f7ac52c8052b4254",
+      "parent_id": "cat_4ab3c4baea774537",
+      "name": "Unisex",
+      "slug": "rimless-unisex",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    },
+    {
+      "id": "cat_ff7394b7bb934c85",
+      "parent_id": "cat_ca9d440a48d64e4b",
+      "name": "Unisex",
+      "slug": "kids-frame-unisex",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    },
+    {
+      "id": "cat_2a242467e0f54243",
+      "parent_id": "cat_4ab3c4baea774537",
+      "name": "Wanita",
+      "slug": "rimless-wanita",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    },
+    {
+      "id": "cat_7b0baaab7c314bdf",
+      "parent_id": "cat_ca9d440a48d64e4b",
+      "name": "Wanita",
+      "slug": "kids-frame-wanita",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    },
+    {
+      "id": "cat_7dbdc3b4be924c27",
+      "parent_id": "cat_2770f9ae4fb747c5",
+      "name": "Wanita",
+      "slug": "square-wanita",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    },
+    {
+      "id": "cat_aa49c313f65e4610",
+      "parent_id": "cat_64cac2c66f40435e",
+      "name": "Wanita",
+      "slug": "sport-frame-wanita",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    },
+    {
+      "id": "cat_ab44ff7d3aec41d7",
+      "parent_id": "cat_b3f1b68fb5a64695",
+      "name": "Wanita",
+      "slug": "oversized-wanita",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    },
+    {
+      "id": "cat_b869fc45e3484158",
+      "parent_id": "cat_2278c39968f74d39",
+      "name": "Wanita",
+      "slug": "full-rim-wanita",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    },
+    {
+      "id": "cat_c7c70e7520d7451c",
+      "parent_id": "cat_6a0f0bacaa6c4ee8",
+      "name": "Wanita",
+      "slug": "half-rim-wanita",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    },
+    {
+      "id": "cat_c8db483f74e047f0",
+      "parent_id": "cat_67fb4e6c624a4ce0",
+      "name": "Wanita",
+      "slug": "leinz-wanita",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    },
+    {
+      "id": "cat_ee34eb85616b40e4",
+      "parent_id": "cat_7c376dc73fc34a3f",
+      "name": "Wanita",
+      "slug": "round-wanita",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    },
+    {
+      "id": "cat_fc53a5d7fa854ec3",
+      "parent_id": "cat_deabeef8b42b4551",
+      "name": "Wanita",
+      "slug": "cat-eye-wanita",
+      "category_type": "product",
+      "level": 2,
+      "is_active": true
+    }
+  ],
+  "products": [
+    {
+      "id": "prd_fbef635ed7514c8f",
+      "name": "Catlux Aurora Oversized",
+      "type": "frame",
+      "primary_category_id": "cat_ab44ff7d3aec41d7",
+      "category_ids": [
+        "cat_ab44ff7d3aec41d7",
+        "cat_b3f1b68fb5a64695",
+        "cat_f9a1ff0356e24b14"
+      ],
+      "segments": [
+        "Wanita"
+      ],
+      "spec": {
+        "Wajah": "Oval, Bulat, Persegi",
+        "Origin": "Italy",
+        "Garansi": "12 bulan",
+        "Material": "Acetate"
+      }
+    },
+    {
+      "id": "prd_cb46f21f4ef446f3",
+      "name": "EssenseEye Air Rimless",
+      "type": "frame",
+      "primary_category_id": "cat_c67d33f78ebb4d52",
+      "category_ids": [
+        "cat_4ab3c4baea774537",
+        "cat_c67d33f78ebb4d52",
+        "cat_f9a1ff0356e24b14"
+      ],
+      "segments": [
+        "Pria"
+      ],
+      "spec": {
+        "Wajah": "Oval, Bulat, Persegi",
+        "Origin": "Italy",
+        "Garansi": "12 bulan",
+        "Material": "Acetate"
+      }
+    },
+    {
+      "id": "prd_26aa3608a7084627",
+      "name": "EssenseEye Quad Unisex",
+      "type": "frame",
+      "primary_category_id": "cat_90943cf30dee4098",
+      "category_ids": [
+        "cat_2770f9ae4fb747c5",
+        "cat_90943cf30dee4098",
+        "cat_f9a1ff0356e24b14"
+      ],
+      "segments": [
+        "Unisex"
+      ],
+      "spec": {
+        "Wajah": "Oval, Bulat, Persegi",
+        "Origin": "Italy",
+        "Garansi": "12 bulan",
+        "Material": "Acetate"
+      }
+    },
+    {
+      "id": "prd_898f994b888240ab",
+      "name": "Kittycraft Cubby Anak",
+      "type": "frame",
+      "primary_category_id": "cat_021c207590d34a14",
+      "category_ids": [
+        "cat_021c207590d34a14",
+        "cat_ca9d440a48d64e4b",
+        "cat_f9a1ff0356e24b14"
+      ],
+      "segments": [
+        "Anak-anak"
+      ],
+      "spec": {
+        "Wajah": "Oval, Bulat, Persegi",
+        "Origin": "Italy",
+        "Garansi": "12 bulan",
+        "Material": "Acetate"
+      }
+    },
+    {
+      "id": "prd_7ba6732284b649c8",
+      "name": "Kittycraft Lola Round",
+      "type": "frame",
+      "primary_category_id": "cat_ee34eb85616b40e4",
+      "category_ids": [
+        "cat_7c376dc73fc34a3f",
+        "cat_ee34eb85616b40e4",
+        "cat_f9a1ff0356e24b14"
+      ],
+      "segments": [
+        "Wanita"
+      ],
+      "spec": {
+        "Wajah": "Oval, Bulat, Persegi",
+        "Origin": "Italy",
+        "Garansi": "12 bulan",
+        "Material": "Acetate"
+      }
+    },
+    {
+      "id": "prd_f2d20822dbce4da6",
+      "name": "Leinz Aero Pria",
+      "type": "frame",
+      "primary_category_id": "cat_4bb0610322c04fae",
+      "category_ids": [
+        "cat_4bb0610322c04fae",
+        "cat_67fb4e6c624a4ce0",
+        "cat_f9a1ff0356e24b14"
+      ],
+      "segments": [
+        "Pria"
+      ],
+      "spec": {
+        "Wajah": "Oval, Bulat, Persegi",
+        "Origin": "Italy",
+        "Garansi": "12 bulan",
+        "Material": "Acetate"
+      }
+    },
+    {
+      "id": "prd_f1a4277d4ba84cd1",
+      "name": "Leinz Bloom Wanita",
+      "type": "frame",
+      "primary_category_id": "cat_c8db483f74e047f0",
+      "category_ids": [
+        "cat_67fb4e6c624a4ce0",
+        "cat_c8db483f74e047f0",
+        "cat_f9a1ff0356e24b14"
+      ],
+      "segments": [
+        "Wanita"
+      ],
+      "spec": {
+        "Wajah": "Oval, Bulat, Persegi",
+        "Origin": "Italy",
+        "Garansi": "12 bulan",
+        "Material": "Acetate"
+      }
+    },
+    {
+      "id": "prd_df7a0e382fa14177",
+      "name": "Leinz Mini Anak",
+      "type": "frame",
+      "primary_category_id": "cat_f4e07e43d00145b7",
+      "category_ids": [
+        "cat_67fb4e6c624a4ce0",
+        "cat_f4e07e43d00145b7",
+        "cat_f9a1ff0356e24b14"
+      ],
+      "segments": [
+        "Anak-anak"
+      ],
+      "spec": {
+        "Wajah": "Oval, Bulat, Persegi",
+        "Origin": "Italy",
+        "Garansi": "12 bulan",
+        "Material": "Acetate"
+      }
+    },
+    {
+      "id": "prd_75466e5b7e5c4775",
+      "name": "Leinz Petite Cat Eye",
+      "type": "frame",
+      "primary_category_id": "cat_c8db483f74e047f0",
+      "category_ids": [
+        "cat_67fb4e6c624a4ce0",
+        "cat_c8db483f74e047f0",
+        "cat_f9a1ff0356e24b14"
+      ],
+      "segments": [
+        "Wanita"
+      ],
+      "spec": {
+        "Wajah": "Oval, Bulat, Persegi",
+        "Origin": "Italy",
+        "Garansi": "12 bulan",
+        "Material": "Acetate"
+      }
+    },
+    {
+      "id": "prd_0b61644f093f4610",
+      "name": "Leinz Urban Pria",
+      "type": "frame",
+      "primary_category_id": "cat_4bb0610322c04fae",
+      "category_ids": [
+        "cat_4bb0610322c04fae",
+        "cat_67fb4e6c624a4ce0",
+        "cat_f9a1ff0356e24b14"
+      ],
+      "segments": [
+        "Pria"
+      ],
+      "spec": {
+        "Wajah": "Oval, Bulat, Persegi",
+        "Origin": "Italy",
+        "Garansi": "12 bulan",
+        "Material": "Acetate"
+      }
+    },
+    {
+      "id": "prd_0f674d6c51e34ae1",
+      "name": "Lensa Anti Radiasi Blue Cut",
+      "type": "lens",
+      "primary_category_id": "cat_86849a3a92084a57",
+      "category_ids": [
+        "cat_1e21dafc7f3c4850",
+        "cat_86849a3a92084a57"
+      ],
+      "segments": [
+        "Unisex"
+      ],
+      "spec": {
+        "Wajah": "Oval, Bulat, Persegi",
+        "Origin": "Japan",
+        "Garansi": "12 bulan",
+        "Material": "Acetate"
+      }
+    },
+    {
+      "id": "prd_bce0660e41e84eaa",
+      "name": "Lensa Photochromic",
+      "type": "lens",
+      "primary_category_id": "cat_a57421c7ee3b4826",
+      "category_ids": [
+        "cat_1e21dafc7f3c4850",
+        "cat_a57421c7ee3b4826"
+      ],
+      "segments": [
+        "Unisex"
+      ],
+      "spec": {
+        "Wajah": "Oval, Bulat, Persegi",
+        "Origin": "Japan",
+        "Garansi": "12 bulan",
+        "Material": "Acetate"
+      }
+    },
+    {
+      "id": "prd_52253b4c63584c54",
+      "name": "Lensa Progresif Premium",
+      "type": "lens",
+      "primary_category_id": "cat_0882be6403ac4ec8",
+      "category_ids": [
+        "cat_0882be6403ac4ec8",
+        "cat_1e21dafc7f3c4850"
+      ],
+      "segments": [
+        "Unisex"
+      ],
+      "spec": {
+        "Wajah": "Oval, Bulat, Persegi",
+        "Origin": "Japan",
+        "Garansi": "12 bulan",
+        "Material": "Acetate"
+      }
+    },
+    {
+      "id": "prd_401170d2b1564810",
+      "name": "Meow 1003 C4",
+      "type": "frame",
+      "primary_category_id": "cat_fc53a5d7fa854ec3",
+      "category_ids": [
+        "cat_deabeef8b42b4551",
+        "cat_f9a1ff0356e24b14",
+        "cat_fc53a5d7fa854ec3"
+      ],
+      "segments": [
+        "Wanita"
+      ],
+      "spec": {
+        "Wajah": "Oval, Bulat, Persegi",
+        "Origin": "Italy",
+        "Garansi": "12 bulan",
+        "Material": "Acetate"
+      }
+    },
+    {
+      "id": "prd_3e8ddf16743d4901",
+      "name": "Meow Emery",
+      "type": "frame",
+      "primary_category_id": "cat_fc53a5d7fa854ec3",
+      "category_ids": [
+        "cat_deabeef8b42b4551",
+        "cat_f9a1ff0356e24b14",
+        "cat_fc53a5d7fa854ec3"
+      ],
+      "segments": [
+        "Wanita"
+      ],
+      "spec": {
+        "Wajah": "Oval, Bulat, Persegi",
+        "Origin": "Italy",
+        "Garansi": "12 bulan",
+        "Material": "Acetate"
+      }
+    },
+    {
+      "id": "prd_f27e5e8e2c274d16",
+      "name": "Meow Evora",
+      "type": "frame",
+      "primary_category_id": "cat_40be3187b63b4230",
+      "category_ids": [
+        "cat_40be3187b63b4230",
+        "cat_7c376dc73fc34a3f",
+        "cat_f9a1ff0356e24b14"
+      ],
+      "segments": [
+        "Pria"
+      ],
+      "spec": {
+        "Wajah": "Oval, Bulat, Persegi",
+        "Origin": "Italy",
+        "Garansi": "12 bulan",
+        "Material": "Acetate"
+      }
+    },
+    {
+      "id": "prd_98175a8e8a554c55",
+      "name": "Paket Anak Kittycraft + Blue Cut",
+      "type": "package",
+      "primary_category_id": "cat_3502c02ad4ac4d8d",
+      "category_ids": [
+        "cat_3502c02ad4ac4d8d",
+        "cat_8e2e391496d84aba"
+      ],
+      "segments": [
+        "Anak-anak"
+      ],
+      "spec": {
+        "Wajah": "Oval, Bulat, Persegi",
+        "Origin": "Japan",
+        "Garansi": "12 bulan",
+        "Material": "Acetate"
+      }
+    },
+    {
+      "id": "prd_a1911ea875294d3a",
+      "name": "Paket Hemat Leinz + Blue Cut",
+      "type": "package",
+      "primary_category_id": "cat_71b46a9ac639436a",
+      "category_ids": [
+        "cat_71b46a9ac639436a",
+        "cat_8e2e391496d84aba"
+      ],
+      "segments": [
+        "Unisex"
+      ],
+      "spec": {
+        "Wajah": "Oval, Bulat, Persegi",
+        "Origin": "Japan",
+        "Garansi": "12 bulan",
+        "Material": "Acetate"
+      }
+    },
+    {
+      "id": "prd_d7b3f4cfe9574460",
+      "name": "Paket Premium Catlux + Photochromic",
+      "type": "package",
+      "primary_category_id": "cat_d1cf64ed5dbe41af",
+      "category_ids": [
+        "cat_8e2e391496d84aba",
+        "cat_d1cf64ed5dbe41af"
+      ],
+      "segments": [
+        "Wanita"
+      ],
+      "spec": {
+        "Wajah": "Oval, Bulat, Persegi",
+        "Origin": "Japan",
+        "Garansi": "12 bulan",
+        "Material": "Acetate"
+      }
+    },
+    {
+      "id": "prd_1b6d039b016b4131",
+      "name": "PurrLens Trail Sport",
+      "type": "frame",
+      "primary_category_id": "cat_263c673054d14d28",
+      "category_ids": [
+        "cat_263c673054d14d28",
+        "cat_64cac2c66f40435e",
+        "cat_f9a1ff0356e24b14"
+      ],
+      "segments": [
+        "Pria"
+      ],
+      "spec": {
+        "Wajah": "Oval, Bulat, Persegi",
+        "Origin": "Italy",
+        "Garansi": "12 bulan",
+        "Material": "Acetate"
+      }
+    }
+  ]
+}

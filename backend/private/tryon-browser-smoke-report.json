@@ -1,0 +1,20 @@
+{
+  "faces": 1,
+  "landmarks": 478,
+  "fit": {
+    "width": 14.566548394542304,
+    "x": 49.73710876656696,
+    "y": 17.320010968835746,
+    "roll": -0.4988856137508517,
+    "yaw": 2.0568510996708156,
+    "pitch": 0.9270447150861111,
+    "depth": 0
+  },
+  "blankFaces": 0,
+  "videoFaces": 1,
+  "productionUiTracking": true,
+  "liveVideoTracking": true,
+  "frameHiddenWhenFaceLost": true,
+  "streamStoppedOnClose": true,
+  "browserErrors": []
+}

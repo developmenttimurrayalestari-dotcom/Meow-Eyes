@@ -102,3 +102,6 @@ frontend/node_modules/.cache/default-development/0.pack
 
 # Frontend public build-time configuration template.
 !frontend/.env.example
+
+# Private uploaded prescriptions and Meowsurement photos are runtime data.
+backend/private_uploads/

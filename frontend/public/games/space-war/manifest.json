@@ -1,0 +1,12 @@
+{
+  "name": "Meow Space War",
+  "generation_mode": "builtin",
+  "reference": "/logo-meow.jpg",
+  "hero": { "file": "meow-pilot.png", "width": 1774, "height": 887, "transparent": true },
+  "enemies": { "file": "aliens-explosions.png", "cellWidth": 512, "cellHeight": 512, "columns": 3, "rows": 2, "transparent": true, "cells": ["purple-squid", "lime-saucer", "coral-drone", "explosion-start", "explosion-expand", "explosion-sparks"] },
+  "ui": { "file": "ui-laser.png", "cellWidth": 512, "cellHeight": 512, "columns": 3, "rows": 2, "transparent": true, "cells": ["heart", "up", "down", "laser", "score-star", "impact"] },
+  "background": { "file": "galaxy.png", "width": 2172, "height": 724, "transparent": false, "loop": "alternating mirrored tiles with independent star layer" },
+  "world": { "width": 16000, "height": 10000, "ticksPerSecond": 30 },
+  "explosionFrames": [3, 4, 5],
+  "explosionFrameTicks": 6
+}

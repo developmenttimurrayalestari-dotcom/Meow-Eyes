@@ -1,0 +1,10 @@
+{
+  "api": "mocked; no store writes or orders",
+  "onePrescriptionPerCartLine": true,
+  "selectedOnly": true,
+  "independentPhotosAndNotes": true,
+  "unsavedChangesBlockCheckout": true,
+  "reloadRestoresBoth": true,
+  "desktopAndMobile": true,
+  "errors": []
+}

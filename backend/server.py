@@ -24,6 +24,7 @@ from routes_admin_content import router as admin_content_router  # noqa: E402
 from routes_uploads import router as uploads_router, public_upload_file  # noqa: E402
 from routes_features import router as features_router  # noqa: E402
 from routes_integrations import router as integrations_router  # noqa: E402
+from routes_meowsurement import router as meowsurement_router  # noqa: E402
 from scheduler import start_scheduler, stop_scheduler, scheduler  # noqa: E402
 from auth import current_admin  # noqa: E402
 from models import User  # noqa: E402
@@ -102,6 +103,7 @@ async def scheduler_run_now(job_id: str, admin: User = Depends(current_admin)):
     from scheduler import (
         job_expire_pending_orders, job_activate_flash_sales,
         job_poll_shipments, job_auto_complete_orders,
+        job_expire_meowsurement_photos,
     )
     from fastapi import HTTPException
     handlers = {
@@ -109,6 +111,7 @@ async def scheduler_run_now(job_id: str, admin: User = Depends(current_admin)):
         "activate-flash-sales": job_activate_flash_sales,
         "poll-shipments": job_poll_shipments,
         "auto-complete-orders": job_auto_complete_orders,
+        "expire-meowsurement-photos": job_expire_meowsurement_photos,
     }
     fn = handlers.get(job_id)
     if not fn:
@@ -127,6 +130,10 @@ api_router.include_router(catalog_router)
 api_router.include_router(shopping_router)
 api_router.include_router(orders_router)
 api_router.include_router(engagement_router)
+from routes_loyalty import router as loyalty_router
+from routes_returns import router as returns_router
+api_router.include_router(loyalty_router)
+api_router.include_router(returns_router)
 api_router.include_router(admin_router)
 api_router.include_router(export_router)
 api_router.include_router(content_router)
@@ -134,6 +141,7 @@ api_router.include_router(admin_content_router)
 api_router.include_router(uploads_router)
 api_router.include_router(features_router)
 api_router.include_router(integrations_router)
+api_router.include_router(meowsurement_router)
 
 app.include_router(api_router)
 

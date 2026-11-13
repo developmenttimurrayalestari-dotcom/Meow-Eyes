@@ -32,6 +32,9 @@ let webpackConfig = {
         '^@/(.*)$': '<rootDir>/src/$1',
         '^react-router-dom$': '<rootDir>/node_modules/react-router-dom/dist/index.js',
         '^react-router/dom$': '<rootDir>/node_modules/react-router/dist/development/dom-export.js',
+        // Jest 27 otherwise follows Tiptap's TS source instead of its CJS export.
+        '^@tiptap/pm/(.*)$': '<rootDir>/node_modules/@tiptap/pm/dist/$1/index.cjs',
+        '^@tiptap/core/jsx-runtime$': '<rootDir>/node_modules/@tiptap/core/dist/jsx-runtime/jsx-runtime.cjs',
       };
       return jestConfig;
     },

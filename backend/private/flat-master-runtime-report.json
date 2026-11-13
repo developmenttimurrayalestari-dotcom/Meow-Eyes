@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "real_mysql_asgi": true,
+  "list_master_categories": 74,
+  "product_tag_count": 91,
+  "catalog_total": 20,
+  "combined_filter_matches": 5,
+  "backend_server_started": false
+}

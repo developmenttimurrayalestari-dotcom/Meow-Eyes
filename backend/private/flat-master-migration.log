@@ -1,0 +1,4 @@
+
+INFO  [alembic.runtime.migration] Context impl MySQLImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade 20261111_0005 -> 20261111_0006, Flatten product masters and backfill explicit many-to-many assignments.

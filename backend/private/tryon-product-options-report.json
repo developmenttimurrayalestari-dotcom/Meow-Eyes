@@ -1,0 +1,35 @@
+{
+  "groups": [
+    {
+      "product_type": "frame",
+      "deleted": 1,
+      "is_active": 0,
+      "count": 14
+    },
+    {
+      "product_type": "lens",
+      "deleted": 1,
+      "is_active": 0,
+      "count": 3
+    },
+    {
+      "product_type": "package",
+      "deleted": 0,
+      "is_active": 1,
+      "count": 2
+    },
+    {
+      "product_type": "package",
+      "deleted": 1,
+      "is_active": 0,
+      "count": 3
+    }
+  ],
+  "status": 200,
+  "available_products": 2,
+  "available_types": [
+    "package",
+    "package"
+  ],
+  "read_only": true
+}

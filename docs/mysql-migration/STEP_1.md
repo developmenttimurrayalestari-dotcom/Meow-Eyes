@@ -1,5 +1,7 @@
 # Step 1 — MySQL 5.7.24-log schema and backend configuration
 
+> Update 9 November 2026: current application head is `20261109_0003` and there are 79 application tables. The original 68-table foundation and its historical 0001/0002 migration notes remain below. Use [the Meowsurement runbook](../optifit/RUNBOOK.md) and [schema](../optifit/SCHEMA.md) for the 0003 upgrade.
+
 ## Delivery status and boundary
 
 This document records the Step 1 schema foundation for the requested
@@ -190,7 +192,7 @@ Check:
 - `http://127.0.0.1:8001/api/health/live`: process liveness.
 - `http://127.0.0.1:8001/api/health/ready`: 200 only when MySQL is reachable,
   its version and InnoDB configuration are supported, and the installed revision
-  equals `20261106_0002`.
+  equals `20261109_0003` after all current migrations (the original baseline was `20261106_0002`).
   Otherwise returns 503 with a safe reason code.
 - `http://127.0.0.1:8001/docs`: health-only OpenAPI documentation.
 

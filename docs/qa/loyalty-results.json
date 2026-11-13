@@ -1,0 +1,19 @@
+{
+  "date": "2026-11-11",
+  "features": ["point-rate-snapshots", "point-monitoring", "dynamic-games", "slide-puzzle-20-levels", "meow-space-war", "purchase-cashback", "replacement-rma-private-video", "dedicated-virtual-try-on"],
+  "point_valuation": "All points, including cashback, retain their acquisition rate",
+  "backend": {
+    "passed": 337,
+    "skipped": 1,
+    "skip_reason": "A separate disposable MySQL integration database was not configured",
+    "deselected": 2,
+    "deselected_reason": "Windows did not grant symlink creation privilege",
+    "additional_final_rma_wallet_migration_regressions_passed": 10,
+    "store_orders_or_provider_bookings_created_by_qa": false
+  },
+  "frontend": {"passed": 184, "suites": 28, "production_build": true, "remaining_build_warnings": "Existing dependency expression and missing MediaPipe source map"},
+  "browser": {"vto_stream_preserved": true, "cart_variant_correct": true, "dynamic_game_navigation": true, "cooldown_hours_to_seconds": true, "wallet_lot_value": true, "space_war_real_time_mobile_round": true, "page_errors": 0, "physical_camera_tested": false},
+  "live_mysql": {"revision": "20261111_0005", "application_tables": 93, "validation_triggers": 154, "row_rules": 139, "historical_table_counts_preserved": true, "customer_balances_preserved": true, "wallet_mismatches": 0, "games": 4, "puzzle_levels": 20, "point_history_immutable": true, "point_rate_versions_immutable": true, "point_lot_rate_immutable": true, "definer_privileges_verified": false},
+  "live_http": {"backend_ready_port": 8001, "games": true, "puzzle_levels": true, "vto_catalog": true, "private_routes_require_auth": true},
+  "required_store_configuration": ["Return recipient, phone and address in Admin RMA", "Game rewards/cooldowns and desired puzzle images", "Create and activate desired cashback event", "Publish try-on assets for additional frames"]
+}

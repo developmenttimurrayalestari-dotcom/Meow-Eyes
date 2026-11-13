@@ -66,7 +66,7 @@ const RoulettePage = () => {
         <Target className="h-10 w-10 mx-auto text-meow-roulette" />
         <h1 className="font-heading text-4xl md:text-5xl font-black mt-2">Meow Roulette</h1>
         <p className="text-meow-gray mt-2">Spin & dapatkan voucher, poin, atau gratis ongkir!</p>
-        <p className="text-xs uppercase tracking-wider text-meow-salmon font-bold mt-3">Max 3 spin / hari</p>
+        <p className="text-xs text-meow-salmon font-bold mt-3">Jeda bermain dan masa berlaku poin mengikuti pengaturan Roulette.</p>
       </div>
 
       <div className="bg-white rounded-[40px] p-8 grid md:grid-cols-2 gap-8 items-center">

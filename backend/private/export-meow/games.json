@@ -1,0 +1,5 @@
+[
+{"_id": {"$oid": "6adb139d2615a279f5cd9314"}, "id": "gm_2ec577929cdc49e7", "key": "matching", "name": "Match Meow Pairs", "description": "Cocokkan pasangan kartu kacamata kucing!", "is_active": true, "image": "https://images.unsplash.com/photo-1565127803051-49aaf3d36e29?crop=entropy&cs=srgb&fm=jpg&w=800", "max_points": {"$numberInt": "50"}, "created_at": "2026-10-23T07:58:21.161624+00:00"},
+{"_id": {"$oid": "6adb139d2615a279f5cd9315"}, "id": "gm_9ba1aba0bb5743a1", "key": "puzzle", "name": "Meow Puzzle", "description": "Susun puzzle kacamata cute Meow Eyes", "is_active": true, "image": "https://images.unsplash.com/photo-1533738363-b7f9aef128ce?crop=entropy&cs=srgb&fm=jpg&w=800", "max_points": {"$numberInt": "50"}, "created_at": "2026-10-23T07:58:21.161684+00:00"},
+{"_id": {"$oid": "6adb139d2615a279f5cd9316"}, "id": "gm_8eeb47ecdcb340c3", "key": "tetris", "name": "Glasses Tetris", "description": "Susun bingkai kacamata jatuh ala Tetris", "is_active": true, "image": "https://images.unsplash.com/photo-1574258495973-f010dfbb5371?crop=entropy&cs=srgb&fm=jpg&w=800", "max_points": {"$numberInt": "50"}, "created_at": "2026-10-23T07:58:21.161713+00:00"}
+]

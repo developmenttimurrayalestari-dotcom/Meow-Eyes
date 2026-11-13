@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { api } from '../../lib/api';
 import { Link, NavLink, useNavigate, Outlet } from "react-router-dom";
 import {
   LayoutDashboard, Package, FolderTree, Boxes, ShoppingBag,
@@ -9,6 +10,7 @@ import {
 import { useAuth } from "../../contexts/AuthContext";
 
 const NAV = [
+  { to: "/admin/meowsurement", icon: Glasses, label: "Review Meowsurement", testid: "admin-nav-meowsurement", section: "main", perm: "meowsurement.review" },
   { to: "/admin/dashboard", icon: LayoutDashboard, label: "Dashboard", testid: "admin-nav-dashboard", section: "main", perm: null },
   { to: "/admin/products", icon: Package, label: "Produk", testid: "admin-nav-products", section: "catalog", perm: "product.view" },
   { to: "/admin/import", icon: Upload, label: "Import Produk", testid: "admin-nav-import", section: "catalog", perm: "product.import" },
@@ -20,7 +22,11 @@ const NAV = [
   { to: "/admin/reviews", icon: Star, label: "Review", testid: "admin-nav-reviews", section: "sales", perm: "review.view" },
   { to: "/admin/flash-sales", icon: Zap, label: "Flash Sale", testid: "admin-nav-flashsale", section: "sales", perm: null },
   { to: "/admin/vouchers", icon: Ticket, label: "Voucher", testid: "admin-nav-vouchers", section: "sales", perm: null },
-  { to: "/admin/roulette", icon: Target, label: "Roulette", testid: "admin-nav-roulette", section: "engage", perm: null },
+  { to: "/admin/games", icon: Gamepad2, label: "Manage Games", testid: "admin-nav-games", section: "games", perm: null },
+  { to: "/admin/points/conversion", icon: Coins, label: "Manage Konversi Poin", testid: "admin-nav-point-conversion", section: "engage", perm: null },
+  { to: "/admin/points/customers", icon: Users, label: "Monitoring Poin Customer", testid: "admin-nav-point-customers", section: "engage", perm: null },
+  { to: "/admin/cashback-events", icon: Coins, label: "Event Cashback", testid: "admin-nav-cashback", section: "sales", perm: null },
+  { to: "/admin/returns", icon: Truck, label: "Penggantian / RMA", testid: "admin-nav-returns", section: "sales", perm: "order.view" },
   { to: "/admin/newsletter", icon: Mail, label: "Newsletter", testid: "admin-nav-newsletter", section: "engage", perm: null },
   { to: "/admin/articles", icon: FileText, label: "Artikel", testid: "admin-nav-articles", section: "content", perm: "article.view" },
   { to: "/admin/knowledge", icon: BookOpen, label: "Product Knowledge", testid: "admin-nav-knowledge", section: "content", perm: "article.view" },
@@ -39,6 +45,7 @@ const SECTIONS = [
   { key: "catalog", label: "Katalog" },
   { key: "sales", label: "Penjualan" },
   { key: "engage", label: "Engagement" },
+  { key: "games", label: "Manage Games" },
   { key: "content", label: "Konten CMS" },
   { key: "account", label: "Akun & Laporan" },
 ];
@@ -47,11 +54,17 @@ const AdminLayout = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [gameNav, setGameNav] = useState([]);
+  useEffect(() => {
+    if (user?.role === 'staff') return;
+    const load = () => api.get('/admin/games').then(({ data }) => setGameNav(data.games.map(g => ({ to: `/admin/games/${g.key}`, icon: Target, label: `↳ ${g.name}`, testid: `admin-nav-game-${g.key}`, section: 'games', perm: null })))).catch(() => {});
+    load(); window.addEventListener('meow:games-updated', load); return () => window.removeEventListener('meow:games-updated', load);
+  }, [user?.role]);
 
   // For staff, only show NAV items whose `perm` is in their permissions list.
   // Items with perm=null are admin/super_admin-only and are hidden from staff.
   const isStaff = user?.role === "staff";
-  const visibleNav = NAV.filter((n) => {
+  const visibleNav = [...NAV, ...gameNav].filter((n) => {
     if (!isStaff) return true;
     if (!n.perm) return false;
     return (user?.permissions || []).includes(n.perm);
@@ -76,7 +89,7 @@ const AdminLayout = () => {
               {sec.label && <p className="text-[10px] uppercase tracking-widest text-meow-amber/60 px-3 pt-3 pb-1">{sec.label}</p>}
               {visibleNav.filter((n) => n.section === sec.key).map((n) => (
                 <NavLink
-                  key={n.to} to={n.to} data-testid={n.testid}
+                  key={n.to} to={n.to} end={n.to === '/admin/games'} reloadDocument={n.privateShell === true} data-testid={n.testid}
                   className={({ isActive }) =>
                     `flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-colors ${
                       isActive ? "bg-meow-amber text-meow-midnight" : "text-white/70 hover:bg-white/10 hover:text-white"
@@ -129,7 +142,7 @@ const AdminLayout = () => {
                   {sec.label && <p className="text-[10px] uppercase tracking-widest text-meow-amber/60 pt-3 pb-1">{sec.label}</p>}
                   {visibleNav.filter((n) => n.section === sec.key).map((n) => (
                     <NavLink
-                      key={n.to} to={n.to} onClick={() => setMobileOpen(false)}
+                      key={n.to} to={n.to} end={n.to === '/admin/games'} reloadDocument={n.privateShell === true} onClick={() => setMobileOpen(false)}
                       className={({ isActive }) =>
                         `flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold ${
                           isActive ? "bg-meow-amber text-meow-midnight" : "text-white/70 hover:bg-white/10"
@@ -147,7 +160,7 @@ const AdminLayout = () => {
       )}
 
       {/* Main content */}
-      <main className="md:ml-64 flex-1 p-4 md:p-8 pt-20 md:pt-8" data-testid="admin-main">
+      <main className="md:ml-64 flex-1 min-w-0 p-4 md:p-8 pt-20 md:pt-8" data-testid="admin-main">
         <Outlet />
       </main>
     </div>

@@ -46,16 +46,15 @@ KNOWLEDGE_ENTRIES = [
 
 
 async def ensure_feature_content(session, *, apply: bool = True) -> dict:
-    """Create requested topics/category and backfill old new badges once.
+    """Create requested topics and backfill old new badges once.
 
-    We never overwrite a matching slug, publish an existing draft, or reactivate
-    an existing category. The private marker only governs the legacy badge
+    We never overwrite a matching slug or publish an existing draft.
+    New Arrival uses product flags rather than a category. The private marker governs the legacy badge
     backfill, so an administrator's later unmark action survives future reruns.
     """
     existing_slugs = {slug.casefold() for slug in (await session.scalars(select(m.ProductKnowledge.slug))).all()}
     marker = await session.get(m.Setting, FEATURE_SEED_KEY)
     missing = [entry for entry in KNOWLEDGE_ENTRIES if entry[2].casefold() not in existing_slugs]
-    category = await session.scalar(select(m.Category).where(m.Category.slug == "frame-new-arrival"))
     new_products = []
     if marker is None:
         statement = select(m.Product).where(
@@ -67,7 +66,7 @@ async def ensure_feature_content(session, *, apply: bool = True) -> dict:
             statement = statement.with_for_update()
         new_products = (await session.scalars(statement)).all()
     report = {"knowledge_created": len(missing), "knowledge_preserved": len(KNOWLEDGE_ENTRIES) - len(missing),
-              "new_arrival_category_created": category is None,
+              "new_arrival_category_created": False,
               "legacy_new_badges_backfilled": len(new_products), "backfill_already_applied": marker is not None,
               "applied": apply, "knowledge_slugs": [entry[2] for entry in missing]}
     if not apply:
@@ -77,13 +76,6 @@ async def ensure_feature_content(session, *, apply: bool = True) -> dict:
         session.add(m.ProductKnowledge(id=m.new_id(), knowledge_type=kind, title=title, slug=slug,
             description=description, content=f"<p>{body}</p>", status="published", published_at=now,
             sort_order=100 + index, seo_title=title + " | Meow Eyes", seo_description=description))
-    if category is None:
-        parent = await session.scalar(select(m.Category).where(m.Category.slug.in_(["frame", "frames"]))
-            .order_by(m.Category.level, m.Category.id).limit(1))
-        session.add(m.Category(id=m.new_id(), name="New Arrival Frame", slug="frame-new-arrival",
-            category_type="product", parent_id=parent.id if parent else None,
-            level=parent.level + 1 if parent else 0, sort_order=0, is_featured=True, is_active=True,
-            description="Frame terbaru yang ditandai New Arrival. Daftar mengikuti status dan periode produk."))
     for product in new_products:
         product.is_new_arrival = True
     if marker is None:

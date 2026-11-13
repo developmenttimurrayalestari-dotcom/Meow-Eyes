@@ -1,0 +1,12 @@
+{
+  "ok": true,
+  "api": "mocked; no store product writes",
+  "editOpensForNewProduct": true,
+  "newSku": true,
+  "inactive": true,
+  "zeroStock": true,
+  "categoryAndBrandPreserved": true,
+  "originalPreserved": true,
+  "desktopAndMobile": true,
+  "errors": []
+}

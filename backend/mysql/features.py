@@ -17,12 +17,13 @@ from sqlalchemy import func, or_, select
 from . import models as m
 from .api import products_dict, row_dict
 from .base import utcnow
-from .catalog import category_descendants, safe_values, validate_payload
+from .catalog import safe_values, validate_payload
 from .commerce import integer, money
 
 
 PAID_ORDER_STATUSES = frozenset({"paid", "processing", "shipped", "completed"})
 NEW_ARRIVAL_CATEGORY_SLUG = "frame-new-arrival"
+TRY_ON_PRODUCT_TYPES = ('frame', 'package')
 
 
 def normalize_whatsapp_phone(raw: str, *, required: bool = False) -> str:
@@ -122,6 +123,7 @@ async def public_products(session, products) -> list[dict]:
         current = chosen.get(product.id)
         if current:
             sale_item, campaign = current
+            item["discount_price"] = None
             item.update(flash_sale_price=float(sale_item.flash_price), flash_sale_id=campaign.id,
                         flash_sale_item_id=sale_item.id,
                         flash_sale_available=sale_item.quota - sale_item.sold - sale_item.reserved,
@@ -131,7 +133,7 @@ async def public_products(session, products) -> list[dict]:
             product.new_arrival_until is None or product.new_arrival_until > now))
         if item["is_new_arrival"] and "new" not in item["badges"]:
             item["badges"].append("new")
-        item["supports_try_on"] = product.product_type == "frame" and product.id in supported_ids
+        item["supports_try_on"] = product.product_type in TRY_ON_PRODUCT_TYPES and product.deleted_at is None and product.id in supported_ids
     return data
 
 
@@ -152,17 +154,18 @@ def _category_rules(payload: Any) -> list[dict]:
         discount = money(raw.get("discount_value", 0))
         if discount < 0 or (discount_type == "percent" and discount > 100):
             raise HTTPException(422, "Nilai diskon kategori tidak valid")
-        descendants = raw.get("include_descendants", True)
+        descendants = raw.get("include_descendants", False)
         if not isinstance(descendants, bool):
             raise HTTPException(422, "include_descendants harus boolean")
-        rules.append(dict(category_id=category_id, include_descendants=descendants,
+        rules.append(dict(category_id=category_id, include_descendants=False,
                           discount_type=discount_type, discount_value=discount,
                           quota_per_product=integer(raw.get("quota_per_product", 0), "Kuota per produk")))
     return rules
 
 
 def _category_price(product: m.Product, rule: dict) -> Decimal:
-    base = money(product.discount_price if product.discount_price is not None else product.price)
+    # Flash Sale is exclusive: category discounts always start at the normal price.
+    base = money(product.price)
     amount = money(rule["discount_value"])
     if rule["discount_type"] == "percent":
         result = base * (Decimal("100") - amount) / Decimal("100")
@@ -185,7 +188,7 @@ async def _category_candidates(session, rules: list[dict]) -> dict[str, list[dic
         if category.slug == NEW_ARRIVAL_CATEGORY_SLUG:
             condition = (m.Product.product_type == "frame", *new_arrival_conditions())
         else:
-            ids = await category_descendants(session, category.id) if rule["include_descendants"] else {category.id}
+            ids = {category.id}
             condition = (or_(m.Product.primary_category_id.in_(ids), m.Product.id.in_(
                 select(m.ProductCategory.product_id).where(m.ProductCategory.category_id.in_(ids)))),)
         pids = (await session.scalars(select(m.Product.id).where(
@@ -201,8 +204,8 @@ async def create_category_flash_sale(session, payload: dict) -> tuple[m.FlashSal
     """Materialize category rules once, preserving a transparent source FK.
 
     The lowest category price wins for overlaps; explicit product rows override
-    category rules. Existing campaigns can add newly matching products through
-    the refresh endpoint without changing prior price/quota snapshots.
+    category rules. Refresh can synchronize category prices from the regular
+    product price; quotas, counters, manual overrides and order snapshots survive.
     """
     from models import FlashSale as FlashSaleDTO
 
@@ -251,10 +254,10 @@ async def create_category_flash_sale(session, payload: dict) -> tuple[m.FlashSal
                                    source_category_id=source_id, sold=0, reserved=0, **amount))
     await session.flush()
     return flash, {"materialized_products": len(products), "category_rule_count": len(rules),
-                   "pricing_basis": "current_catalog_price"}
+                   "pricing_basis": "regular_product_price"}
 
 
-async def refresh_category_flash_sale(session, flash_id: str) -> int:
+async def refresh_category_flash_sale(session, flash_id: str, *, reprice_existing: bool = False) -> int:
     rules = [row_dict(r) for r in (await session.scalars(select(m.FlashSaleCategory).where(
         m.FlashSaleCategory.flash_sale_id == flash_id))).all()]
     candidates = await _category_candidates(session, rules)
@@ -266,11 +269,19 @@ async def refresh_category_flash_sale(session, flash_id: str) -> int:
         raise HTTPException(404, "Flash Sale tidak ditemukan")
     if flash.end_at <= utcnow():
         raise HTTPException(409, "Flash Sale telah berakhir")
-    existing = set((await session.scalars(select(m.FlashSaleItem.product_id).where(
-        m.FlashSaleItem.flash_sale_id == flash_id).with_for_update())).all())
+    existing = {item.product_id: item for item in (await session.scalars(select(m.FlashSaleItem).where(
+        m.FlashSaleItem.flash_sale_id == flash_id).order_by(m.FlashSaleItem.id).with_for_update())).all()}
+    rules_by_id = {rule["category_id"]: rule for rule in rules}
     count = 0
     for product in products:
-        if product.id in existing or not product.is_active:
+        if not product.is_active:
+            continue
+        if product.id in existing:
+            item = existing[product.id]
+            if reprice_existing and item.source_category_id in rules_by_id:
+                price = _category_price(product, rules_by_id[item.source_category_id])
+                if price != item.flash_price:
+                    item.flash_price = price
             continue
         rule = min(candidates[product.id], key=lambda r: (_category_price(product, r), r["category_id"]))
         session.add(m.FlashSaleItem(id=m.new_id(), flash_sale_id=flash_id, product_id=product.id,

@@ -64,6 +64,9 @@ class User(UpdatedMixin, Base):
     )
     user_id: Mapped[str] = mapped_column(ID, primary_key=True, default=new_id)
     email: Mapped[str] = mapped_column(String(254), unique=True, nullable=False)
+    # Stable Google account identity; email may change. NULL preserves old users.
+    google_subject: Mapped[str | None] = mapped_column(
+        String(255).with_variant(String(255, collation="utf8mb4_bin"), "mysql"), unique=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     picture: Mapped[str | None] = mapped_column(Text)
     password_hash: Mapped[str | None] = mapped_column(String(255))
@@ -120,19 +123,19 @@ class Address(CreatedMixin, Base):
 class Category(CreatedMixin, Base):
     __tablename__ = "categories"
     __table_args__ = (
-        CheckConstraint("parent_id IS NULL OR parent_id <> id", name="not_own_parent"),
-        CheckConstraint("level >= 0", name="level_nonnegative"),
-        Index("ix_categories_parent_sort", "parent_id", "sort_order", "id"),
+        CheckConstraint("group_type IN ('product_type','lens_type','gender','frame_shape','material','collection')", name="group_type"),
+        CheckConstraint("group_type <> 'product_type' OR code IN ('frame','lens','package','accessories')", name="product_kind"),
+        UniqueConstraint('group_type', 'code'),
+        Index('ix_categories_group_sort', 'group_type', 'sort_order', 'id'),
     )
     id: Mapped[str] = mapped_column(ID, primary_key=True, default=new_id)
-    parent_id: Mapped[str | None] = mapped_column(ID, ForeignKey("categories.id", ondelete="RESTRICT"))
+    group_type: Mapped[str] = mapped_column(String(32), server_default='collection', nullable=False)
+    code: Mapped[str] = mapped_column(String(64), default=new_id, nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     slug: Mapped[str] = mapped_column(String(191), unique=True, nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
-    category_type: Mapped[str] = mapped_column(String(32), server_default="product", nullable=False)
     icon: Mapped[str | None] = mapped_column(Text)
     banner_image: Mapped[str | None] = mapped_column(Text)
-    level: Mapped[int] = mapped_column(Integer, server_default="0", nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, server_default="0", nullable=False)
     is_featured: Mapped[bool] = mapped_column(Boolean, server_default="0", nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, server_default="1", nullable=False)
@@ -153,13 +156,14 @@ class Brand(CreatedMixin, Base):
 class Product(UpdatedMixin, Base):
     __tablename__ = "products"
     __table_args__ = (
-        CheckConstraint("product_type IN ('frame','lens','package')", name="type"),
+        CheckConstraint("product_type IN ('frame','lens','package','accessories')", name="type"),
         CheckConstraint("price >= 0 AND (discount_price IS NULL OR discount_price >= 0)", name="prices_nonnegative"),
         CheckConstraint("flash_sale_price IS NULL OR flash_sale_price >= 0", name="legacy_flash_nonnegative"),
         CheckConstraint("weight_gram >= 0 AND min_stock_alert >= 0", name="inventory_values"),
         CheckConstraint("rating_avg BETWEEN 0 AND 5 AND rating_count >= 0 AND sold_count >= 0", name="counters"),
         Index("ix_products_shop", "is_active", "product_type", "created_at", "id"),
         Index("ix_products_arrivals", "is_active", "product_type", "is_new_arrival", "created_at", "id"),
+        Index("ix_products_admin_list", "deleted_at", "created_at", "id"),
         Index("ix_products_price", "is_active", "price", "id"),
         Index("ft_products_name_description", "name", "description", mysql_prefix="FULLTEXT"),
     )
@@ -186,6 +190,9 @@ class Product(UpdatedMixin, Base):
     sold_count: Mapped[int] = mapped_column(BigInteger, server_default="0", nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, server_default="1", nullable=False)
     is_new_arrival: Mapped[bool] = mapped_column(Boolean, server_default="0", nullable=False)
+    # Deletion is distinct from temporarily disabling a product. Historical
+    # orders, inventory, and measurement references retain their original IDs.
+    deleted_at: Mapped[datetime | None] = mapped_column(UTCDateTime())
     new_arrival_until: Mapped[datetime | None] = mapped_column(UTCDateTime())
     seo_title: Mapped[str | None] = mapped_column(String(255))
     seo_description: Mapped[str | None] = mapped_column(Text)
@@ -256,6 +263,13 @@ class LensIndex(Base):
 
 
 # ----------------------- Assets, prescriptions, and try-on -----------------------
+class LensIndexType(Base):
+    __tablename__ = "lens_index_types"
+    lens_index_id: Mapped[str] = mapped_column(ID, ForeignKey("lens_indexes.id", ondelete="CASCADE"), primary_key=True)
+    category_id: Mapped[str] = mapped_column(ID, ForeignKey("categories.id", ondelete="RESTRICT"), primary_key=True)
+    __table_args__ = (Index("ix_lens_index_types_category", "category_id", "lens_index_id"),)
+
+
 class Upload(CreatedMixin, Base):
     __tablename__ = "uploads"
     __table_args__ = (
@@ -562,6 +576,7 @@ class StockMovement(CreatedMixin, Base):
     order_id: Mapped[str | None] = mapped_column(ID, ForeignKey("orders.id", ondelete="RESTRICT"), index=True)
     reservation_id: Mapped[str | None] = mapped_column(ID, ForeignKey("stock_reservations.id", ondelete="RESTRICT"))
     type: Mapped[str] = mapped_column(String(64), nullable=False)
+    ttb_number: Mapped[str | None] = mapped_column(String(128))
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
     delta: Mapped[int | None] = mapped_column(Integer)
     reserved_delta: Mapped[int | None] = mapped_column(Integer)
@@ -1259,3 +1274,15 @@ class MigrationIssue(CreatedMixin, Base):
     explanation: Mapped[str] = mapped_column(Text, nullable=False)
     resolved_at: Mapped[datetime | None] = mapped_column(UTCDateTime())
     resolved_by: Mapped[str | None] = mapped_column(ID, ForeignKey("users.user_id", ondelete="RESTRICT"))
+
+
+# Customer-owned optical measurements are registered after the ecommerce models.
+from .meowsurement_models import (  # noqa: E402,F401
+    CustomerProfile, ProductFrameSpecification, ProductVariantFrameSpecification,
+    MeowsurementSession, MeowsurementRevision, MeowsurementPhoto,
+    MeowsurementCapture, MeowsurementMeasurement, MeowsurementMeasurementSource,
+    MeowsurementReview, MeowsurementAuditEvent,
+)
+from .engagement_models import (PointSettings, PointRateVersion, PointLot, PointHistory, PointRedemption,
+    GameRule, PuzzleLevel, GameSession, CashbackEvent, CashbackAward,
+    ReturnCase, ReturnCaseItem, ReturnEvidence, ReturnTimeline)  # noqa: E402,F401

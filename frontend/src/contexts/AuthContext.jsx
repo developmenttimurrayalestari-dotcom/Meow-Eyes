@@ -29,11 +29,6 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    // CRITICAL: If returning from OAuth callback, skip /me check
-    if (window.location.hash?.includes("session_id=")) {
-      setLoading(false);
-      return;
-    }
     fetchMe();
   }, [fetchMe]);
 
@@ -63,6 +58,12 @@ export const AuthProvider = ({ children }) => {
     setUser(data.user);
     return data.user;
   };
+  const loginWithGoogle = async (credential, nonce) => {
+    const { data } = await api.post("/auth/google", { credential, nonce });
+    if (data.token) setToken(data.token);
+    setUser(data.user);
+    return data.user;
+  };
   const logout = async () => {
     try {
       await api.post("/auth/logout");
@@ -75,7 +76,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider
-      value={{ user, setUser, loading, login, register, logout, refreshMe: fetchMe, cartCount, refreshCartCount }}
+      value={{ user, setUser, loading, login, register, loginWithGoogle, logout, refreshMe: fetchMe, cartCount, refreshCartCount }}
     >
       {children}
     </AuthContext.Provider>

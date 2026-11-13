@@ -1,11 +1,7 @@
 import React, { useMemo } from "react";
-import DOMPurify from "dompurify";
+import { sanitizeRichContent } from "../lib/richContent";
 
-export default function HtmlContent({ html, ...props }) {
-  const content = useMemo(() => DOMPurify.sanitize(html || "", {
-    USE_PROFILES: { html: true },
-    FORBID_TAGS: ["style", "form", "input", "button", "textarea", "select", "iframe", "object", "embed", "base", "link"],
-    FORBID_ATTR: ["style"],
-  }), [html]);
-  return <div {...props} dangerouslySetInnerHTML={{ __html: content }} />;
+export default function HtmlContent({ html, className = "", ...props }) {
+  const content = useMemo(() => sanitizeRichContent(html, { resolveImages: true }), [html]);
+  return <div {...props} className={`rich-content ${className}`} dangerouslySetInnerHTML={{ __html: content }} />;
 }

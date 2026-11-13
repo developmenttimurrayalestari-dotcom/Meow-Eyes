@@ -1,0 +1,24 @@
+{
+  "ok": true,
+  "revision": "20261112_0010",
+  "backup": "private\\backups\\lens-index-types-before-0010-20261112T070750Z.sql",
+  "backup_sha256": "822074f255f7f058511e12a7fedbce29f9142bbd4c7fceb5f9c390c64df6dae5",
+  "catalog_prices_product_tags_and_stock_unchanged": true,
+  "counts": {
+    "products": 25,
+    "product_variants": 34,
+    "lens_indexes": 5,
+    "categories": 66,
+    "product_categories": 112
+  },
+  "lens_type_mapping": "admin configures existing indexes",
+  "integrity": {
+    "ok": true,
+    "mode": "full_integrity_audit",
+    "expected_triggers": 154,
+    "row_rules": 139,
+    "definer_privileges_verified": false,
+    "issues": []
+  },
+  "backend_started": false
+}

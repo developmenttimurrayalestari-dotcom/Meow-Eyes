@@ -1,15 +1,16 @@
 """Authentication routes backed by relational users, permissions and sessions."""
 from __future__ import annotations
-import httpx
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from starlette.concurrency import run_in_threadpool
 from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
 from database import session_scope, read_session
 from mysql.models import User as SQLUser, UserSession
 from mysql.api import user_dict
 from mysql.base import utcnow
-from models import RegisterRequest, LoginRequest, PinSetupRequest, PinVerifyRequest, GoogleSessionRequest, User, gen_id
+from models import RegisterRequest, LoginRequest, PinSetupRequest, PinVerifyRequest, GoogleLoginRequest, User, gen_id
 from auth import hash_secret, verify_secret, create_session, current_user, current_user_optional, public_user, verify_pin_or_raise
+from google_identity import client_id, require_google_origin, verify_google_credential
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -54,41 +55,40 @@ async def login(req: LoginRequest, response: Response):
     return {"token": token, "user": public_user(user).model_dump()}
 
 
-@router.post("/google-session")
-async def google_session(req: GoogleSessionRequest, response: Response):
-    """Preserve the existing Emergent identity exchange; no DB lock during HTTP."""
+@router.get("/google/config")
+async def google_config(response: Response):
+    response.headers["Cache-Control"] = "no-store"
+    return {"enabled": bool(client_id()), "client_id": client_id() or None}
+
+
+@router.post("/google")
+async def google_login(req: GoogleLoginRequest, request: Request, response: Response):
+    require_google_origin(request)
+    identity = await run_in_threadpool(verify_google_credential, req.credential, req.nonce)
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            r = await client.get(
-                "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
-                headers={"X-Session-ID": req.session_id})
-        if r.status_code != 200:
-            raise HTTPException(401, "Sesi Google tidak valid")
-        data = r.json()
-    except (httpx.HTTPError, ValueError):
-        raise HTTPException(503, "Layanan autentikasi sementara tidak tersedia") from None
-    if not isinstance(data, dict) or not data.get("email"):
-        raise HTTPException(400, "Data Google tidak lengkap")
-    from pydantic import ValidationError
-    try:
-        candidate = User(email=data["email"], name=data.get("name") or data["email"],
-                         picture=data.get("picture"), provider="google")
-    except ValidationError:
-        raise HTTPException(400, "Data Google tidak valid") from None
-    email = str(candidate.email).strip().lower()
-    async with session_scope() as session:
-        row = await session.scalar(select(SQLUser).where(func.lower(SQLUser.email) == email).with_for_update())
-        if row is None:
-            row = SQLUser(user_id=candidate.user_id, email=email, name=candidate.name,
-                          picture=candidate.picture, provider="google")
-            session.add(row)
+        async with session_scope() as session:
+            row = await session.scalar(select(SQLUser).where(
+                SQLUser.google_subject == identity["subject"]).with_for_update())
+            if row is None:
+                row = await session.scalar(select(SQLUser).where(
+                    func.lower(SQLUser.email) == identity["email"]).with_for_update())
+                if row is not None:
+                    if row.google_subject is not None or not identity["authoritative_email"]:
+                        raise HTTPException(409, "Email sudah terdaftar. Silakan masuk dengan metode akun sebelumnya.")
+                    row.google_subject = identity["subject"]
+                else:
+                    row = SQLUser(user_id=gen_id("usr"), email=identity["email"], name=identity["name"],
+                                  picture=identity["picture"], google_subject=identity["subject"], provider="google")
+                    session.add(row)
+            if row.is_active is False:
+                raise HTTPException(403, "Akun dinonaktifkan")
+            # Keep the original user's password, PIN, name, roles and points.
             await session.flush()
-        elif not row.is_active:
-            raise HTTPException(403, "Akun dinonaktifkan")
-        else:
-            row.name, row.picture, row.updated_at = candidate.name, candidate.picture, utcnow()
-        token, _ = await create_session(row.user_id, session)
-        user = User(**await user_dict(session, row))
+            token, _ = await create_session(row.user_id, session)
+            user = User(**await user_dict(session, row))
+    except IntegrityError:
+        raise HTTPException(409, "Akun sedang diperbarui. Silakan coba masuk kembali.") from None
+    response.headers["Cache-Control"] = "no-store"
     _set_cookie(response, token)
     return {"token": token, "user": public_user(user).model_dump()}
 

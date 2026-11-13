@@ -1,5 +1,12 @@
 # Generated MySQL 5.7.24 schema
 
+Current application head: `20261112_0009` (93 application tables). Apply migrations
+with `python -m alembic upgrade head`; the historical 001 export below still ends
+at 0002. Incremental exports 003, 004 and 005 add customer Meowsurement, optional
+manual frames, and the loyalty/games/cashback/replacement domains respectively.
+See [the feature runbook](../../docs/LOYALTY_GAMES_RMA.md) for configuration and
+the verified 0005 installation.
+
 `001_initial_schema.sql` is the full **fresh-database** export through Alembic
 head `20261106_0002`. It applies the initial schema history `20261106_0001` and
 the MySQL 5.7 compatibility revision. It contains the 68 application/support
@@ -82,3 +89,27 @@ MySQL 5.7 or treat these schema revisions as a server downgrade tool.
 
 Future model changes require a new Alembic revision. Do not edit an already
 applied migration to force existing databases to match a new model.
+
+Revision `20261111_0006` flattens product categories and seeds independent master
+groups. It requires **online** Alembic because existing ancestry must be mapped
+before dropping its columns. Historical SQL exports remain frozen; apply them
+only to their recorded revision, then run `python -m alembic upgrade head` with
+writers paused and a full backup. Full offline generation through `head` is
+intentionally refused. See [the migration procedure](../../docs/mysql-migration/STEP_2.md#master-kategori-independen-0006).
+
+Revision `20261112_0007` adds nullable `products.deleted_at` and the admin list
+index. Existing products keep their status. Deletion hides a product from admin
+and storefront lists while retaining order, stock, and measurement references;
+deactivation keeps the product available in the admin list for reactivation.
+The frozen incremental export is `007_product_deletion.sql`, generated with
+`python -m alembic upgrade 20261111_0006:20261112_0007 --sql`. Apply it only to a
+verified 0006 schema with backups; online `alembic upgrade head` is preferred.
+
+Revision `20261112_0008` retires collection categories and product assignments,
+archiving original references in a private setting. It requires online Alembic
+and has no offline SQL export. It preserves materialized flash-sale prices and
+quota while detaching their retired category rules. Back up before migration.
+
+Revision `20261112_0009` adds nullable `stock_movements.ttb_number VARCHAR(128)`.
+Existing stock quantities and historical movements remain unchanged. New
+inventory adjustments record Receipt Stock/Issue Stock and the TTB reference.

@@ -1,0 +1,12 @@
+{
+  "ok": true,
+  "api": "mocked; no store writes or orders",
+  "frameLensCosts350000": true,
+  "regularTotal807000": true,
+  "flashSaleTotal457000": true,
+  "packageLensCostsZero": true,
+  "twoFramesCountTwice": true,
+  "sameShippingQuoteRefreshesTotals": true,
+  "desktopAndMobile": true,
+  "errors": []
+}

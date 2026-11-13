@@ -6,6 +6,7 @@ never returned by diagnostics or included in a dataclass representation.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import ipaddress
 import os
 import re
 from urllib.parse import urlsplit
@@ -35,13 +36,25 @@ def shipping_provider() -> str:
     return value
 
 
+def _local_host(host: str | None) -> bool:
+    if host == 'localhost':
+        return True
+    try:
+        address = ipaddress.ip_address(host or '')
+    except ValueError:
+        return False
+    networks = ('10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16', 'fc00::/7')
+    return address.is_loopback or any(address.version == network.version and address in network
+                                    for network in map(ipaddress.ip_network, networks))
+
+
 def _http_url(value: str, name: str, *, local: bool = False) -> str:
     try:
         p = urlsplit(value)
         p.port
     except ValueError:
         raise HTTPException(503, f"Konfigurasi {name} tidak valid") from None
-    local_http = local and p.scheme == "http" and p.hostname in {"localhost", "127.0.0.1"}
+    local_http = local and p.scheme == "http" and _local_host(p.hostname)
     if (p.scheme != "https" and not local_http) or not p.hostname or p.username or p.password or p.query or p.fragment:
         raise HTTPException(503, f"Konfigurasi {name} tidak valid")
     return value.rstrip("/")
@@ -72,6 +85,15 @@ class DokuSettings:
     def base_url(self) -> str:
         return "https://api.doku.com" if self.environment == "production" else "https://api-sandbox.doku.com"
 
+    @property
+    def notification_override_url(self) -> str | None:
+        # DOKU's server cannot reach the developer's private LAN. Browser
+        # return URLs can still point there during sandbox testing; notification
+        # delivery uses the merchant dashboard unless a public URL is supplied.
+        if not self.public_api_url or _local_host(urlsplit(self.public_api_url).hostname):
+            return None
+        return self.public_api_url + self.notification_path
+
     @classmethod
     def from_env(cls) -> "DokuSettings":
         missing = [key for key in ("DOKU_CLIENT_ID", "DOKU_SECRET_KEY", "PUBLIC_FRONTEND_URL") if not os.environ.get(key)]
@@ -80,7 +102,7 @@ class DokuSettings:
         env = os.environ.get("DOKU_ENVIRONMENT", "sandbox").strip().lower()
         if env not in {"sandbox", "production"}:
             raise HTTPException(503, "Konfigurasi DOKU_ENVIRONMENT tidak valid")
-        local = env == "sandbox" and os.environ.get("APP_ENV", "development") != "production"
+        local = env == "sandbox" and os.environ.get("APP_ENV", "development") in {"development", "test"}
         frontend = _http_url(os.environ["PUBLIC_FRONTEND_URL"], "PUBLIC_FRONTEND_URL", local=local)
         public_api = os.environ.get("PUBLIC_API_URL", "").rstrip("/")
         if public_api:

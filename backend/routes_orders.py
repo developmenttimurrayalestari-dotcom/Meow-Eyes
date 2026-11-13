@@ -6,13 +6,13 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy import select
 
 from auth import current_admin, current_user, verify_pin_or_raise
-from database import read_session
+from database import read_session, session_scope
 from models import CheckoutConfirm, CheckoutPreview, User
 from mysql import models as m
 from mysql.api import order_dict, product_dict, row_dict
 from mysql.base import utcnow
 from mysql.commerce import (
-    POINT_VALUE, RESERVATION_HOURS, checkout_quote, confirm_mock_payment,
+    RESERVATION_HOURS, checkout_quote, confirm_mock_payment,
     create_checkout, expire_order, priced_cart, prescription_payload,
 )
 from services_mock import everpro_track
@@ -48,10 +48,9 @@ async def shipping_options(payload: dict[str, Any], user: User = Depends(current
 
 @router.post("/checkout/preview")
 async def checkout_preview(req: CheckoutPreview, user: User = Depends(current_user)):
-    async with read_session() as s:
-        fresh = await s.get(m.User, user.user_id)
-        if fresh is None or not fresh.is_active:
-            raise HTTPException(403, "Akun tidak tersedia")
+    from mysql.commerce import lock_user
+    async with session_scope() as s:
+        fresh = await lock_user(s, user.user_id)
         return (await checkout_quote(s, fresh, req)).payload()
 
 

@@ -28,7 +28,6 @@ from mysql.api import order_dict, product_dict, row_dict, values_for
 from mysql.base import utcnow
 
 
-POINT_VALUE = Decimal("100.00")
 RESERVATION_HOURS = 1
 ZERO = Decimal("0.00")
 MAX_CART_QUANTITY = 10000
@@ -138,6 +137,8 @@ async def save_prescription(
         measurements["axis"] = None if axis in (None, "") else integer(axis, "AXIS", 0, 180)
         if any(v is not None for v in measurements.values()):
             eyes.append(m.PrescriptionEye(prescription_id=prescription.id, eye=eye, **measurements))
+    if not eyes and pd_total is None and pd_right is None and notes is None and attachment is None:
+        return None
     s.add(prescription)
     await s.flush()
     s.add_all(eyes)
@@ -266,10 +267,13 @@ class CheckoutQuote:
     roulette_discount: Decimal
     free_shipping: bool
     total: Decimal
+    point_plan: list | None = None
 
     def payload(self) -> dict[str, Any]:
         return {
             "subtotal": float(self.subtotal),
+            "product_subtotal": float(sum((item.frame_price * item.cart.quantity for item in self.items), ZERO)),
+            "lens_subtotal": float(sum((item.lens_price * item.cart.quantity for item in self.items), ZERO)),
             "voucher": row_dict(self.voucher) if self.voucher else None,
             "voucher_discount": float(self.voucher_discount),
             "points_used": self.points_used, "points_discount": float(self.points_discount),
@@ -283,6 +287,7 @@ class CheckoutQuote:
             },
             "free_shipping": self.free_shipping, "total": float(self.total),
             "items_count": len(self.items), "weight_gram": self.weight,
+            "flash_sale_exclusive": any(item.flash_item is not None for item in self.items),
         }
 
 
@@ -367,19 +372,15 @@ async def priced_cart(
             item.lens_product, item.lens_variant = lens, lv
             item.lens_price = base_price(lens, lv)
         if cart.lens_index_id:
-            if item.lens_product is None:
-                raise HTTPException(400, "Indeks lensa memerlukan produk lensa")
-            lens_index = await s.scalar(select(m.LensIndex).where(
-                m.LensIndex.id == cart.lens_index_id, m.LensIndex.is_active.is_(True)
-            ).with_for_update() if lock else select(m.LensIndex).where(
-                m.LensIndex.id == cart.lens_index_id, m.LensIndex.is_active.is_(True)
-            ))
-            if lens_index is None:
+            from .lenses import validate_index
+            try:
+                lens_index = await validate_index(s, product, cart.lens_index_id, lock=lock)
+            except HTTPException:
                 if skip_unavailable:
                     continue
-                raise HTTPException(400, "Indeks lensa tidak tersedia")
+                raise
             item.lens_index = lens_index
-            item.index_surcharge = money(lens_index.additional_price)
+            item.index_surcharge = ZERO if product.product_type == 'package' else money(lens_index.additional_price)
             item.lens_price += item.index_surcharge
         demands[variant.id] += cart.quantity
         weight += product.weight_gram * cart.quantity
@@ -425,6 +426,7 @@ async def checkout_quote(s: AsyncSession, user: m.User, req: Any, *, lock: bool 
     if not items:
         raise HTTPException(400, "Tidak ada item yang dipilih")
     subtotal = sum((i.subtotal for i in items), ZERO)
+    flash_sale_exclusive = any(item.flash_item is not None for item in items)
     if shipping_provider() == "mock":
         from services_mock import everpro_cost
         options = everpro_cost(address.province, max(weight, 100))
@@ -441,7 +443,7 @@ async def checkout_quote(s: AsyncSession, user: m.User, req: Any, *, lock: bool 
     voucher = None
     voucher_discount = ZERO
     free_shipping = False
-    if req.voucher_code:
+    if req.voucher_code and not flash_sale_exclusive:
         q = select(m.Voucher).where(m.Voucher.code == req.voucher_code.upper())
         voucher = await s.scalar(q.with_for_update() if lock else q)
         if voucher is None:
@@ -455,7 +457,7 @@ async def checkout_quote(s: AsyncSession, user: m.User, req: Any, *, lock: bool 
             raise HTTPException(400, "Batas penggunaan voucher untuk akun ini tercapai")
     roulette = None
     roulette_discount = ZERO
-    if req.roulette_spin_id:
+    if req.roulette_spin_id and not flash_sale_exclusive:
         q = select(m.RouletteSpin).where(m.RouletteSpin.id == req.roulette_spin_id,
                                         m.RouletteSpin.user_id == user.user_id)
         roulette = await s.scalar(q.with_for_update() if lock else q)
@@ -467,10 +469,10 @@ async def checkout_quote(s: AsyncSession, user: m.User, req: Any, *, lock: bool 
             free_shipping = True
         else:
             raise HTTPException(400, "Hadiah ini tidak dapat digunakan pada checkout")
-    max_points = int(max(ZERO, subtotal - voucher_discount - roulette_discount) // POINT_VALUE)
+    from mysql.points import quote as point_quote
     requested_points = integer(req.use_points or 0, "Poin", 0, 9223372036854775807)
-    points_used = min(requested_points, user.points_balance, max_points)
-    points_discount = POINT_VALUE * points_used
+    points_used, points_discount, point_plan = await point_quote(s, user, 0 if flash_sale_exclusive else requested_points,
+        max(ZERO, subtotal - voucher_discount - roulette_discount))
     if free_shipping:
         shipping_cost = ZERO
     total = money(subtotal - voucher_discount - roulette_discount - points_discount + shipping_cost)
@@ -482,7 +484,7 @@ async def checkout_quote(s: AsyncSession, user: m.User, req: Any, *, lock: bool 
             raise HTTPException(422, "Total pembayaran DOKU harus Rp1 sampai Rp999.999.999.999")
     return CheckoutQuote(address, user, items, subtotal, weight, shipping, shipping_cost,
                          voucher, voucher_discount, points_used, points_discount,
-                         roulette, money(roulette_discount), free_shipping, total)
+                         roulette, money(roulette_discount), free_shipping, total, point_plan)
 
 
 def checkout_identity(user_id: str, req: Any, key: str | None) -> tuple[str | None, str]:
@@ -541,7 +543,9 @@ async def _save_order(s: AsyncSession, quote: CheckoutQuote, key: str | None, fi
         )
         s.add(row)
         await s.flush()
-        components = [("primary", item.product, item.variant, item.frame_price, ZERO)]
+        standalone_index = item.lens_index is not None and item.lens_product is None
+        primary_surcharge = item.index_surcharge if standalone_index else ZERO
+        components = [("primary", item.product, item.variant, item.frame_price + primary_surcharge, primary_surcharge)]
         if item.lens_product and item.lens_variant:
             components.append(("lens", item.lens_product, item.lens_variant,
                                item.lens_price, item.index_surcharge))
@@ -549,8 +553,8 @@ async def _save_order(s: AsyncSession, quote: CheckoutQuote, key: str | None, fi
             s.add(m.OrderItemComponent(
                 id=gen_id("ocp"), order_item_id=row.id, order_id=order.id,
                 component_type=kind, product_id=product.id, variant_id=variant.id,
-                lens_index_id=item.lens_index.id if kind == "lens" and item.lens_index else None,
-                lens_index_name=item.lens_index.name if kind == "lens" and item.lens_index else None,
+                lens_index_id=item.lens_index.id if item.lens_index and (kind == "lens" or standalone_index) else None,
+                lens_index_name=item.lens_index.name if item.lens_index and (kind == "lens" or standalone_index) else None,
                 product_name=product.name, sku=variant.sku, variant_label=variant_label(variant),
                 quantity=item.cart.quantity, unit_price=price, index_surcharge=surcharge,
                 subtotal=price * item.cart.quantity, sort_order=component_position,
@@ -591,13 +595,9 @@ async def _save_order(s: AsyncSession, quote: CheckoutQuote, key: str | None, fi
             id=gen_id("rrd"), spin_id=quote.roulette.id, order_id=order.id, user_id=order.user_id,
             discount_amount=quote.roulette_discount, status="reserved",
         ))
-    if quote.points_used:
-        quote.user.points_balance -= quote.points_used
-        s.add(m.PointLog(
-            id=gen_id("pts"), user_id=order.user_id, delta=-quote.points_used,
-            balance_after=quote.user.points_balance, type="redeem_checkout",
-            note=order.order_number, order_id=order.id,
-        ))
+    from mysql.points import reserve as reserve_points, snapshot_cashback
+    await reserve_points(s, quote.user, order, quote.point_plan or [])
+    await snapshot_cashback(s, order)
     s.add(m.OrderStatusLog(id=gen_id("ols"), order_id=order.id,
                           status="pending_payment", note="Order dibuat"))
     await s.execute(delete(m.CartItem).where(
@@ -845,13 +845,8 @@ async def _release_locked(
         raise HTTPException(409, "Order sudah memiliki penjualan stok; perlu rekonsiliasi")
     await _resolve_stock(s, order, sold=False, status=status)
     await _resolve_promotions(s, order, sold=False, status=status)
-    if order.points_used:
-        user.points_balance += order.points_used
-        s.add(m.PointLog(
-            id=gen_id("pts"), user_id=user.user_id, delta=order.points_used,
-            balance_after=user.points_balance, type="refund_point", order_id=order.id,
-            note=order.order_number + " (" + status + ")",
-        ))
+    from mysql.points import release as release_points
+    await release_points(s, user, order, status)
     pending = (await s.scalars(select(m.Payment).where(
         m.Payment.order_id == order.id, m.Payment.status == "pending"
     ))).all()
@@ -1013,6 +1008,8 @@ async def admin_transition_order(
             order.status, order.updated_at = new_status, utcnow()
             if new_status == "completed":
                 order.completed_at = utcnow()
+                from mysql.points import complete_order as complete_point_order
+                await complete_point_order(s, user, order)
             if new_status == "shipped":
                 order.shipment_status = "in_transit"
                 shipments = (await s.scalars(select(m.Shipment).where(

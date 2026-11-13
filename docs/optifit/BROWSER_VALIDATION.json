@@ -1,0 +1,115 @@
+{
+  "ranAt": "2026-11-09T06:13:45.212Z",
+  "environment": "Production React build + Chromium + real FastAPI endpoints + disposable SQLite. Synthetic accounts only; no payment/shipment provider calls.",
+  "results": [
+    {
+      "name": "Unauthenticated Meowsurement uses website login and incomplete customer profile; no PIN or local accounts",
+      "status": "passed",
+      "durationMs": 993,
+      "detail": {
+        "profileGate": true,
+        "originalTargetPreserved": true,
+        "websiteCustomerWithoutPin": true
+      }
+    },
+    {
+      "name": "Incomplete prescription is a draft; literal zero survives; nonzero CYL requires AXIS",
+      "status": "passed",
+      "durationMs": 1404,
+      "detail": {
+        "zeroPreserved": true,
+        "unknownAdd": null,
+        "ready": true,
+        "version": 2
+      }
+    },
+    {
+      "name": "Existing web admin saves typed default geometry and size-specific variant override",
+      "status": "passed",
+      "durationMs": 1560,
+      "detail": {
+        "defaultA": 52,
+        "overrideA": 56,
+        "version": 1
+      }
+    },
+    {
+      "name": "Product detail reflects effective variant geometry and carries frame selection into Meowsurement",
+      "status": "passed",
+      "durationMs": 628,
+      "detail": {
+        "zeroDisplayed": true,
+        "variantPreserved": true,
+        "noLocalOnboarding": true
+      }
+    },
+    {
+      "name": "Session is created through real API with server-owned profile and frame snapshots",
+      "status": "passed",
+      "durationMs": 287,
+      "detail": {
+        "sessionId": "ms_f6ea10026e97423e980ee1417a31fd9b",
+        "profileVersion": 2,
+        "frameA": 56,
+        "variantId": "qa-frame-large",
+        "uploadPhotosDefault": false
+      }
+    },
+    {
+      "name": "Preparation, three independent manual PD readings, submission and evidence-bound approval use existing website accounts",
+      "status": "passed",
+      "durationMs": 1226,
+      "detail": {
+        "status": "approved",
+        "rightPdMm": 31,
+        "leftPdMm": 33,
+        "sampleCount": 3,
+        "independentWebsiteReviewer": true,
+        "requiredEvidence": true,
+        "photoUploadEnabled": false
+      }
+    },
+    {
+      "name": "Concurrent profile update shows conflict and cannot overwrite saved version or old session snapshot",
+      "status": "passed",
+      "durationMs": 1222,
+      "detail": {
+        "staleWriteStatus": 409,
+        "immutableOriginalRx": 0,
+        "currentProfileRx": -0.75,
+        "currentCatalogA": 57,
+        "originalFrameA": 56,
+        "realReload": true
+      }
+    },
+    {
+      "name": "Existing admin review queue opens customer session without requiring an admin prescription profile",
+      "status": "passed",
+      "durationMs": 432,
+      "detail": {
+        "reviewSession": "ms_f6ea10026e97423e980ee1417a31fd9b",
+        "adminProfileNotRequired": true
+      }
+    },
+    {
+      "name": "Profile and admin specification editor fit a 390px viewport; customer cannot access catalog admin",
+      "status": "passed",
+      "durationMs": 571,
+      "detail": {
+        "profileWidth": {
+          "viewport": 390,
+          "width": 390
+        },
+        "dialogWidth": {
+          "width": 381.73583984375,
+          "scrollWidth": 388,
+          "clientWidth": 388
+        },
+        "customerAdminStatus": 403
+      }
+    }
+  ],
+  "pageErrors": [],
+  "passed": 9,
+  "failed": 0
+}

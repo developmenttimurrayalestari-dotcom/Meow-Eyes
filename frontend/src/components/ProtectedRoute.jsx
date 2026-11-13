@@ -15,7 +15,7 @@ export const ProtectedRoute = ({ children, requireRole }) => {
     );
   }
   if (!user) {
-    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+    return <Navigate to="/login" state={{ from: location.pathname + location.search + location.hash }} replace />;
   }
   if (requireRole === "admin" && !["staff", "admin", "super_admin"].includes(user.role)) {
     return <Navigate to="/" replace />;

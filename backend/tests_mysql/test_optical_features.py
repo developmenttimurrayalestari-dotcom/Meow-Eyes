@@ -74,6 +74,73 @@ def png_bytes():
     return data.getvalue()
 
 
+def test_flash_sale_uses_regular_price_and_excludes_other_checkout_discounts():
+    async def run():
+        async with feature_client(bundle=False) as (client, auth, d, _):
+            await category_fixture(d)
+            async with session_scope() as s:
+                product = await s.get(m.Product, d["frame"])
+                product.price, product.discount_price = Decimal("420000"), Decimal("350000")
+            auth["user"] = d["admin_user"]
+            now = utcnow()
+            created = await client.post("/api/admin/flash-sales", json={"name": "Exclusive 60%",
+                "start_at": (now - timedelta(hours=1)).isoformat(), "end_at": (now + timedelta(hours=1)).isoformat(),
+                "category_rules": [{"category_id": "root_frames", "include_descendants": True,
+                    "discount_type": "percent", "discount_value": 60, "quota_per_product": 5}]})
+            assert created.status_code == 200, created.text
+            flash = created.json()["flash_sale"]
+            item = flash["items"][0]
+            assert item["flash_price"] == 168000
+            public = (await client.get(f'/api/products/{d["frame"]}')).json()["product"]
+            assert public["flash_sale_price"] == 168000 and public["discount_price"] is None
+            async with session_scope() as s:
+                (await s.get(m.FlashSaleItem, item["id"])).flash_price = Decimal("140000")
+            refresh = await client.post(f'/api/admin/flash-sales/{flash["id"]}/refresh-categories')
+            assert refresh.status_code == 200, refresh.text
+            assert refresh.json()["flash_sale"]["items"][0]["flash_price"] == 168000
+            req = d["req"].model_copy(update={"use_points": 2, "voucher_code": d["voucher"].upper(), "roulette_spin_id": d["spin"]})
+            from mysql.commerce import checkout_quote
+            async with read_session() as s:
+                quote = await checkout_quote(s, await s.get(m.User, d["alice"]), req)
+                assert quote.payload()["flash_sale_exclusive"]
+                assert quote.subtotal == Decimal("168000")
+                assert quote.voucher is None and quote.roulette is None and quote.points_used == 0
+                assert quote.voucher_discount == quote.roulette_discount == quote.points_discount == 0
+            order = (await create_checkout(d["alice"], req))["order"]
+            async with read_session() as s:
+                assert (await s.get(m.User, d["alice"])).points_balance == 100
+                assert (await s.get(m.Voucher, d["voucher"])).used_count == 0
+                assert not (await s.get(m.RouletteSpin, d["spin"])).used
+            denied = await client.delete(f'/api/admin/flash-sales/{flash["id"]}')
+            assert denied.status_code == 409
+            assert order["id"]
+    asyncio.run(run())
+
+
+def test_admin_can_delete_unused_flash_sale_and_its_category_children():
+    async def run():
+        async with feature_client(bundle=False) as (client, auth, d, _):
+            await category_fixture(d)
+            auth["user"] = d["admin_user"]
+            now = utcnow()
+            response = await client.post("/api/admin/flash-sales", json={"name": "Delete me",
+                "start_at": (now - timedelta(hours=1)).isoformat(), "end_at": (now + timedelta(hours=1)).isoformat(),
+                "category_rules": [{"category_id": "root_frames", "include_descendants": True,
+                    "discount_type": "percent", "discount_value": 60, "quota_per_product": 5}]})
+            assert response.status_code == 200, response.text
+            flash = response.json()["flash_sale"]
+            auth["user"] = d["user"]
+            assert (await client.delete(f'/api/admin/flash-sales/{flash["id"]}')).status_code == 403
+            auth["user"] = d["admin_user"]
+            assert (await client.delete(f'/api/admin/flash-sales/{flash["id"]}')).status_code == 200
+            async with read_session() as s:
+                assert await s.get(m.FlashSale, flash["id"]) is None
+                assert await s.scalar(select(m.FlashSaleItem.id).where(m.FlashSaleItem.flash_sale_id == flash["id"])) is None
+                assert (await s.execute(select(m.FlashSaleCategory).where(m.FlashSaleCategory.flash_sale_id == flash["id"])) ).first() is None
+            assert (await client.delete(f'/api/admin/flash-sales/{flash["id"]}')).status_code == 404
+    asyncio.run(run())
+
+
 def test_whatsapp_admin_persistence_normalization_and_permissions():
     async def run():
         async with feature_client() as (client, auth, d, _):
@@ -189,6 +256,80 @@ def test_private_rx_photo_is_decoded_nonpublic_and_owner_or_fulfilment_only(tmp_
     asyncio.run(run())
 
 
+def test_each_standalone_cart_line_keeps_its_own_photo_and_notes_in_order_snapshot(tmp_path, monkeypatch):
+    monkeypatch.setattr(routes_features, "PRIVATE_UPLOAD_ROOT", tmp_path / "private")
+    async def run():
+        async with feature_client(bundle=False) as (client, auth, d, _):
+            package_id, package_variant, package_cart = (d["prefix"] + suffix for suffix in ("_package", "_pv", "_pc"))
+            async with session_scope() as s:
+                (await s.get(m.CartItem, d["cart"])).quantity = 2
+                s.add(m.Product(id=package_id, name="Paket", slug=package_id, sku=package_id.upper(),
+                    price=Decimal("1500"), product_type="package", description="Paket fixture",
+                    main_image="/fixture.png", weight_gram=150, is_active=True))
+                await s.flush()
+                s.add(m.ProductVariant(id=package_variant, product_id=package_id, sku=package_variant.upper(),
+                    stock=5, reserved=0, is_active=True, color="Black", sort_order=0))
+                await s.flush()
+                s.add(m.CartItem(id=package_cart, user_id=d["alice"], product_id=package_id, variant_id=package_variant, quantity=1))
+            expected = {}
+            for cart_id, notes in ((d["cart"], "Resep frame"), (package_cart, "Resep paket")):
+                upload = await client.post("/api/uploads/prescription", files={"file": ("resep.png", png_bytes(), "image/png")})
+                assert upload.status_code == 200, upload.text
+                photo_id = upload.json()["id"]
+                response = await client.patch(f"/api/cart/{cart_id}/prescription", json={"notes": notes, "attachment_upload_id": photo_id})
+                assert response.status_code == 200, response.text
+                expected[cart_id] = response.json()["prescription"]
+                assert expected[cart_id]["notes"] == notes and expected[cart_id]["attachment_upload_id"] == photo_id
+            cart = {row["id"]: row for row in (await client.get("/api/cart")).json()["items"]}
+            assert cart[d["cart"]]["quantity"] == 2
+            async with read_session() as s:
+                sources = {row.id: row.prescription_id for row in (await s.scalars(select(m.CartItem))).all()}
+            assert len(set(sources.values())) == 2
+            for cart_id, rx in expected.items():
+                assert cart[cart_id]["prescription"] == rx
+            auth["user"] = d["bob_user"]
+            assert (await client.patch(f'/api/cart/{d["cart"]}/prescription', json={"notes": "forbidden"})).status_code == 404
+            bob_upload = await client.post("/api/uploads/prescription", files={"file": ("bob.png", png_bytes(), "image/png")})
+            assert bob_upload.status_code == 200, bob_upload.text
+            auth["user"] = d["user"]
+            assert (await client.patch(f"/api/cart/{package_cart}/prescription", json={"attachment_upload_id": bob_upload.json()["id"]})).status_code == 400
+            req = d["req"].model_copy(update={"selected_item_ids": [d["cart"], package_cart]})
+            order = (await create_checkout(d["alice"], req))["order"]
+            items = {row["product_id"]: row for row in order["items"]}
+            assert len(items) == 2 and items[d["frame"]]["quantity"] == 2
+            for cart_id, product_id in ((d["cart"], d["frame"]), (package_cart, package_id)):
+                rx = items[product_id]["prescription"]
+                assert rx["notes"] == expected[cart_id]["notes"]
+                assert rx["attachment_upload_id"] == expected[cart_id]["attachment_upload_id"]
+            # Editing source data cannot change either order's saved prescription.
+            async with session_scope() as s:
+                (await s.get(m.Prescription, sources[d["cart"]])).notes = "Changed source"
+            async with read_session() as s:
+                links = list((await s.scalars(select(m.OrderItemPrescription).where(m.OrderItemPrescription.order_id == order["id"]))).all())
+                assert len(links) == 2
+                assert all(link.prescription_id not in sources.values() for link in links)
+                snapshots = list((await s.scalars(select(m.Prescription).where(m.Prescription.id.in_(
+                    [link.prescription_id for link in links])))).all())
+                assert {rx.notes for rx in snapshots} == {"Resep frame", "Resep paket"}
+                assert all(rx.is_order_snapshot for rx in snapshots)
+    asyncio.run(run())
+
+
+def test_add_standalone_prescription_does_not_merge_into_plain_cart_line():
+    async def run():
+        async with feature_client(bundle=False) as (client, auth, d, _):
+            response = await client.post("/api/cart", json={"product_id": d["frame"], "variant_id": d["vf"],
+                "quantity": 2, "prescription": {"notes": "Resep baris baru"}})
+            assert response.status_code == 200, response.text
+            assert response.json()["id"] != d["cart"]
+            cart = {row["id"]: row for row in (await client.get("/api/cart")).json()["items"]}
+            assert len(cart) == 2
+            assert cart[d["cart"]]["quantity"] == 1 and cart[d["cart"]]["prescription"] is None
+            assert cart[response.json()["id"]]["quantity"] == 2
+            assert cart[response.json()["id"]]["prescription"]["notes"] == "Resep baris baru"
+    asyncio.run(run())
+
+
 def test_prescription_ownership_and_measurement_validation():
     async def run():
         async with feature_client() as (client, auth, d, _):
@@ -244,11 +385,12 @@ def test_paid_checkout_enables_product_lens_and_transaction_ratings_once():
 
 async def category_fixture(d):
     async with session_scope() as s:
-        s.add(m.Category(id="root_frames", name="Frames", slug="frames", level=0))
+        s.add(m.Category(id="root_frames", name="Frames", slug="frames"))
         await s.flush()
-        s.add(m.Category(id="child_frames", name="Round", slug="round", parent_id="root_frames", level=1))
+        s.add(m.Category(id="child_frames", name="Round", slug="round"))
         await s.flush()
         s.add(m.ProductCategory(product_id=d["frame"], category_id="child_frames"))
+        s.add(m.ProductCategory(product_id=d["frame"], category_id="root_frames"))
         (await s.get(m.Product, d["frame"])).primary_category_id = "child_frames"
         (await s.get(m.Product, d["frame"])).flash_sale_price = Decimal("1.00")  # Stale legacy cache must be ignored.
         s.add(m.ProductBadge(product_id=d["lens"], badge="flashsale"))
@@ -315,6 +457,7 @@ def test_flash_sale_refresh_only_adds_new_matches_and_manual_items_override():
                     product_type="frame", main_image="", primary_category_id="child_frames"))
                 await s.flush()
                 s.add(m.ProductCategory(product_id="newframe", category_id="child_frames"))
+                s.add(m.ProductCategory(product_id="newframe", category_id="root_frames"))
             refreshed = await client.post(f'/api/admin/flash-sales/{flash["id"]}/refresh-categories')
             assert refreshed.status_code == 200, refreshed.text
             assert refreshed.json()["added_products"] == 1

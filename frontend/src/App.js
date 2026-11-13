@@ -1,6 +1,6 @@
 import React from "react";
 import "@/App.css";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
 import { AuthProvider } from "./contexts/AuthContext";
 
@@ -24,19 +24,23 @@ import WishlistPage from "./pages/WishlistPage";
 import ProfilePage from "./pages/ProfilePage";
 import AddressesPage from "./pages/AddressesPage";
 import GamesPage from "./pages/GamesPage";
-import GamePlayPage from "./pages/GamePlayPage";
+import GamePlayPage from "./pages/GamesRoundPage";
+import VirtualTryOnPage from './pages/VirtualTryOnPage';
+import AdminReturns from './pages/admin/AdminReturns';
+import { AdminPointConversion, AdminPointMonitoring, AdminManageGames, AdminCashback } from './pages/admin/AdminLoyalty';
 import RoulettePage from "./pages/RoulettePage";
-import PointsPage from "./pages/PointsPage";
+import PointsPage from "./pages/WalletPage";
 import VouchersPage from "./pages/VouchersPage";
 import NewsletterPage from "./pages/NewsletterPage";
 import StaticPage from "./pages/StaticPage";
 
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminProducts from "./pages/admin/AdminProducts";
+import AdminMeowsurement from "./pages/admin/AdminMeowsurement";
 import AdminCategories from "./pages/admin/AdminCategories";
 import AdminOrders from "./pages/admin/AdminOrders";
 import AdminInventory from "./pages/admin/AdminInventory";
-import { AdminVouchers, AdminFlashSales, AdminRoulette } from "./pages/admin/AdminPromos";
+import { AdminVouchers, AdminFlashSales } from "./pages/admin/AdminPromos";
 import { AdminUsers, AdminNewsletter } from "./pages/admin/AdminCustomers";
 import AdminReports from "./pages/admin/AdminReports";
 import { AdminWhatsApp, AdminTryOn } from "./pages/admin/AdminFeatures";
@@ -56,11 +60,6 @@ import ContactPage from "./pages/ContactPage";
 const Shell = ({ children }) => <MainLayout>{children}</MainLayout>;
 
 function AppRouter() {
-  const location = useLocation();
-  // Detect Emergent OAuth callback synchronously (before any other route runs)
-  if (location.hash?.includes("session_id=")) {
-    return <AuthCallback />;
-  }
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
@@ -75,12 +74,19 @@ function AppRouter() {
         <Route path="/admin/integrations" element={<AdminIntegrations />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/admin/products" element={<AdminProducts />} />
+        <Route path="/admin/meowsurement" element={<AdminMeowsurement />} />
         <Route path="/admin/categories" element={<AdminCategories />} />
         <Route path="/admin/orders" element={<AdminOrders />} />
         <Route path="/admin/inventory" element={<AdminInventory />} />
         <Route path="/admin/vouchers" element={<AdminVouchers />} />
         <Route path="/admin/flash-sales" element={<AdminFlashSales />} />
-        <Route path="/admin/roulette" element={<AdminRoulette />} />
+        <Route path="/admin/roulette" element={<Navigate to="/admin/games/roulette" replace />} />
+        <Route path="/admin/games" element={<AdminManageGames />} />
+        <Route path="/admin/games/:key" element={<AdminManageGames />} />
+        <Route path="/admin/points/conversion" element={<AdminPointConversion />} />
+        <Route path="/admin/points/customers" element={<AdminPointMonitoring />} />
+        <Route path="/admin/cashback-events" element={<AdminCashback />} />
+        <Route path="/admin/returns" element={<AdminReturns />} />
         <Route path="/admin/users" element={<AdminUsers />} />
         <Route path="/admin/newsletter" element={<AdminNewsletter />} />
         <Route path="/admin/reports" element={<AdminReports />} />
@@ -110,13 +116,14 @@ function AppRouter() {
       <Route path="/products/:slug" element={<Shell><ProductDetailPage /></Shell>} />
       <Route path="/category/:slug" element={<Shell><ProductsPage /></Shell>} />
       <Route path="/games" element={<Shell><GamesPage /></Shell>} />
+      <Route path="/virtual-try-on" element={<Shell><VirtualTryOnPage /></Shell>} />
       <Route path="/games/:key" element={<Shell><GamePlayPage /></Shell>} />
       <Route path="/roulette" element={<Shell><RoulettePage /></Shell>} />
       <Route path="/newsletter" element={<Shell><NewsletterPage /></Shell>} />
       <Route path="/vouchers" element={<Shell><VouchersPage /></Shell>} />
       <Route path="/faq" element={<Shell><ContactPage /></Shell>} />
-      <Route path="/terms" element={<Shell><StaticPage slug="syarat-ketentuan" /></Shell>} />
-      <Route path="/privacy" element={<Shell><StaticPage slug="kebijakan-privasi" /></Shell>} />
+      <Route path="/terms" element={<Shell><StaticPage slug="syarat-ketentuan" pageType="terms_conditions" /></Shell>} />
+      <Route path="/privacy" element={<Shell><StaticPage slug="kebijakan-privasi" pageType="privacy_policy" /></Shell>} />
       <Route path="/pages/:slug" element={<Shell><StaticPage /></Shell>} />
 
       {/* Protected customer pages */}

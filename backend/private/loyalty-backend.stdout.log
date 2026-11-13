@@ -1,0 +1,13 @@
+INFO:     127.0.0.1:50880 - "GET /api/health/ready HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50890 - "GET /api/health/ready HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50891 - "GET /api/games HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50892 - "GET /api/games/puzzle-levels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50893 - "GET /api/try-on/catalog HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50894 - "GET /api/points/logs HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50895 - "GET /api/admin/points/settings HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50896 - "GET /api/admin/points/customers HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50897 - "GET /api/admin/games HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50898 - "GET /api/admin/returns HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50899 - "GET /api/returns/evidence/unauthorized HTTP/1.1" 401 Unauthorized
+INFO:     192.168.44.50:51131 - "OPTIONS /api/settings/whatsapp HTTP/1.1" 200 OK
+INFO:     192.168.44.50:51131 - "GET /api/settings/whatsapp HTTP/1.1" 200 OK

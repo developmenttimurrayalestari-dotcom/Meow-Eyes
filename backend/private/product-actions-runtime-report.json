@@ -1,0 +1,13 @@
+{
+  "ok": true,
+  "real_mysql_asgi": true,
+  "schema_ready": true,
+  "admin_products": 1,
+  "master_groups": 5,
+  "visible_masters": 23,
+  "inventory_items": 1,
+  "deleted_inventory_items": 29,
+  "public_products": 1,
+  "backend_server_started": false,
+  "product_mutations": 0
+}

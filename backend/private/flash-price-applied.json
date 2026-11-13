@@ -1,0 +1,27 @@
+{
+  "ok": true,
+  "mode": "apply",
+  "database": "db_meoweyes",
+  "changed_items": 2,
+  "changes": [
+    {
+      "item_id": "9ca18cbc00474184b361eebe6a497fe8",
+      "product_id": "prd_898f994b888240ab",
+      "flash_sale_id": "fls_41310c1d4b6140fb",
+      "old_price": "87500.00",
+      "new_price": "105000.00",
+      "sold": 0,
+      "reserved": 0
+    },
+    {
+      "item_id": "d1c3bd3e173b489b876d2ee4f365f400",
+      "product_id": "prd_898f994b888240ab",
+      "flash_sale_id": "fls_c97b6d85d7d244b1",
+      "old_price": "140000.00",
+      "new_price": "168000.00",
+      "sold": 0,
+      "reserved": 0
+    }
+  ],
+  "note": "Manual product overrides and existing order snapshots are preserved."
+}

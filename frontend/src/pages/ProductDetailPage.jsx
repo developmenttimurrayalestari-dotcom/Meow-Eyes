@@ -3,10 +3,13 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { api, apiError, formatIDR, imageSrc } from "../lib/api";
 import { useAuth } from "../contexts/AuthContext";
 import ProductCard from "../components/ProductCard";
+import HtmlContent from "../components/HtmlContent";
 import VirtualTryOn from "../components/VirtualTryOn";
-import { PrescriptionFields, prescriptionValues } from "../components/PrescriptionForm";
+import ProductMeowsurement from "../components/ProductMeowsurement";
+import PrescriptionPhotoInput from "../components/PrescriptionPhotoInput";
 import { ChevronRight, Heart, Truck, ShieldCheck, Sparkles, Star, BellRing, Cat } from "lucide-react";
 import { toast } from "sonner";
+import { isTryOnProduct } from '../lib/tryOnProducts';
 
 const ProductDetailPage = () => {
   const { slug } = useParams();
@@ -23,7 +26,8 @@ const ProductDetailPage = () => {
   const [lensOptions, setLensOptions] = useState({ lens_products: [], lens_indexes: [] });
   const [lensProductId, setLensProductId] = useState("");
   const [lensIndexId, setLensIndexId] = useState("");
-  const [rx, setRx] = useState(() => prescriptionValues());
+  const [prescriptionPhoto, setPrescriptionPhoto] = useState(null);
+  const [prescriptionUploadId, setPrescriptionUploadId] = useState(null);
   // Recommended bundle picks (Basic / Popular / Premium)
   const [bundlePicks, setBundlePicks] = useState([]);
   const [bundleFor, setBundleFor] = useState("");
@@ -33,7 +37,7 @@ const ProductDetailPage = () => {
 
   useEffect(() => {
     const controller = new AbortController();
-    setData(null); setError(""); setQty(1); setRx(prescriptionValues());
+    setData(null); setError(""); setQty(1); setPrescriptionPhoto(null); setPrescriptionUploadId(null);
     setSelectedImg(0); setSelectedVariant(null);
     setWantLens(false); setLensProductId(""); setLensIndexId("");
     setLensOptions({ lens_products: [], lens_indexes: [] }); setBundlePicks([]);
@@ -98,7 +102,17 @@ const ProductDetailPage = () => {
         body.lens_product_id = lensProductId;
         body.lens_variant_id = selectedLensVariant.id;
         body.lens_index_id = lensIndexId || null;
-        if (Object.values(rx).some((v) => v)) body.prescription = { ...rx };
+        if (prescriptionPhoto) {
+          let uploadId = prescriptionUploadId;
+          if (!uploadId) {
+            const formData = new FormData();
+            formData.append("file", prescriptionPhoto);
+            const { data: upload } = await api.post("/uploads/prescription", formData);
+            uploadId = upload.id;
+            setPrescriptionUploadId(uploadId);
+          }
+          body.prescription = { attachment_upload_id: uploadId };
+        }
       }
       await api.post("/cart", body);
       toast.success(wantLens && lensProductId ? "Frame + Lensa ditambahkan ke keranjang" : "Ditambahkan ke keranjang");
@@ -186,7 +200,8 @@ const ProductDetailPage = () => {
               </button>
             ))}
           </div>
-          {p.product_type === "frame" && <VirtualTryOn productId={p.id} variantId={selectedVariant?.id} productName={p.name} />}
+          {isTryOnProduct(p) && <VirtualTryOn productId={p.id} variantId={selectedVariant?.id} productName={p.name} />}
+          {p.product_type === "frame" && <ProductMeowsurement productId={p.id} variantId={selectedVariant?.id} />}
         </div>
 
         {/* Info */}
@@ -297,7 +312,7 @@ const ProductDetailPage = () => {
           {p.product_type === "frame" && lensOptions.lens_products?.length > 0 && (
             <div className="bg-meow-amber/10 rounded-3xl p-4" data-testid="lens-picker">
               <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={wantLens} onChange={(e) => setWantLens(e.target.checked)} data-testid="want-lens-checkbox" />
+                <input type="checkbox" checked={wantLens} disabled={adding} onChange={(e) => setWantLens(e.target.checked)} data-testid="want-lens-checkbox" />
                 <span className="font-bold">🐱 Tambahkan Lensa (Bundle Hemat)</span>
               </label>
               {wantLens && (
@@ -320,11 +335,7 @@ const ProductDetailPage = () => {
                     </select>
                   )}
                   {lensProductId && (
-                    <details className="text-xs text-meow-gray">
-                      <summary className="cursor-pointer font-bold py-2">Input resep kacamata (opsional)</summary>
-                      <div className="mt-2"><PrescriptionFields value={rx} onChange={setRx} idPrefix="product-rx" /></div>
-                      <p className="mt-2">Anda dapat mengisi kembali resep dan melampirkan fotonya saat checkout.</p>
-                    </details>
+                    <PrescriptionPhotoInput file={prescriptionPhoto} disabled={adding} onChange={(file) => { setPrescriptionPhoto(file); setPrescriptionUploadId(null); }} />
                   )}
                 </div>
               )}
@@ -356,7 +367,7 @@ const ProductDetailPage = () => {
       <section className="mt-10 grid lg:grid-cols-3 gap-6" data-testid="pd-desc-section">
         <div className="lg:col-span-2 bg-white rounded-3xl p-6">
           <h3 className="font-heading text-2xl font-extrabold mb-3">Tentang Produk</h3>
-          <p className="text-meow-gray leading-relaxed">{p.description}</p>
+          <HtmlContent html={p.description} className="text-meow-gray leading-relaxed" data-testid="product-description" />
         </div>
         <div className="bg-white rounded-3xl p-6">
           <h3 className="font-heading text-xl font-extrabold mb-3">Spesifikasi</h3>

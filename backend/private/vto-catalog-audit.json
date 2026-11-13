@@ -1,0 +1,41 @@
+{
+  "assets": 3,
+  "distinct_products": 3,
+  "eligible_products": 1,
+  "items": [
+    {
+      "asset_id": "37a469305ce347719bb8b4f9cdcfb442",
+      "product_id": "prd_401170d2b1564810",
+      "product_name": "Meow 1003 C4",
+      "status": "draft",
+      "product_active": true,
+      "product_type": "frame",
+      "variant_active": null,
+      "excluded_by": [
+        "asset_draft"
+      ]
+    },
+    {
+      "asset_id": "7e6b74c17bed4542bdb52e41f519bb2b",
+      "product_id": "prd_3e8ddf16743d4901",
+      "product_name": "Meow Emery",
+      "status": "draft",
+      "product_active": true,
+      "product_type": "frame",
+      "variant_active": null,
+      "excluded_by": [
+        "asset_draft"
+      ]
+    },
+    {
+      "asset_id": "b0836625042a42a28c3a5b57de5f4e3a",
+      "product_id": "prd_f27e5e8e2c274d16",
+      "product_name": "Meow Evora",
+      "status": "published",
+      "product_active": true,
+      "product_type": "frame",
+      "variant_active": null,
+      "excluded_by": []
+    }
+  ]
+}

@@ -273,6 +273,7 @@ def load_export(directory: str | Path, *, allow_partial: bool = False) -> tuple[
 
 
 EXTRA_FIELDS = {
+    "categories": {"parent_id", "level", "category_type"},
     "users": {"permissions"}, "user_sessions": {"session_token"},
     "products": {"variants", "category_ids", "segments", "badges", "gallery"},
     "cart_items": {"prescription"},
@@ -456,6 +457,9 @@ class Planner:
         collection, doc = source.collection, source.document
         data = self.base(source)
         inherited_time = doc.get("created_at", doc.get("updated_at"))
+        if collection == "categories":
+            data.setdefault("group_type", "collection")
+            data["code"] = data.get("code") or "legacy-" + checksum(doc.get("id"))[:32]
         if collection == "users":
             self.add(source, "users", data, inherited_time=inherited_time)
             for permission in self.list(source, "permissions"):
@@ -693,42 +697,16 @@ class Planner:
             self.add(source, "product_review_images", {"review_id": doc.get("id"), "sort_order": index, "image_url": image})
 
     def validate(self, plan: ImportPlan) -> None:
-        self._category_cycles()
         if plan.errors:
             return
         # Stable table order gives valid FK insertion and resumable checkpoints.
         ranks = {table.name: i for i, table in enumerate(Base.metadata.sorted_tables)}
-        category_depths = self._category_depths()
-        plan.rows.sort(key=lambda r: (ranks[r.table], category_depths.get(r.values.get("id"), 0) if r.table == "categories" else 0, r.key_text))
+        plan.rows.sort(key=lambda r: (ranks[r.table], r.key_text))
         self._unique_keys()
         if not plan.errors:
             self._portable_integrity(plan)
         if not plan.errors:
             self._accounting(plan)
-
-    def _category_depths(self) -> dict[str, int]:
-        parents = {r.values["id"]: r.values.get("parent_id") for r in self.rows if r.table == "categories"}
-        depths: dict[str, int] = {}
-        for category in parents:
-            seen = set()
-            key = category
-            while key in parents and key not in seen:
-                seen.add(key)
-                key = parents[key]
-            depths[category] = len(seen) - 1
-        return depths
-
-    def _category_cycles(self) -> None:
-        categories = self.by_application_id["categories"]
-        for identity, source in categories.items():
-            seen: set[str] = set()
-            cursor = identity
-            while cursor in categories:
-                if cursor in seen:
-                    self.issue(source, "parent_id", "category_cycle", "Category ancestry contains a cycle.")
-                    break
-                seen.add(cursor)
-                cursor = categories[cursor].document.get("parent_id")
 
     def _unique_keys(self) -> None:
         # Conservative accent/case-insensitive comparison catches common

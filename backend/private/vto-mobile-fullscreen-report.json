@@ -1,0 +1,55 @@
+{
+  "portrait": {
+    "x": 0,
+    "y": 0,
+    "w": 390,
+    "h": 844,
+    "fit": "cover",
+    "catalog": {
+      "x": 274,
+      "right": 378,
+      "y": 160,
+      "bottom": 614
+    },
+    "card": {
+      "x": 118,
+      "right": 378,
+      "y": 640,
+      "bottom": 832
+    },
+    "overflow": false
+  },
+  "details_toggle_preserves_camera_and_hidden_preference": true,
+  "landscape": {
+    "x": 0,
+    "y": 0,
+    "w": 844,
+    "h": 390,
+    "fit": "cover",
+    "catalog": {
+      "x": 728,
+      "right": 832,
+      "y": 64,
+      "bottom": 200
+    },
+    "card": {
+      "x": 572,
+      "right": 832,
+      "y": 211,
+      "bottom": 378
+    },
+    "overflow": false
+  },
+  "desktop_details": {
+    "width": 300,
+    "rightInset": 12,
+    "bottomInset": 12,
+    "cameraWidth": 1146
+  },
+  "stream_preserved": true,
+  "cart_variant_correct": true,
+  "search_and_tips": true,
+  "desktop_and_exit_restore_layout": true,
+  "page_errors": [],
+  "ok": true
+}

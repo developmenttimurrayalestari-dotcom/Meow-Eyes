@@ -1,0 +1,4 @@
+INFO  [alembic.runtime.migration] Context impl MySQLImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade 20261110_0004 -> 20261111_0005, Versioned point wallet, verified games, cashback and private replacement RMA.
+Frozen MySQL 5.7 DDL. Back up and pause writers before upgrade; DDL commits.

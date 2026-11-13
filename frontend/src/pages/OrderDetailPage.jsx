@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { api, apiError, formatIDR, imageSrc } from "../lib/api";
 import { Cat } from "lucide-react";
 import PurchaseRatings from "../components/PurchaseRatings";
+import OrderReturns from '../components/Returns';
 
 const OrderDetailPage = () => {
   const { id } = useParams();
@@ -98,6 +99,7 @@ const OrderDetailPage = () => {
         </div>
       </div>
       {o.payment_status === "paid" && !o.payment_reconciliation_required && <PurchaseRatings orderId={o.id} />}
+      <OrderReturns order={o} />
       {o.status === "pending_payment" && <Link to={`/payment/${o.order_number}`} className="btn-primary inline-block mt-6">Lanjutkan Pembayaran</Link>}
     </div>
   );

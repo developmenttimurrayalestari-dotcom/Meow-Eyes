@@ -17,6 +17,7 @@ from mysql.commerce import (
     prescription_payload, resolve_variant, save_prescription, voucher_amount,
 )
 from mysql.features import PAID_ORDER_STATUSES, safe_web_url
+from integrations.locations import selected_location
 
 
 router = APIRouter(tags=["shopping"])
@@ -41,6 +42,7 @@ async def _cart_payload(s, item: PricedItem) -> dict[str, Any]:
         "lens_price": float(item.lens_price), "frame_price": float(item.frame_price),
         "unit_price": float(item.unit_price), "subtotal": float(item.subtotal),
         "available_stock": max(available, 0),
+        "flash_sale_active": item.flash_item is not None,
         "prescription": await prescription_payload(s, item.cart.prescription_id),
     }
 
@@ -62,7 +64,7 @@ async def get_cart(user: User = Depends(current_user)):
 @router.post("/cart")
 async def add_to_cart(req: CartItemCreate, user: User = Depends(current_user)):
     quantity = integer(req.quantity, "Jumlah", 1, MAX_CART_QUANTITY)
-    if (req.lens_variant_id or req.lens_index_id or req.prescription) and not req.lens_product_id:
+    if req.lens_variant_id and not req.lens_product_id:
         raise HTTPException(400, "Konfigurasi lensa memerlukan produk lensa")
     async with session_scope() as s:
         await lock_user(s, user.user_id)
@@ -70,6 +72,8 @@ async def add_to_cart(req: CartItemCreate, user: User = Depends(current_user)):
         if product is None:
             raise HTTPException(404, "Produk tidak ditemukan")
         variant = await resolve_variant(s, product, req.variant_id)
+        from mysql.lenses import validate_index
+        await validate_index(s, product, req.lens_index_id, lock=True)
         lens_variant = None
         if req.lens_product_id:
             lens = await s.scalar(select(m.Product).where(
@@ -82,11 +86,12 @@ async def add_to_cart(req: CartItemCreate, user: User = Depends(current_user)):
                 m.LensIndex.id == req.lens_index_id, m.LensIndex.is_active.is_(True)
             )) is None:
                 raise HTTPException(400, "Indeks lensa tidak tersedia")
-        if not req.lens_product_id:
+        if not req.lens_product_id and not req.prescription and not req.lens_index_id:
             existing = await s.scalar(select(m.CartItem).where(
                 m.CartItem.user_id == user.user_id, m.CartItem.product_id == product.id,
                 m.CartItem.variant_id == variant.id, m.CartItem.lens_product_id.is_(None),
                 m.CartItem.prescription_id.is_(None),
+                m.CartItem.lens_index_id.is_(None),
             ).order_by(m.CartItem.id).with_for_update())
             if existing:
                 existing.quantity = integer(existing.quantity + quantity, "Jumlah", 1, MAX_CART_QUANTITY)
@@ -143,14 +148,39 @@ async def list_addresses(user: User = Depends(current_user)):
 
 @router.post("/addresses")
 async def create_address(req: AddressCreate, user: User = Depends(current_user)):
+    payload = req.model_dump(exclude={'everpro_location'})
+    if req.everpro_location:
+        payload.update(await selected_location(req.everpro_location))
     async with session_scope() as s:
         await lock_user(s, user.user_id)
         if req.is_default:
             await s.execute(update(m.Address).where(m.Address.user_id == user.user_id).values(is_default=False))
-        address = m.Address(id=gen_id("adr"), user_id=user.user_id, **values_for(m.Address, req.model_dump()))
+        address = m.Address(id=gen_id("adr"), user_id=user.user_id, **values_for(m.Address, payload))
         s.add(address)
         await s.flush()
         return {"ok": True, "address": row_dict(address)}
+
+
+@router.patch('/addresses/{address_id}')
+async def update_address(address_id: str, req: AddressCreate, user: User = Depends(current_user)):
+    async with read_session() as s:
+        owned = await s.scalar(select(m.Address.id).where(m.Address.id == address_id, m.Address.user_id == user.user_id))
+        if not owned:
+            raise HTTPException(404, 'Alamat tidak ditemukan')
+    payload = req.model_dump(exclude={'everpro_location'})
+    if req.everpro_location:
+        payload.update(await selected_location(req.everpro_location))
+    async with session_scope() as s:
+        await lock_user(s, user.user_id)
+        address = await s.scalar(select(m.Address).where(m.Address.id == address_id, m.Address.user_id == user.user_id).with_for_update())
+        if address is None:
+            raise HTTPException(404, 'Alamat tidak ditemukan')
+        if req.is_default:
+            await s.execute(update(m.Address).where(m.Address.user_id == user.user_id).values(is_default=False))
+        for field, value in values_for(m.Address, payload).items():
+            setattr(address, field, value)
+        await s.flush()
+        return {'ok': True, 'address': row_dict(address)}
 
 
 @router.patch("/addresses/{address_id}/default")

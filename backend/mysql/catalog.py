@@ -123,6 +123,8 @@ async def write_product(session: AsyncSession, payload: dict[str, Any], *,
         session.add(product)
     else:
         product = await get_or_404(session, m.Product, product.id, lock=True)
+        if product.deleted_at is not None:
+            raise HTTPException(409, "Produk sudah dihapus dan tidak dapat diedit kembali")
         apply_fields(product, payload, PRODUCT_FIELDS)
     for field in ("price", "discount_price", "flash_sale_price"):
         value = getattr(product, field)
@@ -134,23 +136,13 @@ async def write_product(session: AsyncSession, payload: dict[str, Any], *,
             raise HTTPException(422, f"{field} tidak boleh negatif")
     await session.flush()
 
-    if "category_ids" in payload or "primary_category_id" in payload:
-        if "category_ids" in payload:
-            category_ids = list(dict.fromkeys(strings(payload["category_ids"], max_length=64)))
-        else:
-            category_ids = list((await session.scalars(select(m.ProductCategory.category_id)
-                .where(m.ProductCategory.product_id == product.id))).all())
-        if product.primary_category_id and product.primary_category_id not in category_ids:
-            category_ids.append(product.primary_category_id)
-        found = set((await session.scalars(select(m.Category.id)
-            .where(m.Category.id.in_(category_ids)))).all()) if category_ids else set()
-        if found != set(category_ids):
-            raise HTTPException(422, "Kategori produk tidak ditemukan")
-        await session.execute(delete(m.ProductCategory).where(m.ProductCategory.product_id == product.id))
-        session.add_all([m.ProductCategory(product_id=product.id, category_id=cid) for cid in category_ids])
+    if creating or any(key in payload for key in ('category_ids', 'primary_category_id', 'product_type', 'segments')):
+        from .taxonomy import replace_product_tags
+        if 'category_ids' in payload: payload['category_ids'] = strings(payload['category_ids'], max_length=64)
+        if 'segments' in payload: payload['segments'] = strings(payload['segments'], max_length=64, unique=True)
+        await replace_product_tags(session, product, payload)
 
     for field, model, column in (
-        ("segments", m.ProductSegment, "segment"),
         ("badges", m.ProductBadge, "badge"),
     ):
         if field in payload:
@@ -230,32 +222,8 @@ async def write_product(session: AsyncSession, payload: dict[str, Any], *,
 
 
 async def category_breadcrumb(session: AsyncSession, category_id: str | None) -> list[dict]:
-    chain: list[dict] = []
-    seen: set[str] = set()
-    while category_id and category_id not in seen:
-        seen.add(category_id)
-        category = await session.get(m.Category, category_id)
-        if category is None:
-            break
-        chain.insert(0, row_dict(category))
-        category_id = category.parent_id
-    return chain
-
-
-async def category_descendants(session: AsyncSession, category_id: str) -> set[str]:
-    rows = (await session.execute(select(m.Category.id, m.Category.parent_id))).all()
-    children: dict[str, list[str]] = {}
-    for cid, parent in rows:
-        children.setdefault(parent, []).append(cid)
-    found: set[str] = set()
-    pending = [category_id]
-    while pending:
-        current = pending.pop()
-        if current in found:
-            continue
-        found.add(current)
-        pending.extend(children.get(current, []))
-    return found
+    category = await session.get(m.Category, category_id) if category_id else None
+    return [row_dict(category)] if category else []
 
 
 async def articles_dict(session: AsyncSession, articles: Iterable[m.Article], *,

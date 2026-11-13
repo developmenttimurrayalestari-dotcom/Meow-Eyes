@@ -1,0 +1,14 @@
+{
+  "backend_ready": true,
+  "public_games": 4,
+  "puzzle_levels": 20,
+  "vto_catalog_available": true,
+  "vto_products": 1,
+  "unauthenticated_private_routes_rejected": true,
+  "live_immutable_guards": {
+    "point_history": true,
+    "point_rate_versions": true,
+    "point_lots": true
+  },
+  "ok": true
+}

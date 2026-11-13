@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from typing import List, Optional, Literal, Dict, Any
 from pydantic import BaseModel, Field, EmailStr, ConfigDict
 import uuid
+from mysql.taxonomy_definitions import GroupType, ProductType
 
 
 def gen_id(prefix: str = "") -> str:
@@ -71,8 +72,10 @@ class PinVerifyRequest(BaseModel):
     pin: str = Field(min_length=6, max_length=6, pattern=r"^\d{6}$")
 
 
-class GoogleSessionRequest(BaseModel):
-    session_id: str
+class GoogleLoginRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    credential: str = Field(min_length=1, max_length=16384)
+    nonce: str = Field(min_length=32, max_length=128, pattern=r"^[A-Za-z0-9_-]+$")
 
 
 # ---------- Address ----------
@@ -93,6 +96,13 @@ class Address(BaseModel):
     created_at: str = Field(default_factory=now_iso)
 
 
+class EverproLocationSelection(BaseModel):
+    province_id: str = Field(min_length=1, max_length=128)
+    city_id: str = Field(min_length=1, max_length=128)
+    district_id: str = Field(min_length=1, max_length=128)
+    subdistrict_id: str = Field(min_length=1, max_length=128)
+
+
 class AddressCreate(BaseModel):
     label: str
     recipient: str
@@ -104,20 +114,20 @@ class AddressCreate(BaseModel):
     subdistrict: Optional[str] = None
     district: Optional[str] = None
     everpro_destination_id: Optional[str] = None
+    everpro_location: Optional[EverproLocationSelection] = None
     is_default: bool = False
 
 
 # ---------- Category / Brand ----------
 class Category(BaseModel):
     id: str = Field(default_factory=lambda: gen_id("cat"))
-    parent_id: Optional[str] = None
     name: str
     slug: str
     description: Optional[str] = None
-    category_type: str = "product"  # product | frame | lens | package | promo
+    group_type: GroupType = "product_type"
+    code: Optional[str] = None
     icon: Optional[str] = None
     banner_image: Optional[str] = None
-    level: int = 0
     sort_order: int = 0
     is_featured: bool = False
     is_active: bool = True
@@ -126,12 +136,19 @@ class Category(BaseModel):
     created_at: str = Field(default_factory=now_iso)
 
 
+class ProductBulkAction(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    action: Literal["delete", "deactivate"]
+    product_ids: List[str] = Field(min_length=1, max_length=200)
+
+
 class CategoryCreate(BaseModel):
-    parent_id: Optional[str] = None
+    model_config = ConfigDict(extra="forbid")
     name: str
     slug: Optional[str] = None
     description: Optional[str] = None
-    category_type: str = "product"
+    group_type: GroupType
+    code: Optional[str] = None
     icon: Optional[str] = None
     banner_image: Optional[str] = None
     sort_order: int = 0
@@ -178,7 +195,7 @@ class Product(BaseModel):
     sku: str
     description: str
     spec: Dict[str, Any] = Field(default_factory=dict)
-    product_type: Literal["frame", "lens", "package"] = "frame"
+    product_type: ProductType = "frame"
     category_ids: List[str] = Field(default_factory=list)
     primary_category_id: Optional[str] = None
     brand_id: Optional[str] = None
@@ -211,7 +228,7 @@ class ProductUpdate(BaseModel):
     sku: Optional[str] = None
     description: Optional[str] = None
     spec: Optional[Dict[str, Any]] = None
-    product_type: Optional[Literal["frame", "lens", "package"]] = None
+    product_type: Optional[ProductType] = None
     category_ids: Optional[List[str]] = None
     primary_category_id: Optional[str] = None
     brand_id: Optional[str] = None
@@ -237,7 +254,7 @@ class ProductCreate(BaseModel):
     sku: Optional[str] = None
     description: str
     spec: Dict[str, Any] = Field(default_factory=dict)
-    product_type: Literal["frame", "lens", "package"] = "frame"
+    product_type: ProductType = "frame"
     category_ids: List[str] = Field(default_factory=list)
     primary_category_id: Optional[str] = None
     brand_id: Optional[str] = None
@@ -550,6 +567,12 @@ class LensIndex(BaseModel):
     additional_price: float = 0
     is_active: bool = True
     sort_order: int = 0
+
+
+class LensIndexInput(LensIndex):
+    # Admin classification is stored in a bridge, outside legacy Lens Index exports.
+    lens_type_ids: List[str] = Field(default_factory=list, max_length=100)
+    additional_price: float = Field(default=0, ge=0, allow_inf_nan=False)
 
 
 class FAQCategory(BaseModel):

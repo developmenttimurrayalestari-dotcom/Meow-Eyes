@@ -1,0 +1,10 @@
+from pathlib import Path
+p=Path('private/apply-product-deletion-migration.py').read_text(encoding='utf-8')
+p=p.replace('20261112_0007','20261112_0009').replace('20261111_0006','20261112_0008')
+p=p.replace('product-deletion-before-0007','stock-ttb-before-0009').replace('product-deletion-migration','stock-ttb-migration')
+p=p.replace('nullable products.deleted_at and admin list index; no product deletion','nullable stock_movements.ttb_number; no stock changes')
+p=p.replace("after['deleted_count']==0", "after['deleted_count']==before['deleted_count']")
+p=p.replace("canonical = [{key:value", "variants = [dict(row) for row in (await conn.execute(text('SELECT * FROM product_variants ORDER BY id'))).mappings()]\n            canonical = [{key:value")
+p=p.replace("digest = hashlib.sha256(json.dumps(canonical,", "digest = hashlib.sha256(json.dumps([canonical,variants],")
+Path('private/apply-stock-ttb-migration.py').write_text(p,encoding='utf-8')
+print('Inventory migration backup runner prepared')

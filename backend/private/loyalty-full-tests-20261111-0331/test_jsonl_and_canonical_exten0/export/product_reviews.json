@@ -1,0 +1,1 @@
+[{"id": "review", "product_id": "product", "user_id": "customer", "user_name": "Customer", "order_id": "complete-order", "rating": 5, "body": "Great", "images": ["/review.png"], "is_approved": true, "status": "approved", "created_at": "2026-11-06T00:00:00+00:00"}]

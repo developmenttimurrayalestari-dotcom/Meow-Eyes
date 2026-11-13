@@ -1,0 +1,27 @@
+{
+  "scope": "local import copy only; original MongoDB unchanged",
+  "original_backup": "export-original-backup\\products.json",
+  "original_sha256": "fb4a82cbe6efce83cf967b74c81a016239f69b6b8dd397bf16e4ecff6f1fc779",
+  "corrected_sha256": "4fb1b544f8e717c6cd43763a4f83cab1663ad4707064a1ef98d240272236e655",
+  "changes": [
+    {
+      "id": "prd_f27e5e8e2c274d16",
+      "name": "MeowOptik Vintage Round",
+      "old_sku": "ME-MEOWOPTIK-",
+      "new_sku": "ME-MEOWOPTIK-VINTAGE"
+    },
+    {
+      "id": "prd_898f994b888240ab",
+      "name": "Kittycraft Cubby Anak",
+      "old_sku": "ME-KITTYCRAFT",
+      "new_sku": "ME-KITTYCRAFT-CUBBY"
+    },
+    {
+      "id": "prd_cb46f21f4ef446f3",
+      "name": "EssenseEye Air Rimless",
+      "old_sku": "ME-ESSENSEEYE",
+      "new_sku": "ME-ESSENSEEYE-AIR"
+    }
+  ],
+  "note": "mongo-export-manifest.json describes the original export; products.json now has the corrected checksum recorded here."
+}

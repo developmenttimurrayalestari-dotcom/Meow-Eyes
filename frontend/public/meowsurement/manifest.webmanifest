@@ -1,0 +1,20 @@
+{
+  "name": "Meowsurement — Meow Eyes",
+  "short_name": "Meowsurement",
+  "lang": "id-ID",
+  "id": "/meowsurement/",
+  "start_url": "/meowsurement/",
+  "scope": "/meowsurement/",
+  "display": "standalone",
+  "background_color": "#f3f7f5",
+  "theme_color": "#176b5b",
+  "description": "Pengukuran fitting dengan profil customer, resep tersimpan, dan spesifikasi frame Meow Eyes.",
+  "icons": [
+    {
+      "src": "/logo-meow.jpg",
+      "sizes": "any",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
+  ]
+}

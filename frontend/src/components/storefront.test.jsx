@@ -9,6 +9,7 @@ import { api } from "../lib/api";
 jest.mock("../lib/api", () => ({ api: { get: jest.fn(), post: jest.fn(), patch: jest.fn() }, apiError: (error, fallback) => error.response?.data?.detail || fallback, imageSrc: (value) => value }));
 jest.mock("sonner", () => ({ toast: { success: jest.fn(), error: jest.fn() } }));
 jest.mock("./ui/dialog", () => ({ Dialog: () => null, DialogContent: () => null, DialogTitle: () => null, DialogTrigger: () => null, DialogDescription: () => null }));
+jest.mock("../hooks/useTryOnTracking", () => ({ __esModule: true, default: () => ({ state: "searching", fit: null }) }));
 
 let host;
 let root;
@@ -82,7 +83,7 @@ test("try-on requests camera only on a click and stops a stream that resolves af
   let resolveStream;
   const stop = jest.fn();
   const getUserMedia = jest.fn(() => new Promise((resolve) => { resolveStream = resolve; }));
-  Object.defineProperty(window, "isSecureContext", { value: true, configurable: true });
+  Object.defineProperty(window, "isSecureContext", { value: false, configurable: true });
   Object.defineProperty(navigator, "mediaDevices", { value: { getUserMedia }, configurable: true });
   await render(<TryOnStudio assets={[{ id: "asset", asset_type: "image", source_url: "frame.png", scale: 1 }]} name="Frame" />);
   expect(getUserMedia).not.toHaveBeenCalled();

@@ -1,0 +1,23 @@
+{
+  "ok": true,
+  "savedResources": [
+    "articles",
+    "knowledge",
+    "pages"
+  ],
+  "headings": true,
+  "textStyles": true,
+  "editableTables": true,
+  "imageUpload": true,
+  "portableImagePaths": true,
+  "reopenPreservesContent": true,
+  "publishedFormatting": true,
+  "mobileLayout": true,
+  "imageGallery": true,
+  "imageSizing": true,
+  "cursorResize": true,
+  "imageAlignment": true,
+  "responsivePublishedImage": true,
+  "browserErrors": [],
+  "note": "Production build with mocked APIs; no live CMS records were modified."
+}

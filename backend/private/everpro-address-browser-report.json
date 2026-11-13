@@ -1,0 +1,12 @@
+{
+  "api": "mocked; no store writes or orders",
+  "nativeCascade": true,
+  "autoPostcode": true,
+  "clearsChildren": true,
+  "sameAddressRefreshesQuote": true,
+  "createAndEdit": true,
+  "editPrefillsOfficialNames": true,
+  "mobileAndDesktop": true,
+  "shippingRequests": 3,
+  "errors": []
+}

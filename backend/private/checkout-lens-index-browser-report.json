@@ -1,0 +1,14 @@
+{
+  "api": "mocked; no store writes or orders",
+  "onePrescriptionPerCartLine": true,
+  "selectedOnly": true,
+  "independentPhotosAndNotes": true,
+  "unsavedChangesBlockCheckout": true,
+  "reloadRestoresBoth": true,
+  "lensSelectionPerItem": true,
+  "frameCostsPerUnit": true,
+  "packageCostsZero": true,
+  "adminEditMultipleTypes": true,
+  "desktopAndMobile": true,
+  "errors": []
+}

@@ -1,0 +1,8 @@
+{
+  "ok": true,
+  "mode": "dry_run",
+  "database": "db_meoweyes",
+  "changed_items": 0,
+  "changes": [],
+  "note": "Manual product overrides and existing order snapshots are preserved."
+}

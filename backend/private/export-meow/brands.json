@@ -1,0 +1,8 @@
+[
+{"_id": {"$oid": "6adb139a2615a279f5cd92ee"}, "id": "brd_b1845bf573734de8", "name": "Leinz", "slug": "leinz", "logo": null, "description": "Premium brand Leinz", "is_active": true, "created_at": "2026-10-23T07:58:18.141850+00:00"},
+{"_id": {"$oid": "6adb139a2615a279f5cd92ef"}, "id": "brd_5d2a87b6de0a421d", "name": "MeowOptik", "slug": "meowoptik", "logo": null, "description": "Premium brand MeowOptik", "is_active": true, "created_at": "2026-10-23T07:58:18.397067+00:00"},
+{"_id": {"$oid": "6adb139a2615a279f5cd92f0"}, "id": "brd_a1a43360a32847d6", "name": "PurrLens", "slug": "purrlens", "logo": null, "description": "Premium brand PurrLens", "is_active": true, "created_at": "2026-10-23T07:58:18.629166+00:00"},
+{"_id": {"$oid": "6adb139a2615a279f5cd92f1"}, "id": "brd_e78d6cf8db334a0b", "name": "Catlux", "slug": "catlux", "logo": null, "description": "Premium brand Catlux", "is_active": true, "created_at": "2026-10-23T07:58:18.741113+00:00"},
+{"_id": {"$oid": "6adb139a2615a279f5cd92f2"}, "id": "brd_9054aabe325441da", "name": "Kittycraft", "slug": "kittycraft", "logo": null, "description": "Premium brand Kittycraft", "is_active": true, "created_at": "2026-10-23T07:58:18.803447+00:00"},
+{"_id": {"$oid": "6adb139a2615a279f5cd92f3"}, "id": "brd_8d5d28e0ab264d8e", "name": "EssenseEye", "slug": "essenseeye", "logo": null, "description": "Premium brand EssenseEye", "is_active": true, "created_at": "2026-10-23T07:58:18.867613+00:00"}
+]

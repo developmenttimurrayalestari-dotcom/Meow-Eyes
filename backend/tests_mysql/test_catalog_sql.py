@@ -34,6 +34,29 @@ import routes_export as exports
 import routes_uploads as uploads
 
 
+def test_public_cms_navigation_contains_only_published_metadata_and_tracks_status_changes():
+    async def run():
+        async with sql_client() as (client, factory, auth):
+            saved = []
+            for title, status in (("Published", "published"), ("Draft", "draft"), ("Archived", "archived")):
+                response = await client.post('/api/admin/pages', json={"title": title, "content": '<p>Full body</p>', "status": status})
+                assert response.status_code == 200, response.text
+                saved.append(response.json()['page'])
+            admin_user = auth['user']; auth['user'] = None
+            response = await client.get('/api/pages')
+            assert response.status_code == 200
+            assert response.json()['pages'] == [{key: saved[0][key] for key in ('id', 'slug', 'title', 'page_type')}]
+            assert (await client.get('/api/pages/draft')).status_code == 404
+            assert (await client.get('/api/pages/published')).status_code == 200
+            auth['user'] = admin_user
+            assert (await client.put('/api/admin/pages/' + saved[1]['id'], json={'status': 'published'})).status_code == 200
+            assert len((await client.get('/api/pages')).json()['pages']) == 2
+            assert (await client.put('/api/admin/pages/' + saved[0]['id'], json={'status': 'unpublished'})).status_code == 200
+            assert [item['slug'] for item in (await client.get('/api/pages')).json()['pages']] == ['draft']
+            assert (await client.get('/api/pages/published')).status_code == 404
+    asyncio.run(run())
+
+
 @asynccontextmanager
 async def sql_client():
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
@@ -58,17 +81,19 @@ async def sql_client():
                       methods=["GET", "HEAD"], include_in_schema=False)
     try:
         async with factory.begin() as s:
+            from mysql.taxonomy import seed_masters
+            await seed_masters(s)
             s.add(m.User(user_id="admin", email="admin@example.com", name="Admin", role="super_admin"))
             s.add(m.User(user_id="customer", email="customer@example.com", name="Customer"))
-            s.add(m.Category(id="cat", name="Frames", slug="frames", level=0))
+            s.add(m.Category(id="cat", name="Frames", slug="frames"))
             await s.flush()
-            s.add(m.Category(id="child", parent_id="cat", name="Round", slug="round", level=1))
+            s.add(m.Category(id="child", group_type="frame_shape", code="legacy-round", name="Round", slug="round"))
             s.add(m.Brand(id="brand", name="Leinz", slug="leinz"))
             await s.flush()
             s.add(m.Product(id="product", name="Frame 100%", slug="frame", sku="FRAME", description="Description",
                             price=Decimal("100.10"), main_image="/frame.png", primary_category_id="child", brand_id="brand"))
             await s.flush()
-            s.add_all([m.ProductCategory(product_id="product", category_id="child"),
+            s.add_all([m.ProductCategory(product_id="product", category_id="child"), m.ProductCategory(product_id="product", category_id="cat"),
                        m.ProductVariant(id="variant", product_id="product", sku="VARIANT", stock=10, reserved=2),
                        m.ProductImage(product_id="product", sort_order=0, image_url="/frame.png"),
                        m.ProductBadge(product_id="product", badge="new")])
@@ -99,7 +124,7 @@ def test_catalog_filters_breadcrumbs_and_stable_pagination():
             assert set(p["id"] for p in p1["products"]).isdisjoint(p["id"] for p in p2["products"])
             assert (await client.get("/api/products", params={"limit": 0})).status_code == 422
             detail = (await client.get("/api/products/frame")).json()
-            assert [c["id"] for c in detail["breadcrumb"]] == ["cat", "child"]
+            assert [c["id"] for c in detail["breadcrumb"]] == ["child"]
             assert detail["brand"]["id"] == "brand"
             assert detail["product"]["variants"][0]["reserved"] == 2
             assert detail["product"]["price"] == 100.1
@@ -135,19 +160,31 @@ def test_product_updates_keep_variant_identity_and_reserved_stock():
     asyncio.run(run())
 
 
+def test_admin_frame_search_matches_product_and_variant_skus_but_not_deleted_products():
+    async def run():
+        async with sql_client() as (client,factory,_):
+            for query in ('FRAME','VARIANT'):
+                response=await client.get('/api/admin/products',params={'q':query,'product_type':'frame'})
+                assert response.status_code==200 and response.json()['total']==1
+            await client.delete('/api/admin/products/product')
+            assert (await client.get('/api/admin/products',params={'q':'VARIANT','product_type':'frame'})).json()['total']==0
+    asyncio.run(run())
+
+
 def test_category_cycles_and_referenced_deletes_are_rejected():
     async def run():
         async with sql_client() as (client, factory, _):
             response = await client.put("/api/admin/categories/cat", json={"name": "Frames", "parent_id": "child"})
             assert response.status_code == 422, response.text
             async with factory() as s:
-                assert (await s.get(m.Category, "cat")).parent_id is None
-                assert (await s.get(m.Category, "child")).level == 1
+                assert (await s.get(m.Category, "cat")).group_type == "collection"
+                assert (await s.get(m.Category, "child")).group_type == "frame_shape"
             assert (await client.delete("/api/admin/categories/child")).status_code == 409
             assert (await client.delete("/api/admin/brands/brand")).status_code == 409
-            created = await client.post("/api/admin/categories", json={"name": "New", "parent_id": "child"})
+            created = await client.post("/api/admin/categories", json={"name": "New", "group_type": "material"})
             assert created.status_code == 200, created.text
-            assert created.json()["category"]["level"] == 2
+            assert created.json()["category"]["group_type"] == "material"
+            assert "parent_id" not in created.json()["category"]
     asyncio.run(run())
 
 
@@ -217,7 +254,7 @@ def test_product_import_atomic_validation_and_stable_variant_ids():
     async def run():
         async with sql_client() as (client, factory, _):
             record = {"product_name": "Imported frame", "product_type": "frame", "product_slug": "frame",
-                "main_category": "Round", "brand": "Leinz", "variant_sku": "VARIANT", "variant_price": 200,
+                "main_category": "round", "brand": "Leinz", "variant_sku": "VARIANT", "variant_price": 200,
                 "variant_stock": 9, "is_active": 0}
             invalid = _workbook([record, {**record, "product_slug": "another", "variant_sku": "OTHER", "variant_stock": -2}])
             preview = await client.post("/api/admin/products/import/preview", files={"file": ("data.xlsx", invalid)})
@@ -372,7 +409,7 @@ def test_dashboard_promotion_and_export_routes_execute_relational_queries():
             assert (await client.post("/api/admin/reviews/review/moderate", json={"action": "hide"})).status_code == 200
             detail = (await client.get("/api/products/frame")).json()
             assert detail["product"]["rating_count"] == 0 and detail["reviews"] == []
-            paths = ["/brands", "/categories", "/categories/tree", "/categories/frames", "/homepage",
+            paths = ["/brands", "/categories", "/categories/tree", "/categories/round", "/homepage",
                      "/products/search-suggest?q=Frame", "/articles", "/articles/categories", "/knowledge", "/faqs",
                      "/lens/indexes", "/lens/options-for-frame/product", "/admin/products", "/admin/categories", "/admin/brands",
                      "/admin/orders", "/admin/inventory", "/admin/vouchers", "/admin/flash-sales", "/admin/roulette/rewards",
