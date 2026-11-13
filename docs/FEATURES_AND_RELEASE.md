@@ -12,6 +12,87 @@ tercantum di [VALIDATION](mysql-migration/VALIDATION.md).
 
 ## Fitur pelanggan dan admin
 
+### Menjalankan frontend dan backend dengan PM2 di Windows
+
+File [ecosystem.config.js](../ecosystem.config.js) mendefinisikan `meow-backend`
+(Uvicorn, port 8001) dan `meow-frontend` (server statis PM2, port 3000). Path
+mengikuti lokasi repositori, termasuk path yang mengandung spasi. Backend memakai
+Python dari `backend/.venv_backend/Scripts/python.exe`, satu proses/satu worker
+agar maintenance scheduler tidak dijalankan ganda. Konfigurasi aplikasi backend
+tetap dibaca dari `backend/.env.mysql`.
+
+Dari PowerShell pada folder `Meow-Eyes`, pasang PM2 satu kali:
+
+```powershell
+npm install -g pm2
+```
+
+Pastikan dependencies frontend/backend sudah terpasang. Bangun frontend setelah
+mengatur `REACT_APP_BACKEND_URL` pada `frontend/.env`:
+
+```powershell
+Set-Location frontend
+npm run build
+Set-Location ..
+```
+
+Hentikan proses frontend/backend manual yang menggunakan port sama dengan
+`Ctrl+C` pada terminal masing-masing. Setelah port tersedia, jalankan dari
+folder `Meow-Eyes`:
+
+```powershell
+pm2 start ecosystem.config.js
+pm2 status
+pm2 logs meow-backend --lines 50
+```
+
+`online` pada PM2 menunjukkan proses hidup. Periksa juga halaman website dan
+readiness API sebelum menyimpan daftar proses:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8001/api/health/ready
+pm2 save
+```
+
+Untuk mengubah port, edit `FRONTEND_PORT`/`BACKEND_PORT` di `ecosystem.config.js`.
+Samakan URL API pada `frontend/.env` serta `CORS_ORIGINS` dan
+`PUBLIC_FRONTEND_URL` pada `backend/.env.mysql`. Port frontend pada konfigurasi
+PM2 menentukan port server hasil build; `PORT` pada `frontend/.env` digunakan
+oleh development server `npm start`. Perubahan URL API frontend memerlukan
+`npm run build` kembali. Terapkan perubahan konfigurasi PM2 dengan:
+
+```powershell
+pm2 restart ecosystem.config.js --update-env
+pm2 save
+```
+
+Setelah mengubah source frontend, bangun kembali frontend dan refresh browser.
+Setelah mengubah source/config backend, restart `meow-backend`. Perintah untuk
+memeriksa atau mengendalikan masing-masing proses:
+
+```powershell
+pm2 logs meow-frontend --lines 50
+pm2 restart meow-backend
+pm2 stop meow-backend
+pm2 stop meow-frontend
+pm2 resurrect
+```
+
+`pm2 save` menyimpan daftar proses; `pm2 resurrect` memulihkannya. Agar otomatis
+berjalan setelah login Windows, buat task **At log on** di Task Scheduler dengan
+akun Windows yang sama saat menjalankan `pm2 save`. Cari path PM2 menggunakan
+`(Get-Command pm2.cmd).Source`. Pada Action **Start a program**, isi program
+`C:\Windows\System32\cmd.exe`, argumen `/c ""PATH_PM2_CMD_ANDA" resurrect"`, dan
+**Start in** dengan path folder `Meow-Eyes` tanpa tanda kutip. Ini berjalan
+setelah login; untuk berjalan sebelum login, gunakan instalasi Windows service
+yang dijelaskan pada dokumentasi PM2. Bila proyek berada pada mapped drive,
+task harus dapat mengakses drive tersebut dengan akun yang sama.
+
+Referensi: [ecosystem PM2](https://pm2.keymetrics.io/docs/usage/application-declaration/),
+[server statis dan SPA](https://pm2.keymetrics.io/docs/usage/expose/), dan
+[startup/pemulihan proses](https://pm2.keymetrics.io/docs/usage/startup/), dan
+[pemicu login Task Scheduler](https://learn.microsoft.com/en-us/windows/win32/taskschd/logontrigger).
+
 Pembaruan 11 November 2026 menambahkan dompet poin dengan rate per perolehan, Manage Games dinamis, Puzzle Geser 20 level, Meow Space War, event cashback, RMA penggantian produk dengan video privat, dan halaman Virtual Try-On. Lihat [rancangan dan panduan konfigurasi](LOYALTY_GAMES_RMA.md).
 
 | Tahap | Hasil implementasi | Lokasi utama |
