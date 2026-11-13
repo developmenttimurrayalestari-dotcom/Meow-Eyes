@@ -1,6 +1,6 @@
 // Run from this directory: pm2 start ecosystem.config.js
-// Frontend API URLs are compiled at build time; update frontend/.env and rebuild
-// whenever the backend URL changes. Runtime backend settings stay in .env.mysql.
+// Frontend runs the same CRACO development server as `npm start`.
+// Restart the frontend after changing frontend/.env. Backend uses .env.mysql.
 const path = require('node:path');
 
 const FRONTEND_PORT = 4000;
@@ -38,14 +38,14 @@ module.exports = {
       ...defaults,
       name: 'meow-frontend',
       cwd: frontend,
-      script: 'serve',
+      script: path.join(frontend, 'scripts', 'start-pm2.cjs'),
+      interpreter: process.execPath,
       env: {
-        NODE_ENV: 'production',
-        PM2_SERVE_PATH: path.join(frontend, 'build'),
-        PM2_SERVE_HOST: '0.0.0.0',
-        PM2_SERVE_PORT: String(FRONTEND_PORT),
-        PM2_SERVE_SPA: 'true',
-        PM2_SERVE_HOMEPAGE: './index.html',
+        NODE_ENV: 'development',
+        BABEL_ENV: 'development',
+        HOST: '0.0.0.0',
+        PORT: String(FRONTEND_PORT),
+        BROWSER: 'none',
       },
     },
   ],
