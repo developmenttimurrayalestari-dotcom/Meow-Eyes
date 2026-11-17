@@ -1,0 +1,10 @@
+{
+  "ok": true,
+  "api": "mocked; no real customer or session writes",
+  "phoneSignupWithoutEmail": true,
+  "phoneLogin": true,
+  "pinOnboarding": true,
+  "profileDisplaysPhone": true,
+  "mobileNoOverflow": true,
+  "errors": []
+}

@@ -33,7 +33,7 @@ const ProfilePage = () => {
           )}
           <div>
             <p className="font-heading text-2xl font-black">{user.name}</p>
-            <p className="text-white/70 text-sm">{user.email}</p>
+            <p className="text-white/70 text-sm">{user.email || user.phone}</p>
             <p className="text-meow-amber text-xs uppercase tracking-wider font-bold mt-1">{user.role}</p>
           </div>
         </div>

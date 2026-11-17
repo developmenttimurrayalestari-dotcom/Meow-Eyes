@@ -63,7 +63,10 @@ class User(UpdatedMixin, Base):
         CheckConstraint("pin_failed_attempts >= 0", name="pin_attempts_nonnegative"),
     )
     user_id: Mapped[str] = mapped_column(ID, primary_key=True, default=new_id)
-    email: Mapped[str] = mapped_column(String(254), unique=True, nullable=False)
+    email: Mapped[str | None] = mapped_column(String(254), unique=True, nullable=True)
+    phone: Mapped[str | None] = mapped_column(String(16), unique=True, nullable=True)
+    facebook_subject: Mapped[str | None] = mapped_column(
+        String(128).with_variant(String(128, collation="utf8mb4_bin"), "mysql"), unique=True)
     # Stable Google account identity; email may change. NULL preserves old users.
     google_subject: Mapped[str | None] = mapped_column(
         String(255).with_variant(String(255, collation="utf8mb4_bin"), "mysql"), unique=True)

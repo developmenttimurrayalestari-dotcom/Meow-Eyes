@@ -82,6 +82,11 @@ def test_upgrade_sql_matches_committed_export_and_current_metadata():
         if table.name in ("categories", "lens_index_types"): continue  # Later incremental revisions.
         ddl = str(CreateTable(table).compile(dialect=dialect))
         if table.name == 'users':
+            ddl = re.sub(r'\s*facebook_subject VARCHAR\(128\) COLLATE utf8mb4_bin,', '', ddl)
+            ddl = re.sub(r',\s*CONSTRAINT uq_users_facebook_subject UNIQUE \(facebook_subject\)', '', ddl)
+            ddl = re.sub(r'\s*phone VARCHAR\(16\),', '', ddl)
+            ddl = re.sub(r',\s*CONSTRAINT uq_users_phone UNIQUE \(phone\)', '', ddl)
+            ddl = ddl.replace('email VARCHAR(254),', 'email VARCHAR(254) NOT NULL,')
             # Native Google identity is additive in 0011, after the frozen export.
             ddl = re.sub(r'\s*google_subject VARCHAR\(255\) COLLATE utf8mb4_bin,', '', ddl)
             ddl = re.sub(r',\s*CONSTRAINT uq_users_google_subject UNIQUE \(google_subject\)', '', ddl)
@@ -194,3 +199,11 @@ def test_mysql57_has_no_unsupported_text_defaults_and_frozen_replay_matches():
         str(CreateTable(invalid).compile(dialect=mysql.dialect()))
     sql = offline("upgrade", "20261111_0005", "--sql")
     assert not re.search(r"\b(?:TEXT|BLOB|JSON|GEOMETRY)\b[^,\n]*\bDEFAULT\b", sql)
+
+
+def test_facebook_identity_incremental_sql_is_additive():
+    sql = offline('upgrade', '20261117_0013:20261117_0014', '--sql')
+    assert sql == (BACKEND / 'sql/014_facebook_identity.sql').read_text(encoding='utf-8')
+    assert 'facebook_subject VARCHAR(128) COLLATE utf8mb4_bin' in sql
+    assert 'UNIQUE (facebook_subject)' in sql
+    assert not any(value in sql for value in ('UPDATE users', 'DELETE FROM', 'DROP TABLE'))

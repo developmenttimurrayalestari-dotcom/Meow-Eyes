@@ -16,14 +16,14 @@ export const AdminUsers = () => {
       <h1 className="font-heading text-3xl font-black mb-4 flex items-center gap-2"><Users /> Pelanggan</h1>
       <div className="flex items-center bg-white border border-zinc-200 rounded-full px-4 py-2 mb-4 max-w-md">
         <Search className="h-4 w-4 text-meow-gray mr-2" />
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama atau email..." className="bg-transparent flex-1 outline-none text-sm" data-testid="user-search" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama, email, atau telepon..." className="bg-transparent flex-1 outline-none text-sm" data-testid="user-search" />
       </div>
       <div className="bg-white rounded-3xl border border-zinc-200 overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-meow-bg text-xs uppercase text-meow-gray">
             <tr>
               <th className="text-left px-4 py-3">Nama</th>
-              <th className="text-left px-4 py-3">Email</th>
+              <th className="text-left px-4 py-3">Email / Telepon</th>
               <th className="text-left px-4 py-3">Role</th>
               <th className="text-left px-4 py-3">Poin</th>
               <th className="text-left px-4 py-3">Status</th>
@@ -34,7 +34,7 @@ export const AdminUsers = () => {
             {items.map((u) => (
               <tr key={u.user_id} className="border-t border-zinc-100" data-testid={`user-row-${u.user_id}`}>
                 <td className="px-4 py-3 font-bold">{u.name}</td>
-                <td className="px-4 py-3">{u.email}</td>
+                <td className="px-4 py-3">{u.email || u.phone}</td>
                 <td className="px-4 py-3 text-xs uppercase">{u.role}</td>
                 <td className="px-4 py-3">{u.points_balance}</td>
                 <td className="px-4 py-3 text-xs">{u.is_active ? "Aktif" : "Off"}</td>

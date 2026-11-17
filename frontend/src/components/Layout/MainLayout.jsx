@@ -111,7 +111,7 @@ const MainLayout = ({ children }) => {
                 <DropdownMenuContent align="end" className="w-56" data-testid="profile-menu">
                   <DropdownMenuLabel>
                     <p className="font-bold">{user.name}</p>
-                    <p className="text-xs text-meow-gray">{user.email}</p>
+                    <p className="text-xs text-meow-gray">{user.email || user.phone}</p>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => navigate("/profile")} data-testid="menu-profile">

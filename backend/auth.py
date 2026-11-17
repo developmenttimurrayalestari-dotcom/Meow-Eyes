@@ -68,7 +68,7 @@ async def get_session_user(token: str) -> Optional[User]:
 
 def public_user(u: User) -> UserPublic:
     return UserPublic(
-        user_id=u.user_id, email=u.email, name=u.name, picture=u.picture,
+        user_id=u.user_id, email=u.email, phone=u.phone, name=u.name, picture=u.picture,
         role=u.role, provider=u.provider, has_pin=bool(u.pin_hash),
         points_balance=u.points_balance, permissions=u.permissions,
         created_at=u.created_at,

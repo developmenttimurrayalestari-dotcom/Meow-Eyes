@@ -2,12 +2,14 @@ import React, { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
+import { apiError } from "../lib/api";
 import { toast } from "sonner";
+import FacebookAuthButton from "../components/FacebookAuthButton";
 import GoogleAuthButton from "../components/GoogleAuthButton";
 import { authDestination, navigateAfterAuthentication, rememberAuthReturn, requestedAuthReturn } from "../lib/authReturn";
 
 const LoginPage = () => {
-  const { login } = useAuth();
+  const { login, phoneEnabled } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const returnTo = requestedAuthReturn(location);
@@ -25,7 +27,7 @@ const LoginPage = () => {
       rememberAuthReturn("");
       navigateAfterAuthentication(authDestination(returnTo, user.has_pin), navigate);
     } catch (err) {
-      toast.error(err?.response?.data?.detail || "Gagal masuk");
+      toast.error(apiError(err, "Gagal masuk"));
     } finally {
       setLoading(false);
     }
@@ -42,13 +44,13 @@ const LoginPage = () => {
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-4" data-testid="login-form">
           <div>
-            <label className="text-xs font-bold uppercase tracking-wider text-meow-gray">Email</label>
+            <label className="text-xs font-bold uppercase tracking-wider text-meow-gray">{phoneEnabled ? "Email atau nomor telepon" : "Email"}</label>
             <input
               data-testid="login-email"
-              type="email" required
+              type={phoneEnabled ? "text" : "email"} autoComplete="username" required
               value={email} onChange={(e) => setEmail(e.target.value)}
               className="w-full mt-1 px-4 py-3 rounded-2xl border-2 border-transparent bg-meow-bg focus:bg-white focus:border-meow-salmon outline-none transition"
-              placeholder="email@kamu.com"
+              placeholder={phoneEnabled ? "Email atau 08xxxxxxxxxx" : "email@kamu.com"}
             />
           </div>
           <div>
@@ -78,6 +80,7 @@ const LoginPage = () => {
         </div>
 
         <GoogleAuthButton returnTo={returnTo} disabled={loading} />
+        <FacebookAuthButton returnTo={returnTo} disabled={loading} />
 
         <p className="text-center text-sm text-meow-gray mt-6">
           Belum punya akun?{" "}

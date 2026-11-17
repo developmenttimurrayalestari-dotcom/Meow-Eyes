@@ -1,0 +1,13 @@
+{
+  "ok": true,
+  "api": "mocked; no real account/session writes",
+  "metaConsent": "mock SDK; real Meta App ID and Secret required",
+  "phoneUIHidden": true,
+  "facebookSignupAndPin": true,
+  "facebookLoginAndReturn": true,
+  "cancelNoTokenExchange": true,
+  "backendErrorsVisible": true,
+  "missingConfigHandled": true,
+  "mobileNoOverflow": true,
+  "errors": []
+}

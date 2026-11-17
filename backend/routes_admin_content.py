@@ -478,6 +478,8 @@ async def staff_create(payload: Dict[str, Any], admin: User = Depends(current_ad
         "password_hash": hash_secret(password), "pin_hash": hash_secret(pin) if pin else None,
         "permissions": _permissions(payload.get("permissions", [])),
     })
+    if not data['email']:
+        raise HTTPException(422, 'Email staf wajib diisi')
     async with session_scope() as s:
         if await s.scalar(select(m.User.user_id).where(m.User.email == data["email"])):
             raise HTTPException(400, "Email sudah terdaftar")

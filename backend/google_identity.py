@@ -23,9 +23,9 @@ def require_google_origin(request: Request) -> None:
         "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173")
     allowed = {value.strip().rstrip("/") for value in os.environ.get("CORS_ORIGINS", defaults).split(",") if value.strip()}
     if request.headers.get("origin") not in allowed or request.headers.get("origin") in (None, "null", "*"):
-        raise HTTPException(403, "Asal halaman login Google tidak diizinkan")
+        raise HTTPException(403, "Asal halaman autentikasi tidak diizinkan")
     if request.headers.get("content-type", "").split(";", 1)[0].strip().lower() != "application/json":
-        raise HTTPException(415, "Login Google memerlukan JSON")
+        raise HTTPException(415, "Autentikasi memerlukan JSON")
 
 
 def verify_google_credential(credential: str, nonce: str) -> dict:

@@ -248,10 +248,16 @@ def test_production_mock_gate_urls_and_public_diagnostics(env, monkeypatch):
     assert caught.value.status_code == 503
 
 
-def test_persisted_quotes_checkout_rounding_and_retry_identity(adapters):
+@pytest.mark.parametrize('phone_only', [False, True])
+def test_persisted_quotes_checkout_rounding_and_retry_identity(adapters, phone_only):
     async def run():
         async with isolated_database():
             d = await prepared(adapters)
+            if phone_only:
+                async with session_scope() as s:
+                    user = await s.get(m.User, d['alice'])
+                    user.email = None
+                    user.phone = '+6281234567890'
             assert adapters[1].rate_requests[0]["weight"] == 0.1
             first = await create_checkout(d["alice"], d["req"], "checkout-once")
             second = await create_checkout(d["alice"], d["req"], "checkout-once")
@@ -260,6 +266,9 @@ def test_persisted_quotes_checkout_rounding_and_retry_identity(adapters):
             assert first["payment"]["provider"] == "doku" and not first["payment"]["mock"]
             assert len(adapters[0].calls) == 1
             request = adapters[0].calls[0][1]
+            if phone_only:
+                assert 'email' not in request['customer']
+                assert request['customer']['phone']
             assert request["order"]["amount"] == 13000
             assert request["order"]["callback_url"].endswith("/payment/" + first["order"]["order_number"])
             assert request["additional_info"]["override_notification_url"] == "https://api.example.test/api/webhooks/doku"

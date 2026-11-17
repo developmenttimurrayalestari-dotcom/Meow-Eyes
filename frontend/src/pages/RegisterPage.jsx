@@ -1,16 +1,19 @@
 import React, { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { apiError } from "../lib/api";
 import { toast } from "sonner";
+import FacebookAuthButton from "../components/FacebookAuthButton";
 import GoogleAuthButton from "../components/GoogleAuthButton";
 import { authDestination, navigateAfterAuthentication, requestedAuthReturn, usesCustomerMeasurementFlow } from "../lib/authReturn";
 
 const RegisterPage = () => {
-  const { register } = useAuth();
+  const { register, phoneEnabled } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const returnTo = requestedAuthReturn(location);
-  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [method, setMethod] = useState("email");
+  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "" });
   const [loading, setLoading] = useState(false);
 
   const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
@@ -23,11 +26,11 @@ const RegisterPage = () => {
     }
     setLoading(true);
     try {
-      const user = await register(form);
+      const user = await register({ name: form.name, password: form.password, [phoneEnabled ? method : "email"]: form[phoneEnabled ? method : "email"] });
       toast.success(usesCustomerMeasurementFlow(returnTo) ? "Akun berhasil dibuat. Lengkapi profil dan resep untuk Meowsurement." : "Pendaftaran berhasil! Yuk atur PIN keamanan.");
       navigateAfterAuthentication(authDestination(returnTo, user?.has_pin), navigate);
     } catch (err) {
-      toast.error(err?.response?.data?.detail || "Pendaftaran gagal");
+      toast.error(apiError(err, "Pendaftaran gagal"));
     } finally {
       setLoading(false);
     }
@@ -42,17 +45,20 @@ const RegisterPage = () => {
         <h1 className="font-heading text-3xl font-black text-center">Daftar Meow Eyes</h1>
         <p className="text-center text-meow-gray mt-2 text-sm">Gabung gratis, dapat 500 poin sambutan.</p>
 
+        {phoneEnabled && <div className="mt-6 flex gap-2" role="group" aria-label="Metode registrasi">
+          {[['email', 'Email'], ['phone', 'Nomor telepon']].map(([value, label]) => <button type="button" key={value} aria-pressed={method === value} disabled={loading} onClick={() => setMethod(value)} className={`flex-1 rounded-xl border px-3 py-2 text-sm font-bold ${method === value ? 'bg-meow-midnight text-white' : ''}`}>{label}</button>)}
+        </div>}
         <form onSubmit={handleSubmit} className="mt-8 space-y-4" data-testid="register-form">
           {[
             { name: "name", label: "Nama Lengkap", type: "text", placeholder: "Nama kamu" },
-            { name: "email", label: "Email", type: "email", placeholder: "email@kamu.com" },
+            { name: phoneEnabled ? method : "email", label: phoneEnabled && method === "phone" ? "Nomor telepon" : "Email", type: phoneEnabled && method === "phone" ? "tel" : "email", placeholder: phoneEnabled && method === "phone" ? "08xxxxxxxxxx" : "email@kamu.com" },
             { name: "password", label: "Password (min. 8)", type: "password", placeholder: "••••••••" },
           ].map((f) => (
             <div key={f.name}>
               <label className="text-xs font-bold uppercase tracking-wider text-meow-gray">{f.label}</label>
               <input
                 data-testid={`register-${f.name}`}
-                name={f.name} type={f.type} required
+                name={f.name} type={f.type} required maxLength={f.name === "phone" ? 40 : undefined}
                 value={form[f.name]} onChange={onChange}
                 className="w-full mt-1 px-4 py-3 rounded-2xl border-2 border-transparent bg-meow-bg focus:bg-white focus:border-meow-salmon outline-none transition"
                 placeholder={f.placeholder}
@@ -68,6 +74,7 @@ const RegisterPage = () => {
           <div className="h-px bg-meow-gray/30 flex-1" /><span>atau</span><div className="h-px bg-meow-gray/30 flex-1" />
         </div>
         <GoogleAuthButton signup returnTo={returnTo} disabled={loading} />
+        <FacebookAuthButton returnTo={returnTo} disabled={loading} />
 
         <p className="text-center text-sm text-meow-gray mt-6">
           Sudah punya akun?{" "}

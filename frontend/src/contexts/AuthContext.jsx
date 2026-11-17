@@ -7,6 +7,12 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [cartCount, setCartCount] = useState(0);
+  const [phoneEnabled, setPhoneEnabled] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    api.get('/auth/config').then(({ data }) => { if (alive) setPhoneEnabled(data?.phone_enabled === true); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
 
   const fetchMe = useCallback(async () => {
     try {
@@ -46,8 +52,8 @@ export const AuthProvider = ({ children }) => {
     return () => window.removeEventListener("meow:unauthorized", h);
   }, []);
 
-  const login = async (email, password) => {
-    const { data } = await api.post("/auth/login", { email, password });
+  const login = async (identifier, password) => {
+    const { data } = await api.post("/auth/login", { identifier, password });
     if (data.token) setToken(data.token);
     setUser(data.user);
     return data.user;
@@ -64,6 +70,12 @@ export const AuthProvider = ({ children }) => {
     setUser(data.user);
     return data.user;
   };
+  const loginWithFacebook = async (access_token) => {
+    const { data } = await api.post('/auth/facebook', { access_token });
+    if (data.token) setToken(data.token);
+    setUser(data.user);
+    return data.user;
+  };
   const logout = async () => {
     try {
       await api.post("/auth/logout");
@@ -76,7 +88,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider
-      value={{ user, setUser, loading, login, register, loginWithGoogle, logout, refreshMe: fetchMe, cartCount, refreshCartCount }}
+      value={{ user, setUser, loading, login, register, loginWithGoogle, loginWithFacebook, phoneEnabled, logout, refreshMe: fetchMe, cartCount, refreshCartCount }}
     >
       {children}
     </AuthContext.Provider>

@@ -446,7 +446,7 @@ async def admin_list_users(q: Optional[str] = None, admin: User = Depends(curren
     async with read_session() as s:
         stmt = select(m.User)
         if q:
-            stmt = stmt.where(or_(m.User.name.icontains(q, autoescape=True), m.User.email.icontains(q, autoescape=True)))
+            stmt = stmt.where(or_(m.User.name.icontains(q, autoescape=True), m.User.email.icontains(q, autoescape=True), m.User.phone.icontains(q, autoescape=True)))
         rows = (await s.scalars(stmt.order_by(m.User.created_at.desc(), m.User.user_id).limit(200))).all()
         users = [await user_dict(s, user) for user in rows]
         for data in users:

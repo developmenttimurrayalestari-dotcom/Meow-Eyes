@@ -1,0 +1,27 @@
+{
+  "ok": true,
+  "revision": "20261117_0013",
+  "backup": "private\\backups\\phone-accounts-before-0013-20261117T073356Z.sql",
+  "backup_sha256": "5a9c6114105bdd61e535ad75d635c6224038b42c07961299900ff2088cd0b37b",
+  "existing_accounts_permissions_sessions_and_stock_unchanged": true,
+  "counts": {
+    "users": 4,
+    "user_permissions": 6,
+    "user_sessions": 3,
+    "categories": 66,
+    "products": 26,
+    "product_categories": 120,
+    "product_variants": 35,
+    "orders": 4
+  },
+  "phone_accounts": "phone-only registration; no fake emails and no existing account auto-linking",
+  "integrity": {
+    "ok": true,
+    "mode": "full_integrity_audit",
+    "expected_triggers": 154,
+    "row_rules": 139,
+    "definer_privileges_verified": false,
+    "issues": []
+  },
+  "backend_started": false
+}

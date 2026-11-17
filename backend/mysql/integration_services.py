@@ -282,6 +282,8 @@ async def ensure_doku_payment(order_id: str) -> dict:
                 "customer": {"id": owner, "name": user.name, "email": user.email, "phone": address.phone,
                              "address": address.street, "country": "ID", "city": address.city, "postcode": address.postal_code},
             }
+            if not user.email:
+                request['customer'].pop('email', None)
             if settings.notification_override_url:
                 request["additional_info"] = {"override_notification_url": settings.notification_override_url}
             s.add(m.PaymentLog(id=gen_id("plg"), order_id=order_id, payment_id=payment.id, provider="doku",

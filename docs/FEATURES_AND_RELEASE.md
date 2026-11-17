@@ -99,6 +99,113 @@ Pembaruan 11 November 2026 menambahkan dompet poin dengan rate per perolehan, Ma
 | 8. DOKU | Hosted Checkout, penandatanganan request, verifikasi notifikasi, pemeriksaan nilai/identitas pesanan, proses ulang idempoten dan rekonsiliasi status. | Backend integrasi, halaman pembayaran, `/admin/integrations` |
 | 9. Everpro | Tarif dari API, quote tersimpan dan dibatasi masa berlaku, booking sesudah dibayar, pilihan DROP/PICKUP, resi, pelacakan, callback terverifikasi dan pembaruan status. | Checkout, admin detail pesanan, `/admin/integrations` |
 
+### Registrasi/login nomor telepon: nonaktif sementara
+
+Registrasi dan login telepon saat ini **nonaktif secara default**. Pelanggan
+menggunakan email/password, Google, atau Facebook yang sudah dikonfigurasi.
+Kolom/pilihan telepon disembunyikan pada form, dan API menolak registrasi/login
+telepon dengan HTTP 403. Semua field login (`phone`, `identifier`, maupun field
+legacy `email` berisi nomor) mematuhi pembatasan yang sama. Akun, password, PIN,
+poin, dan nomor yang sudah tersimpan tidak dihapus. Sesi yang masih valid tetap
+berlaku; fitur ini tidak mencabut sesi pelanggan yang sudah masuk.
+
+Untuk mengaktifkan kembali, isi pada **backend/.env.mysql di server**:
+
+```dotenv
+AUTH_PHONE_ENABLED=true
+```
+
+Kemudian restart backend dan periksa flag publik (sesuaikan port):
+
+```bash
+pm2 restart meow-backend --update-env
+curl http://127.0.0.1:4001/api/auth/config
+```
+
+Hasil harus `{"phone_enabled":true}`. Refresh penuh halaman registrasi/login.
+Frontend membaca flag dari API; tidak perlu flag telepon terpisah di frontend.
+Untuk mematikan lagi, set `AUTH_PHONE_ENABLED=false`, restart backend, dan refresh
+browser. Variabel environment proses mengungguli file `.env.mysql`; pastikan
+shell/konfigurasi PM2 tidak menyimpan override yang bertentangan.
+
+Saat diaktifkan, pendaftaran telepon memakai nama, nomor, dan password tanpa
+email. Format `08?`, `628?`, dan `+628?` dinormalisasi ke `+628?` dan harus unik.
+Tidak ada pengiriman/verifikasi OTP. Nomor alamat/profil tidak otomatis menjadi
+identitas login akun lama. Migrasi historis `20261117_0013` tetap diperlukan;
+tidak ada downgrade atau penghapusan data untuk menonaktifkan fitur ini.
+
+### Login Facebook langsung melalui Meta
+
+Tombol **Masuk dengan Facebook** tersedia pada `/login` dan `/register`. Browser
+memakai SDK resmi `https://connect.facebook.net/id_ID/sdk.js`; backend memeriksa
+token melalui `/debug_token`, memvalidasi App ID, user ID, masa berlaku token
+dan akses data, kemudian mengambil `/me` dengan `appsecret_proof`. Identitas
+lokal diikat ke `users.facebook_subject` yang unik, bukan ID/nama/email yang
+dikirim bebas oleh browser. Token Meta dan App Secret tidak disimpan pada sesi
+lokal atau dikirim lewat URL website. Session token aplikasi tetap di-hash;
+PIN onboarding serta tujuan halaman setelah login tetap berlaku.
+
+Konfigurasi pemilik toko pada [Meta for Developers](https://developers.facebook.com/apps/):
+
+1. Buat/pilih aplikasi dengan use case Facebook Login untuk autentikasi pengguna.
+   Lengkapi App Domains (`meoweyes.com`), Website URL HTTPS, email dukungan,
+   URL kebijakan privasi dan petunjuk penghapusan data yang sudah dipublikasikan
+   dari CMS. Gunakan domain yang benar-benar dipakai website.
+2. Aktifkan Facebook Login untuk web dan **Login with JavaScript SDK**, lalu isi
+   **Allowed Domains for JavaScript SDK** dengan domain website. Flow ini memakai
+   popup `FB.login` dan callback JavaScript pada halaman login/registrasi. Jangan
+   mengisi endpoint callback backend yang tidak ada pada aplikasi ini.
+3. Salin App ID dan App Secret ke konfigurasi **backend saja**:
+
+   ```dotenv
+   FACEBOOK_APP_ID=APP_ID_ANDA
+   FACEBOOK_APP_SECRET=APP_SECRET_ANDA
+   FACEBOOK_GRAPH_VERSION=v27.0
+   AUTH_PHONE_ENABLED=false
+   ```
+
+4. Tambahkan origin HTTPS frontend ke `CORS_ORIGINS`, pertahankan origin lain
+   yang masih dipakai, dan sesuaikan `PUBLIC_FRONTEND_URL`. Facebook SDK memerlukan
+   HTTPS untuk tindakan autentikasi. App Secret tidak boleh dimasukkan ke
+   `frontend/.env`, source React, log, atau dikirim melalui chat.
+5. Gunakan akun dengan role aplikasi untuk pengujian Development. Untuk pelanggan
+   umum, selesaikan persyaratan dashboard Meta dan aktifkan mode Live. Permintaan
+   akses aplikasi dibatasi pada `public_profile,email`.
+
+Deploy kode beserta migrasi, setelah backup database:
+
+```bash
+cd /home/vmnginx/Project/meow/Meow-Eyes/backend
+.venv_backend/bin/python -m alembic upgrade head
+.venv_backend/bin/python -m mysql.check_integrity
+cd ..
+pm2 restart meow-backend --update-env
+pm2 restart meow-frontend --update-env
+curl http://127.0.0.1:4001/api/auth/facebook/config
+```
+
+Hasil konfigurasi harus berisi `enabled:true`, App ID, dan versi Graph API;
+App Secret tidak pernah ditampilkan. Jika App ID/Secret belum diisi, tombol
+Facebook nonaktif dan menampilkan keterangan belum tersedia. Untuk frontend
+statis, lakukan `npm run build` setelah mengubah source frontend.
+
+Migrasi `20261117_0014` hanya menambahkan identitas Facebook nullable/unik tanpa
+mengubah akun lama. Pendaftaran pertama membutuhkan email yang diberikan Meta.
+Jika email tidak tersedia/izin ditolak, pelanggan diminta mengizinkan email
+atau mendaftar melalui email. Login berikutnya tetap memakai identitas Facebook
+meskipun Meta tidak mengembalikan email lagi. Email yang sudah terdaftar melalui
+metode lain tidak digabung otomatis: pelanggan menggunakan metode akun lamanya.
+Akun nonaktif tetap ditolak. Mengubah App ID dapat mengubah namespace identitas
+Facebook; evaluasi pemetaan akun sebelum mengganti aplikasi Meta.
+
+Uji lokal menggunakan SDK/token response Meta tiruan dan database terisolasi;
+login/consent Facebook nyata memerlukan App ID, App Secret, dan domain HTTPS
+milik toko yang sudah dikonfigurasi. Referensi resmi:
+[Facebook Login Web](https://developers.facebook.com/docs/facebook-login/web/),
+[Debug Token](https://developers.facebook.com/docs/graph-api/reference/debug_token/),
+[Secure Requests](https://developers.facebook.com/docs/graph-api/guides/secure-requests/),
+dan [versi Graph API](https://developers.facebook.com/docs/graph-api/changelog/).
+
 ### Daftar dan login Google langsung
 
 Halaman `/register` dan `/login` memakai tombol resmi **Google Identity Services**
@@ -446,7 +553,7 @@ python seed_features.py --apply
 python -m uvicorn server:app --host 127.0.0.1 --port 8001
 ```
 
-Migrasi head kini `20261112_0012`: 68 tabel dasar, 11 tabel Meowsurement customer,
+Migrasi head kini `20261117_0014`: 68 tabel dasar, 11 tabel Meowsurement customer,
 14 tabel poin, game, cashback dan RMA, serta tabel relasi Lens Index–Jenis Lensa
 (94 tabel aplikasi). Lihat
 [panduan fitur baru](LOYALTY_GAMES_RMA.md) dan [runbook Meowsurement](optifit/RUNBOOK.md).

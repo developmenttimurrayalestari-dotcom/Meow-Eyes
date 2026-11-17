@@ -1,3 +1,4 @@
+jest.mock('./FacebookAuthButton',()=>()=>null);
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
 import { MemoryRouter, Route, Routes } from "react-router-dom";

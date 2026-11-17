@@ -6,7 +6,8 @@ Persistent SQLAlchemy models, UTC datetimes and Decimal money live in mysql/mode
 from __future__ import annotations
 from datetime import datetime, timezone
 from typing import List, Optional, Literal, Dict, Any
-from pydantic import BaseModel, Field, EmailStr, ConfigDict
+from pydantic import BaseModel, Field, EmailStr, ConfigDict, field_validator, model_validator
+from phone_identity import normalize_phone
 import uuid
 from mysql.taxonomy_definitions import GroupType, ProductType
 
@@ -24,7 +25,8 @@ def now_iso() -> str:
 class User(BaseModel):
     model_config = ConfigDict(extra="ignore")
     user_id: str = Field(default_factory=lambda: gen_id("usr"))
-    email: EmailStr
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
     name: str
     picture: Optional[str] = None
     password_hash: Optional[str] = None
@@ -32,7 +34,7 @@ class User(BaseModel):
     pin_failed_attempts: int = 0
     pin_locked_until: Optional[str] = None
     role: Literal["customer", "staff", "admin", "super_admin"] = "customer"
-    provider: Literal["password", "google"] = "password"
+    provider: Literal["password", "google", "facebook"] = "password"
     is_active: bool = True
     points_balance: int = 0
     permissions: List[str] = Field(default_factory=list)
@@ -42,7 +44,8 @@ class User(BaseModel):
 
 class UserPublic(BaseModel):
     user_id: str
-    email: EmailStr
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
     name: str
     picture: Optional[str] = None
     role: str
@@ -54,14 +57,34 @@ class UserPublic(BaseModel):
 
 
 class RegisterRequest(BaseModel):
-    email: EmailStr
-    name: str
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
+    name: str = Field(min_length=1, max_length=255)
     password: str = Field(min_length=8, max_length=72)
+
+    @field_validator('phone')
+    @classmethod
+    def canonical_phone(cls, value):
+        return normalize_phone(value) if value is not None else None
+
+    @model_validator(mode='after')
+    def contact_required(self):
+        if bool(self.email) == bool(self.phone):
+            raise ValueError('Pilih salah satu: email atau nomor telepon')
+        return self
 
 
 class LoginRequest(BaseModel):
-    email: EmailStr
+    email: Optional[str] = Field(default=None, max_length=254)
+    phone: Optional[str] = Field(default=None, max_length=40)
+    identifier: Optional[str] = Field(default=None, max_length=254)
     password: str
+
+    @model_validator(mode='after')
+    def one_identifier(self):
+        if sum(bool(value) for value in (self.email, self.phone, self.identifier)) != 1:
+            raise ValueError('Isi email atau nomor telepon')
+        return self
 
 
 class PinSetupRequest(BaseModel):
@@ -70,6 +93,11 @@ class PinSetupRequest(BaseModel):
 
 class PinVerifyRequest(BaseModel):
     pin: str = Field(min_length=6, max_length=6, pattern=r"^\d{6}$")
+
+
+class FacebookLoginRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    access_token: str = Field(min_length=1, max_length=8192)
 
 
 class GoogleLoginRequest(BaseModel):

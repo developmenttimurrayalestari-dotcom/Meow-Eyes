@@ -20,7 +20,7 @@ logger = logging.getLogger("meow.mysql")
 MYSQL_VERSION_FAMILY = (5, 7)
 MINIMUM_MYSQL_VERSION = (5, 7, 24)
 TARGET_MYSQL_VERSION = "5.7.24-log"
-EXPECTED_SCHEMA_REVISION = "20261112_0012"
+EXPECTED_SCHEMA_REVISION = "20261117_0014"
 
 
 def supported_mysql_version(version: str) -> bool:

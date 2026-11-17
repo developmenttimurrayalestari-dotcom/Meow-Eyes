@@ -11,6 +11,10 @@ from mysql.base import utcnow
 from models import RegisterRequest, LoginRequest, PinSetupRequest, PinVerifyRequest, GoogleLoginRequest, User, gen_id
 from auth import hash_secret, verify_secret, create_session, current_user, current_user_optional, public_user, verify_pin_or_raise
 from google_identity import client_id, require_google_origin, verify_google_credential
+from phone_identity import normalize_phone
+from auth_features import phone_auth_enabled
+from facebook_identity import facebook_config, verify_facebook_token
+from models import FacebookLoginRequest
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -22,37 +26,91 @@ def _set_cookie(resp: Response, token: str) -> None:
 
 @router.post("/register")
 async def register(req: RegisterRequest, response: Response):
-    email = str(req.email).strip().lower()
+    if req.phone and not phone_auth_enabled():
+        raise HTTPException(403, 'Registrasi nomor telepon sementara dinonaktifkan. Gunakan email.')
+    if not req.name.strip():
+        raise HTTPException(422, 'Nama wajib diisi')
+    email = str(req.email).strip().lower() if req.email else None
+    phone = req.phone
+    duplicate = 'Nomor telepon sudah terdaftar' if phone else 'Email sudah terdaftar'
     hashed = hash_secret(req.password)
     try:
         async with session_scope() as session:
-            if await session.scalar(select(SQLUser.user_id).where(func.lower(SQLUser.email) == email)):
-                raise HTTPException(400, "Email sudah terdaftar")
-            row = SQLUser(user_id=gen_id("usr"), email=email, name=req.name,
+            condition = SQLUser.phone == phone if phone else func.lower(SQLUser.email) == email
+            if await session.scalar(select(SQLUser.user_id).where(condition)):
+                raise HTTPException(400, duplicate)
+            row = SQLUser(user_id=gen_id("usr"), email=email, phone=phone, name=req.name.strip(),
                           password_hash=hashed, provider="password")
             session.add(row)
             await session.flush()
             token, _ = await create_session(row.user_id, session)
             user = User(**await user_dict(session, row))
     except IntegrityError:
-        raise HTTPException(400, "Email sudah terdaftar") from None
+        raise HTTPException(400, duplicate) from None
     _set_cookie(response, token)
     return {"token": token, "user": public_user(user).model_dump()}
 
 
 @router.post("/login")
 async def login(req: LoginRequest, response: Response):
+    identifier = (req.identifier or req.phone or req.email).strip()
+    if '@' in identifier:
+        condition = func.lower(SQLUser.email) == identifier.lower()
+    else:
+        if not phone_auth_enabled():
+            raise HTTPException(403, 'Login nomor telepon sementara dinonaktifkan. Gunakan email atau login sosial.')
+        try:
+            condition = SQLUser.phone == normalize_phone(identifier)
+        except ValueError:
+            raise HTTPException(401, 'Email/nomor telepon atau password salah') from None
     async with session_scope() as session:
-        row = await session.scalar(select(SQLUser).where(
-            func.lower(SQLUser.email) == str(req.email).strip().lower()))
+        row = await session.scalar(select(SQLUser).where(condition))
         if row is None or not row.password_hash or not verify_secret(req.password, row.password_hash):
-            raise HTTPException(401, "Email atau password salah")
+            raise HTTPException(401, "Email/nomor telepon atau password salah")
         if not row.is_active:
             raise HTTPException(403, "Akun dinonaktifkan")
         token, _ = await create_session(row.user_id, session)
         user = User(**await user_dict(session, row))
     _set_cookie(response, token)
     return {"token": token, "user": public_user(user).model_dump()}
+
+
+@router.get('/config')
+async def auth_config(response: Response):
+    response.headers['Cache-Control'] = 'no-store'
+    return {'phone_enabled': phone_auth_enabled()}
+
+
+@router.get('/facebook/config')
+async def get_facebook_config(response: Response):
+    response.headers['Cache-Control'] = 'no-store'
+    return facebook_config()
+
+
+@router.post('/facebook')
+async def facebook_login(req: FacebookLoginRequest, request: Request, response: Response):
+    require_google_origin(request)
+    identity = await run_in_threadpool(verify_facebook_token, req.access_token)
+    try:
+        async with session_scope() as session:
+            row = await session.scalar(select(SQLUser).where(SQLUser.facebook_subject == identity['subject']).with_for_update())
+            if row is None:
+                if not identity['email']:
+                    raise HTTPException(422, 'Facebook belum memberikan email. Izinkan akses email untuk membuat akun atau daftar menggunakan email.')
+                if await session.scalar(select(SQLUser.user_id).where(func.lower(SQLUser.email) == identity['email'])):
+                    raise HTTPException(409, 'Email sudah terdaftar. Gunakan metode login akun sebelumnya; akun tidak digabung otomatis.')
+                row = SQLUser(user_id=gen_id('usr'), email=identity['email'], name=identity['name'],
+                    picture=identity['picture'], facebook_subject=identity['subject'], provider='facebook')
+                session.add(row)
+            if row.is_active is False: raise HTTPException(403, 'Akun dinonaktifkan')
+            await session.flush()
+            token, _ = await create_session(row.user_id, session)
+            user = User(**await user_dict(session, row))
+    except IntegrityError:
+        raise HTTPException(409, 'Akun sedang diperbarui. Silakan coba masuk kembali.') from None
+    response.headers['Cache-Control'] = 'no-store'
+    _set_cookie(response, token)
+    return {'token': token, 'user': public_user(user).model_dump()}
 
 
 @router.get("/google/config")

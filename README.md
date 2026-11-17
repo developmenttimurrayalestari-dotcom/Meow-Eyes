@@ -16,6 +16,7 @@ admin lokal, operator, atau pasien terpisah.
 ## Mulai dari sini
 
 - [Poin, Manage Games, Cashback, RMA, dan halaman Virtual Try-On](docs/LOYALTY_GAMES_RMA.md)
+- [Login Facebook dan mengaktifkan kembali login telepon](docs/FEATURES_AND_RELEASE.md#registrasilogin-nomor-telepon-nonaktif-sementara)
 - [Fitur lengkap dan panduan rilis](docs/FEATURES_AND_RELEASE.md)
 - [Konfigurasi DOKU, Everpro dan rekonsiliasi](docs/INTEGRATIONS.md)
 - [Hasil pengujian dan batas verifikasi](docs/mysql-migration/VALIDATION.md)
@@ -25,7 +26,7 @@ Backend aplikasi adalah **`server:app`** dalam direktori `backend`.
 `mysql_bootstrap:app` hanya untuk diagnostik skema. Endpoint asli dipertahankan
 kecuali pertukaran sesi Google Emergent yang diganti autentikasi Google langsung,
 dan ditambah endpoint fitur/integrasi. Tidak ada query runtime
-Motor/PyMongo. Head Alembic saat ini **`20261112_0012`**. [Daftar/login Google langsung](docs/FEATURES_AND_RELEASE.md#daftar-dan-login-google-langsung), [Lens Index dan resep checkout](docs/FEATURES_AND_RELEASE.md#lens-index-jenis-lensa-dan-resep-checkout), [manajemen produk dan aksi massal](docs/FEATURES_AND_RELEASE.md#hapus-dan-nonaktifkan-produk), [master kategori independen](docs/mysql-migration/STEP_2.md#master-kategori-independen-0006), [alur menu pengukuran dan frame manual](docs/optifit/CUSTOMER_FLOW.md), serta [poin, game, cashback, RMA dan Virtual Try-On](docs/LOYALTY_GAMES_RMA.md).
+Motor/PyMongo. Head Alembic saat ini **`20261117_0014`**. [Daftar/login Google langsung](docs/FEATURES_AND_RELEASE.md#daftar-dan-login-google-langsung), [Lens Index dan resep checkout](docs/FEATURES_AND_RELEASE.md#lens-index-jenis-lensa-dan-resep-checkout), [manajemen produk dan aksi massal](docs/FEATURES_AND_RELEASE.md#hapus-dan-nonaktifkan-produk), [master kategori independen](docs/mysql-migration/STEP_2.md#master-kategori-independen-0006), [alur menu pengukuran dan frame manual](docs/optifit/CUSTOMER_FLOW.md), serta [poin, game, cashback, RMA dan Virtual Try-On](docs/LOYALTY_GAMES_RMA.md).
 
 ## Database dan data sebelumnya
 
