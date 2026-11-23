@@ -376,6 +376,22 @@ async def delete_voucher(vid: str, admin: User = Depends(current_admin)):
     return {"ok": True}
 
 
+@router.put('/vouchers/{vid}')
+async def update_voucher(vid: str, payload: Dict[str, Any], admin: User = Depends(current_admin)):
+    async with session_scope() as s:
+        row = await get_or_404(s, m.Voucher, vid, lock=True)
+        data = {**row_dict(row), **{k: v for k, v in payload.items() if k in VoucherDTO.model_fields and k not in ('id', 'created_at', 'used_count')}}
+        data = safe_values(m.Voucher, validate_payload(VoucherDTO, data))
+        if data['end_at'] <= data['start_at'] or data['quota'] < row.used_count:
+            raise HTTPException(422, 'Periode atau kuota voucher tidak valid')
+        if row.used_count and (data['audience'] != row.audience or data['code'] != row.code):
+            raise HTTPException(409, 'Kode dan sasaran voucher yang sudah dipakai tidak dapat diubah')
+        for key, value in data.items():
+            if key not in ('id', 'created_at', 'used_count'): setattr(row, key, value)
+        await s.flush()
+    return {'ok': True}
+
+
 @router.get("/flash-sales")
 async def admin_list_flash_sales(admin: User = Depends(current_admin)):
     async with read_session() as s:
@@ -442,17 +458,12 @@ async def delete_reward(rid: str, admin: User = Depends(current_admin)):
 
 
 @router.get("/users")
-async def admin_list_users(q: Optional[str] = None, admin: User = Depends(current_admin)):
+async def admin_list_users(q: Optional[str] = None, page: int = Query(1, ge=1),
+                           page_size: int = Query(25, ge=1, le=100), verified: bool | None = None,
+                           active: bool | None = None, admin: User = Depends(current_admin)):
     async with read_session() as s:
-        stmt = select(m.User)
-        if q:
-            stmt = stmt.where(or_(m.User.name.icontains(q, autoescape=True), m.User.email.icontains(q, autoescape=True), m.User.phone.icontains(q, autoescape=True)))
-        rows = (await s.scalars(stmt.order_by(m.User.created_at.desc(), m.User.user_id).limit(200))).all()
-        users = [await user_dict(s, user) for user in rows]
-        for data in users:
-            data.pop("password_hash", None)
-            data.pop("pin_hash", None)
-        return {"users": users}
+        from routes_customer_growth import customer_list
+        return await customer_list(s, q, page, page_size, verified, active)
 
 
 def _can_manage_user(admin, target):
@@ -468,6 +479,8 @@ async def toggle_user_active(uid: str, admin: User = Depends(current_admin)):
         if user.user_id == admin.user_id:
             raise HTTPException(409, "Tidak dapat menonaktifkan akun sendiri")
         user.is_active = not user.is_active
+        if not user.is_active:
+            await s.execute(delete(m.UserSession).where(m.UserSession.user_id == uid))
     return {"ok": True}
 
 

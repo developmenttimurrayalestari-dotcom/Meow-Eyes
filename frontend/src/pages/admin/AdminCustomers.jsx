@@ -1,55 +1,9 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { api } from "../../lib/api";
-import { Users, Mail, Search } from "lucide-react";
+import { Mail } from "lucide-react";
 import { toast } from "sonner";
 
-export const AdminUsers = () => {
-  const [items, setItems] = useState([]);
-  const [q, setQ] = useState("");
-  const load = useCallback(() => api.get("/admin/users", { params: { q } }).then(({ data }) => setItems(data.users)), [q]);
-  useEffect(() => { load(); }, [load]);
-  const toggle = async (uid) => { await api.post(`/admin/users/${uid}/toggle-active`); load(); };
-  const reset = async (uid) => { await api.post(`/admin/users/${uid}/reset-pin`); toast.success("PIN direset"); };
-
-  return (
-    <div data-testid="admin-users">
-      <h1 className="font-heading text-3xl font-black mb-4 flex items-center gap-2"><Users /> Pelanggan</h1>
-      <div className="flex items-center bg-white border border-zinc-200 rounded-full px-4 py-2 mb-4 max-w-md">
-        <Search className="h-4 w-4 text-meow-gray mr-2" />
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama, email, atau telepon..." className="bg-transparent flex-1 outline-none text-sm" data-testid="user-search" />
-      </div>
-      <div className="bg-white rounded-3xl border border-zinc-200 overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-meow-bg text-xs uppercase text-meow-gray">
-            <tr>
-              <th className="text-left px-4 py-3">Nama</th>
-              <th className="text-left px-4 py-3">Email / Telepon</th>
-              <th className="text-left px-4 py-3">Role</th>
-              <th className="text-left px-4 py-3">Poin</th>
-              <th className="text-left px-4 py-3">Status</th>
-              <th className="text-right px-4 py-3">Aksi</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((u) => (
-              <tr key={u.user_id} className="border-t border-zinc-100" data-testid={`user-row-${u.user_id}`}>
-                <td className="px-4 py-3 font-bold">{u.name}</td>
-                <td className="px-4 py-3">{u.email || u.phone}</td>
-                <td className="px-4 py-3 text-xs uppercase">{u.role}</td>
-                <td className="px-4 py-3">{u.points_balance}</td>
-                <td className="px-4 py-3 text-xs">{u.is_active ? "Aktif" : "Off"}</td>
-                <td className="px-4 py-3 text-right">
-                  <button onClick={() => toggle(u.user_id)} className="text-xs text-meow-salmon font-bold mr-2" data-testid={`toggle-${u.user_id}`}>Toggle</button>
-                  <button onClick={() => reset(u.user_id)} className="text-xs text-meow-amber font-bold" data-testid={`reset-pin-${u.user_id}`}>Reset PIN</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-};
+export { default as AdminUsers } from "./CustomerManagement";
 
 export const AdminNewsletter = () => {
   const [subs, setSubs] = useState([]);

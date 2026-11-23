@@ -88,7 +88,7 @@ export default function PaymentPage() {
     <p className="text-sm text-meow-gray">Pesanan #{order.order_number}</p>
     {needsVerification ? <section className="rounded-3xl p-6 mt-6 border border-amber-200 bg-amber-50" data-testid="payment-verification-pending"><h2 className="font-heading text-xl font-black">Pembayaran Sedang Diperiksa</h2><p className="mt-2 text-sm">Informasi pembayaran telah diterima dan memerlukan pemeriksaan oleh tim toko. Tunggu pembaruan status sebelum melakukan pembayaran lagi.</p><Link to={`/orders/${order.id}`} className="btn-secondary mt-4 inline-block">Lihat Detail Pesanan</Link></section> : paid ? <section className="bg-white rounded-3xl p-8 mt-6 text-center" data-testid="payment-paid">
       <CheckCircle2 className="h-16 w-16 mx-auto text-meow-mint" /><h2 className="font-heading text-2xl font-black mt-3">Pembayaran Berhasil</h2>
-      <p className="text-meow-gray text-sm mt-2">Pembayaran telah terkonfirmasi. Anda dapat melihat perkembangan pesanan dan memberikan rating di bawah.</p>
+      <p className="text-meow-gray text-sm mt-2">Pembayaran telah terkonfirmasi. Pantau perkembangan pesanan melalui detail pesanan. Ulasan tersedia setelah pesanan diterima.</p>
       <div className="flex flex-col sm:flex-row gap-3 justify-center mt-6"><Link to={`/orders/${order.id}`} className="btn-primary">Lihat Detail Pesanan</Link><Link to="/shop-now" className="btn-secondary">Belanja Lagi</Link></div>
     </section> : closed ? <section className="bg-white rounded-3xl p-8 mt-6 text-center"><h2 className="font-heading text-2xl font-black">{order.status === "expired" ? "Waktu Pembayaran Berakhir" : order.payment_status === "refunded" ? "Pembayaran Dikembalikan" : "Pesanan Dibatalkan"}</h2><p className="text-sm text-meow-gray mt-2">Tautan pembayaran untuk pesanan ini tidak dapat digunakan.</p><Link to={`/orders/${order.id}`} className="btn-secondary mt-5 inline-block">Lihat Detail Pesanan</Link></section>
       : <section className="bg-white rounded-3xl p-6 md:p-8 mt-6">
@@ -106,7 +106,7 @@ export default function PaymentPage() {
         <p className="text-xs text-meow-gray mt-4 text-center" aria-live="polite">Status: {order.payment_status === "pending" ? "Menunggu pembayaran" : order.payment_status}. Halaman memperbarui status secara otomatis.</p>
       </section>}
     {error && <div role="alert" className="mt-4 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-sm">{error}</div>}
-    {paid && <PurchaseRatings orderId={order.id} />}
+    {paid && order.shipment_status === 'delivered' && <PurchaseRatings orderId={order.id} />}
     {!paid && <Link to={`/orders/${order.id}`} className="block text-center mt-5 text-sm font-bold text-meow-salmon">Lihat Detail Pesanan →</Link>}
   </div>;
 }

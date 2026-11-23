@@ -39,7 +39,7 @@ def normalize_whatsapp_phone(raw: str, *, required: bool = False) -> str:
 
 
 def order_can_be_reviewed(order: m.Order) -> bool:
-    return order.payment_status == "paid" and order.status in PAID_ORDER_STATUSES
+    return order.payment_status == "paid" and order.shipment_status == 'delivered' and order.status not in ('cancelled', 'refunded', 'expired')
 
 
 def safe_web_url(value: Any, label: str = "URL", *, allow_http: bool = False) -> str:

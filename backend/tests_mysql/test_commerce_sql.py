@@ -234,6 +234,8 @@ def test_review_requires_actual_completed_purchase_and_unique_purchase():
             order = (await create_checkout(d["alice"], d["req"]))["order"]
             await confirm_mock_payment(order["order_number"], d["alice"])
             await admin_transition_order(order["id"], "completed", None, d["admin"])
+            async with session_scope() as s:
+                (await s.get(m.Order, order['id'])).shipment_status = 'delivered'
             with pytest.raises(HTTPException):
                 await create_review(d["lens"], {"order_id": order["id"], "body": "Not purchased", "rating": 5}, d["user"])
             review = await create_review(d["frame"], {"order_id": order["id"], "body": "Good", "rating": 4}, d["user"])

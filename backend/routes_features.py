@@ -259,7 +259,7 @@ async def review_eligibility(order_id: str, user: User = Depends(current_user)):
         for product in products.values():
             product["review"] = reviews.get(product["product_id"])
             product["eligible"] = allowed and product["review"] is None
-        return {"eligible": allowed, "reason": None if allowed else "Ulasan tersedia setelah pembayaran berhasil dikonfirmasi",
+        return {"eligible": allowed, "reason": None if allowed else "Ulasan tersedia setelah pesanan diterima (Delivered)",
                 "order_review": row_dict(order_review) if order_review else None,
                 "products": list(products.values())}
 
@@ -277,7 +277,7 @@ async def create_order_review(order_id: str, payload: dict[str, Any], user: User
         if order is None:
             raise HTTPException(404, "Pesanan tidak ditemukan")
         if not order_can_be_reviewed(order):
-            raise HTTPException(409, "Ulasan tersedia setelah pembayaran berhasil dikonfirmasi")
+            raise HTTPException(409, "Ulasan tersedia setelah pesanan diterima (Delivered)")
         if await s.scalar(select(m.OrderReview.id).where(m.OrderReview.order_id == order_id)):
             raise HTTPException(409, "Transaksi ini sudah diberi ulasan")
         review = m.OrderReview(id=m.new_id(), order_id=order.id, user_id=user.user_id,

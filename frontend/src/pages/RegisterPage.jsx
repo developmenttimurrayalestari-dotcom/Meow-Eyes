@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { apiError } from "../lib/api";
 import { toast } from "sonner";
+import { referralCode, rememberReferral } from '../lib/referral';
 import FacebookAuthButton from "../components/FacebookAuthButton";
 import GoogleAuthButton from "../components/GoogleAuthButton";
 import { authDestination, navigateAfterAuthentication, requestedAuthReturn, usesCustomerMeasurementFlow } from "../lib/authReturn";
@@ -15,6 +16,7 @@ const RegisterPage = () => {
   const [method, setMethod] = useState("email");
   const [form, setForm] = useState({ name: "", email: "", phone: "", password: "" });
   const [loading, setLoading] = useState(false);
+  const [referral, setReferral] = useState(() => rememberReferral(new URLSearchParams(location.search).get('ref') || referralCode()));
 
   const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -26,7 +28,7 @@ const RegisterPage = () => {
     }
     setLoading(true);
     try {
-      const user = await register({ name: form.name, password: form.password, [phoneEnabled ? method : "email"]: form[phoneEnabled ? method : "email"] });
+      const user = await register({ name: form.name, password: form.password, [phoneEnabled ? method : "email"]: form[phoneEnabled ? method : "email"], ...(referral ? { referral_code: referral } : {}) });
       toast.success(usesCustomerMeasurementFlow(returnTo) ? "Akun berhasil dibuat. Lengkapi profil dan resep untuk Meowsurement." : "Pendaftaran berhasil! Yuk atur PIN keamanan.");
       navigateAfterAuthentication(authDestination(returnTo, user?.has_pin), navigate);
     } catch (err) {
@@ -43,7 +45,7 @@ const RegisterPage = () => {
           <img src="/logo-meow.jpg" alt="Meow Eyes" className="h-20 w-20 rounded-full ring-4 ring-meow-salmon/30 object-cover" />
         </div>
         <h1 className="font-heading text-3xl font-black text-center">Daftar Meow Eyes</h1>
-        <p className="text-center text-meow-gray mt-2 text-sm">Gabung gratis, dapat 500 poin sambutan.</p>
+        <p className="text-center text-meow-gray mt-2 text-sm">Gabung gratis untuk menikmati manfaat member.</p>
 
         {phoneEnabled && <div className="mt-6 flex gap-2" role="group" aria-label="Metode registrasi">
           {[['email', 'Email'], ['phone', 'Nomor telepon']].map(([value, label]) => <button type="button" key={value} aria-pressed={method === value} disabled={loading} onClick={() => setMethod(value)} className={`flex-1 rounded-xl border px-3 py-2 text-sm font-bold ${method === value ? 'bg-meow-midnight text-white' : ''}`}>{label}</button>)}
@@ -65,6 +67,7 @@ const RegisterPage = () => {
               />
             </div>
           ))}
+          <label className="block text-sm">Kode referral (opsional)<input value={referral} maxLength={32} onChange={e => setReferral(rememberReferral(e.target.value))} className="mt-1 w-full px-4 py-3 rounded-2xl bg-meow-bg border" autoComplete="off" /></label>
           <button type="submit" disabled={loading} className="w-full btn-primary disabled:opacity-60" data-testid="register-submit-btn">
             {loading ? "Membuat akun..." : "Daftar"}
           </button>

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { api, formatIDR } from "../lib/api";
+import { api, apiError, formatIDR } from "../lib/api";
+import { Link } from 'react-router-dom';
 import { Ticket, Copy } from "lucide-react";
 import { toast } from "sonner";
 
@@ -9,8 +10,11 @@ const VouchersPage = () => {
     api.get("/vouchers/active").then(({ data }) => setVouchers(data.vouchers));
   }, []);
   const copyCode = (code) => {
-    navigator.clipboard.writeText(code);
-    toast.success(`Kode ${code} disalin`);
+    navigator.clipboard?.writeText(code).then(() => toast.success(`Kode ${code} disalin`)).catch(() => toast.info(`Gunakan kode ${code} di checkout`));
+  };
+  const claim = async v => {
+    try { await api.post(`/vouchers/${v.id}/claim`); setVouchers(current => current.map(item => item.id === v.id ? { ...item, claimed: true } : item)); toast.success(`Voucher diklaim. Kode: ${v.code}`); }
+    catch (err) { toast.error(apiError(err)); }
   };
   return (
     <div className="max-w-3xl mx-auto px-4 md:px-6 py-8" data-testid="vouchers-page">
@@ -27,6 +31,8 @@ const VouchersPage = () => {
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-heading font-extrabold">{v.name}</p>
+              {v.audience === 'new_member' && <p className="text-xs text-amber-700 mt-1">Member baru · Email terverifikasi · Transaksi pertama · Sekali per akun</p>}
+              {v.eligibility_reason && <p className="text-xs text-red-600 mt-1">{v.eligibility_reason} <Link to="/profile" className="underline">Buka Profil</Link></p>}
               <p className="text-xs text-meow-gray">
                 {v.discount_type === "percent" ? `${v.discount_value}% diskon, max ${formatIDR(v.max_discount || 0)}` :
                  v.discount_type === "nominal" ? `Potongan ${formatIDR(v.discount_value)}` :
@@ -35,8 +41,8 @@ const VouchersPage = () => {
               </p>
               <p className="text-xs text-meow-gray mt-1">Berlaku s/d {v.end_at.slice(0, 10)}</p>
             </div>
-            <button onClick={() => copyCode(v.code)} className="px-3 py-2 bg-meow-midnight text-white rounded-full text-xs font-bold flex items-center gap-1" data-testid={`copy-voucher-${v.code}`}>
-              {v.code} <Copy className="h-3 w-3" />
+            <button disabled={v.eligible === false} onClick={() => v.audience === 'new_member' && !v.claimed ? claim(v) : copyCode(v.code)} className="px-3 py-2 bg-meow-midnight text-white rounded-full text-xs font-bold flex items-center gap-1 disabled:opacity-40" data-testid={`copy-voucher-${v.code}`}>
+              {v.audience === 'new_member' && !v.claimed ? 'Klaim Voucher' : v.code} <Copy className="h-3 w-3" />
             </button>
           </div>
         ))}

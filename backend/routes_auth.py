@@ -15,6 +15,7 @@ from phone_identity import normalize_phone
 from auth_features import phone_auth_enabled
 from facebook_identity import facebook_config, verify_facebook_token
 from models import FacebookLoginRequest
+from mysql import customer_growth as growth
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -43,12 +44,15 @@ async def register(req: RegisterRequest, response: Response):
                           password_hash=hashed, provider="password")
             session.add(row)
             await session.flush()
+            await growth.attach_referral(session, row, req.referral_code)
             token, _ = await create_session(row.user_id, session)
             user = User(**await user_dict(session, row))
     except IntegrityError:
         raise HTTPException(400, duplicate) from None
     _set_cookie(response, token)
-    return {"token": token, "user": public_user(user).model_dump()}
+    sent = await growth.request_verification(user.user_id, optional=True)
+    await growth.deliver_rewards()
+    return {"token": token, "user": public_user(user).model_dump(), "verification_sent": sent}
 
 
 @router.post("/login")
@@ -102,6 +106,8 @@ async def facebook_login(req: FacebookLoginRequest, request: Request, response: 
                 row = SQLUser(user_id=gen_id('usr'), email=identity['email'], name=identity['name'],
                     picture=identity['picture'], facebook_subject=identity['subject'], provider='facebook')
                 session.add(row)
+                await session.flush()
+                await growth.attach_referral(session, row, req.referral_code)
             if row.is_active is False: raise HTTPException(403, 'Akun dinonaktifkan')
             await session.flush()
             token, _ = await create_session(row.user_id, session)
@@ -110,6 +116,8 @@ async def facebook_login(req: FacebookLoginRequest, request: Request, response: 
         raise HTTPException(409, 'Akun sedang diperbarui. Silakan coba masuk kembali.') from None
     response.headers['Cache-Control'] = 'no-store'
     _set_cookie(response, token)
+    await growth.request_verification(user.user_id, optional=True)
+    await growth.deliver_rewards()
     return {'token': token, 'user': public_user(user).model_dump()}
 
 
@@ -138,9 +146,14 @@ async def google_login(req: GoogleLoginRequest, request: Request, response: Resp
                     row = SQLUser(user_id=gen_id("usr"), email=identity["email"], name=identity["name"],
                                   picture=identity["picture"], google_subject=identity["subject"], provider="google")
                     session.add(row)
+                    await session.flush()
+                    await growth.attach_referral(session, row, req.referral_code)
             if row.is_active is False:
                 raise HTTPException(403, "Akun dinonaktifkan")
             # Keep the original user's password, PIN, name, roles and points.
+            if identity.get('authoritative_email') and row.email and row.email.lower() == identity['email'].lower():
+                row.email_verified_at = row.email_verified_at or utcnow()
+            growth.ensure_code(row)
             await session.flush()
             token, _ = await create_session(row.user_id, session)
             user = User(**await user_dict(session, row))
@@ -148,6 +161,8 @@ async def google_login(req: GoogleLoginRequest, request: Request, response: Resp
         raise HTTPException(409, "Akun sedang diperbarui. Silakan coba masuk kembali.") from None
     response.headers["Cache-Control"] = "no-store"
     _set_cookie(response, token)
+    await growth.request_verification(user.user_id, optional=True)
+    await growth.deliver_rewards()
     return {"token": token, "user": public_user(user).model_dump()}
 
 

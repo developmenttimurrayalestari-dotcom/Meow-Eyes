@@ -350,7 +350,7 @@ def test_prescription_ownership_and_measurement_validation():
     asyncio.run(run())
 
 
-def test_paid_checkout_enables_product_lens_and_transaction_ratings_once():
+def test_delivered_checkout_enables_product_lens_and_transaction_ratings_once():
     async def run():
         async with feature_client() as (client, auth, d, _):
             order = (await create_checkout(d["alice"], d["req"]))["order"]
@@ -359,6 +359,9 @@ def test_paid_checkout_enables_product_lens_and_transaction_ratings_once():
             assert (await client.post(f'/api/orders/{order["id"]}/review', json={"rating": 5})).status_code == 409
             assert (await client.post(f'/api/products/{d["frame"]}/reviews', json={"order_id": order["id"], "rating": 5})).status_code == 400
             await confirm_mock_payment(order["order_number"], d["alice"])
+            assert not (await client.get(eligibility)).json()['eligible']
+            async with session_scope() as s:
+                (await s.get(m.Order, order['id'])).shipment_status = 'delivered'
             eligible = (await client.get(eligibility)).json()
             assert eligible["eligible"] and len(eligible["products"]) == 2
             for product_id in (d["frame"], d["lens"]):

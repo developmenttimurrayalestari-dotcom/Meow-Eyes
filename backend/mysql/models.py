@@ -80,6 +80,8 @@ class User(UpdatedMixin, Base):
     provider: Mapped[str] = mapped_column(String(32), server_default="password", nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, server_default="1", nullable=False)
     points_balance: Mapped[int] = mapped_column(BigInteger, server_default="0", nullable=False)
+    email_verified_at: Mapped[datetime | None] = mapped_column(UTCDateTime())
+    referral_code: Mapped[str | None] = mapped_column(String(32), unique=True, default=lambda: 'ME' + uuid.uuid4().hex[:24].upper())
 
 
 class UserPermission(Base):
@@ -102,7 +104,10 @@ class UserSession(CreatedMixin, Base):
 
 class Address(CreatedMixin, Base):
     __tablename__ = "addresses"
-    __table_args__ = (UniqueConstraint("id", "user_id"),)
+    __table_args__ = (UniqueConstraint("id", "user_id"),
+        CheckConstraint("(latitude IS NULL AND longitude IS NULL) OR (latitude IS NOT NULL AND longitude IS NOT NULL AND latitude BETWEEN -90 AND 90 AND longitude BETWEEN -180 AND 180)", name="coordinates"))
+    latitude: Mapped[Decimal | None] = mapped_column(Numeric(10, 7))
+    longitude: Mapped[Decimal | None] = mapped_column(Numeric(10, 7))
     id: Mapped[str] = mapped_column(ID, primary_key=True, default=new_id)
     user_id: Mapped[str] = mapped_column(ID, ForeignKey("users.user_id", ondelete="RESTRICT"), index=True, nullable=False)
     label: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -160,6 +165,7 @@ class Product(UpdatedMixin, Base):
     __tablename__ = "products"
     __table_args__ = (
         CheckConstraint("product_type IN ('frame','lens','package','accessories')", name="type"),
+        CheckConstraint("sale_role IN ('main','add_on')", name="sale_role"),
         CheckConstraint("price >= 0 AND (discount_price IS NULL OR discount_price >= 0)", name="prices_nonnegative"),
         CheckConstraint("flash_sale_price IS NULL OR flash_sale_price >= 0", name="legacy_flash_nonnegative"),
         CheckConstraint("weight_gram >= 0 AND min_stock_alert >= 0", name="inventory_values"),
@@ -177,6 +183,7 @@ class Product(UpdatedMixin, Base):
     description: Mapped[str] = mapped_column(Text, nullable=False)
     spec: Mapped[dict[str, Any] | None] = mapped_column(JSON)
     product_type: Mapped[str] = mapped_column(String(16), server_default="frame", nullable=False)
+    sale_role: Mapped[str] = mapped_column(String(16), server_default="main", nullable=False)
     primary_category_id: Mapped[str | None] = mapped_column(ID, ForeignKey("categories.id", ondelete="RESTRICT"), index=True)
     brand_id: Mapped[str | None] = mapped_column(ID, ForeignKey("brands.id", ondelete="RESTRICT"), index=True)
     price: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
@@ -414,7 +421,8 @@ class Order(UpdatedMixin, Base):
         UniqueConstraint("id", "user_id"),
         ForeignKeyConstraint(["shipping_quote_id", "user_id"], ["shipping_quotes.id", "shipping_quotes.user_id"], ondelete="RESTRICT"),
         CheckConstraint("status IN ('pending_payment','paid','processing','shipped','completed','cancelled','expired','refunded')", name="status"),
-        CheckConstraint("payment_status IN ('pending','paid','failed','expired','cancelled','refunded')", name="payment_status"),
+        CheckConstraint("payment_status IN ('pending','cod_pending','paid','failed','expired','cancelled','refunded')", name="payment_status"),
+        CheckConstraint("payment_mode IN ('online','cod')", name="payment_mode"),
         CheckConstraint("shipment_status IN ('pending','created','picked_up','in_transit','delivered','failed','returned','cancelled')", name="shipment_status"),
         CheckConstraint("subtotal >= 0 AND discount >= 0 AND flash_sale_discount >= 0 AND voucher_discount >= 0", name="discount_amounts"),
         CheckConstraint("points_used >= 0 AND points_discount >= 0 AND roulette_discount >= 0 AND shipping_cost >= 0 AND total >= 0", name="amounts"),
@@ -442,6 +450,7 @@ class Order(UpdatedMixin, Base):
     currency: Mapped[str] = mapped_column(String(3), server_default="IDR", nullable=False)
     status: Mapped[str] = mapped_column(String(32), server_default="pending_payment", nullable=False)
     payment_status: Mapped[str] = mapped_column(String(32), server_default="pending", nullable=False)
+    payment_mode: Mapped[str] = mapped_column(String(16), server_default="online", nullable=False)
     shipment_status: Mapped[str] = mapped_column(String(32), server_default="pending", nullable=False)
     reservation_expires_at: Mapped[datetime | None] = mapped_column(UTCDateTime())
     completed_at: Mapped[datetime | None] = mapped_column(UTCDateTime())
@@ -450,6 +459,9 @@ class Order(UpdatedMixin, Base):
 
 class OrderAddress(Base):
     __tablename__ = "order_addresses"
+    __table_args__ = (CheckConstraint("(latitude IS NULL AND longitude IS NULL) OR (latitude IS NOT NULL AND longitude IS NOT NULL AND latitude BETWEEN -90 AND 90 AND longitude BETWEEN -180 AND 180)", name="coordinates"),)
+    latitude: Mapped[Decimal | None] = mapped_column(Numeric(10, 7))
+    longitude: Mapped[Decimal | None] = mapped_column(Numeric(10, 7))
     order_id: Mapped[str] = mapped_column(ID, ForeignKey("orders.id", ondelete="RESTRICT"), primary_key=True)
     # These source references are deliberately snapshots, not live address FKs.
     source_address_id: Mapped[str | None] = mapped_column(ID)
@@ -499,7 +511,7 @@ class OrderItemComponent(Base):
         UniqueConstraint("order_item_id", "sort_order"),
         ForeignKeyConstraint(["order_item_id", "order_id"], ["order_items.id", "order_items.order_id"], ondelete="RESTRICT"),
         ForeignKeyConstraint(["product_id", "variant_id"], ["product_variants.product_id", "product_variants.id"], ondelete="RESTRICT"),
-        CheckConstraint("component_type IN ('primary','lens')", name="type"),
+        CheckConstraint("component_type IN ('primary','lens','add_on')", name="type"),
         CheckConstraint("quantity > 0 AND unit_price >= 0 AND subtotal >= 0 AND index_surcharge >= 0", name="amounts"),
     )
     id: Mapped[str] = mapped_column(ID, primary_key=True, default=new_id)
@@ -594,6 +606,7 @@ class Voucher(CreatedMixin, Base):
     __tablename__ = "vouchers"
     __table_args__ = (
         CheckConstraint("discount_type IN ('percent','nominal','free_shipping')", name="type"),
+        CheckConstraint("audience IN ('general','new_member','referral')", name="audience"),
         CheckConstraint("discount_value >= 0 AND min_purchase >= 0 AND (max_discount IS NULL OR max_discount >= 0)", name="amounts"),
         CheckConstraint("discount_type <> 'percent' OR discount_value <= 100", name="percentage"),
         CheckConstraint("quota >= 0 AND used_count >= 0 AND used_count <= quota AND quota_per_user >= 0", name="quotas"),
@@ -602,6 +615,7 @@ class Voucher(CreatedMixin, Base):
     )
     id: Mapped[str] = mapped_column(ID, primary_key=True, default=new_id)
     code: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
+    audience: Mapped[str] = mapped_column(String(16), server_default="general", nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     discount_type: Mapped[str] = mapped_column(String(32), nullable=False)
     discount_value: Mapped[Decimal] = mapped_column(MONEY, server_default="0", nullable=False)
@@ -1289,3 +1303,4 @@ from .meowsurement_models import (  # noqa: E402,F401
 from .engagement_models import (PointSettings, PointRateVersion, PointLot, PointHistory, PointRedemption,
     GameRule, PuzzleLevel, GameSession, CashbackEvent, CashbackAward,
     ReturnCase, ReturnCaseItem, ReturnEvidence, ReturnTimeline)  # noqa: E402,F401
+from .growth_models import EmailVerification, Referral, GrowthReward, VoucherGrant, DailyCheckin, CartAddon, AddonFlashReservation  # noqa: E402,F401

@@ -72,9 +72,10 @@ async def _saved_doku_context(s, payment_id: str) -> dict | None:
     return log.payload if log else None
 
 
-def shipping_fingerprint(items, address: m.Address, settings: EverproSettings) -> tuple[str, dict]:
-    address_snapshot = {key: getattr(address, key) for key in (
+def shipping_fingerprint(items, address: m.Address, settings: EverproSettings, payment_mode='online') -> tuple[str, dict]:
+    address_snapshot = {key: json_value(getattr(address, key)) for key in (
         "id", "recipient", "phone", "street", "subdistrict", "district", "city", "province", "postal_code", "country_code",
+        "latitude", "longitude",
     )}
     origin = {
         "postal_code": settings.origin_postal_code, "subdistrict": settings.origin_subdistrict,
@@ -82,6 +83,7 @@ def shipping_fingerprint(items, address: m.Address, settings: EverproSettings) -
         "email": settings.shipper_email, "shipment_type": settings.shipment_type,
         "package_type_id": settings.package_type_id, "length": settings.length_cm,
         "width": settings.width_cm, "height": settings.height_cm, "insurance": settings.insurance,
+        "latitude": settings.origin_latitude, "longitude": settings.origin_longitude,
     }
     lines = [{
         "cart_id": item.cart.id, "product_id": item.product.id, "variant_id": item.variant.id,
@@ -91,10 +93,12 @@ def shipping_fingerprint(items, address: m.Address, settings: EverproSettings) -
         "lens_variant_id": item.lens_variant.id if item.lens_variant else None,
         "lens_weight": item.lens_product.weight_gram if item.lens_product else None,
         "prescription_id": item.cart.prescription_id,
+        "addons": [{'product_id': a['product'].id, 'variant_id': a['variant'].id, 'price': str(a['price']),
+            'weight': a['product'].weight_gram} for a in item.addons],
     } for item in sorted(items, key=lambda x: x.cart.id)]
     provider = {"environment": settings.environment, "base_url": settings.base_url,
                 "account": hashlib.sha256(settings.client_key.encode()).hexdigest()}
-    snapshot = {"address": address_snapshot, "origin": origin, "items": lines, "provider": provider, "version": 1}
+    snapshot = {"address": address_snapshot, "origin": origin, "items": lines, "provider": provider, "version": 2, 'payment_mode': payment_mode}
     return _digest(snapshot), snapshot
 
 
@@ -107,15 +111,13 @@ def _shipping_address_valid(address: m.Address) -> None:
         raise HTTPException(422, "Nomor telepon penerima harus menggunakan nomor Indonesia yang valid")
 
 
-def _rate_options(body: dict) -> list[dict]:
+def _rate_options(body: dict, *, coordinates=False, cod=False) -> list[dict]:
     data = body.get("data")
     if not isinstance(data, dict):
         raise ProviderError("everpro", "invalid_rates_response")
     options, seen = [], set()
-    # Instant/same-day need verified coordinates; these are intentionally not
-    # offered from a postcode-only address form. Regular/express/cargo use the
-    # postal-address request documented in the provider's OpenAPI.
-    for group in ("regular", "express", "cargo"):
+    # Instant/same-day require both origin and destination coordinates.
+    for group in (("regular", "express", "cargo", "instant", "same_day", "sameday") if coordinates else ("regular", "express", "cargo")):
         rates = data.get(group) or []
         if not isinstance(rates, list):
             raise ProviderError("everpro", "invalid_rates_response")
@@ -129,6 +131,7 @@ def _rate_options(body: dict) -> list[dict]:
                 # from the other couriers. Never guess a code from its name.
                 continue
             key = (courier, service)
+            if cod and any(rate.get(key) is False for key in ('is_cod', 'is_valid_min_cod_amount', 'is_valid_max_cod_amount')): continue
             if key in seen or rate.get("is_flat_rate") or rate.get("is_use_wood_packing"):
                 # Flat-rate/wood-packing rate requests require an extended
                 # booking contract; do not present an unbookable rate.
@@ -144,7 +147,24 @@ def _rate_options(body: dict) -> list[dict]:
     return options
 
 
-async def shipping_options(user_id: str, address_id: str, selected_ids: list[str]) -> dict:
+async def shipping_options(user_id: str, address_id: str, selected_ids: list[str], *, payment_mode='online', benefits=None) -> dict:
+    if payment_mode not in ('online', 'cod'): raise HTTPException(422, 'Metode pembayaran tidak valid')
+    cod_goods = None
+    if payment_mode == 'cod':
+        from models import CheckoutPreview
+        from .customer_growth import config
+        from .commerce import checkout_benefits
+        req = CheckoutPreview(address_id=address_id, **{k: v for k, v in (benefits or {}).items()
+            if k in ('voucher_code', 'use_points', 'roulette_spin_id')})
+        async with session_scope() as s:
+            user = await lock_user(s, user_id)
+            if not (await config(s))['cod_enabled']: raise HTTPException(403, 'COD belum aktif')
+            items, _ = await priced_cart(s, user_id, selected_ids)
+            subtotal = sum((i.subtotal for i in items), ZERO)
+            _, vd, free, _, rd, _, pd, _ = await checkout_benefits(s, user, req, subtotal, any(i.has_flash for i in items))
+            if free: raise HTTPException(422, 'Promo gratis ongkir belum mendukung COD. Pilih pembayaran online.')
+            cod_goods = (subtotal - vd - rd - pd).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
+            if cod_goods <= 0: raise HTTPException(422, 'Nilai barang COD harus lebih besar dari nol')
     provider = shipping_provider()
     if provider == "disabled":
         raise HTTPException(503, "Pengiriman belum diaktifkan")
@@ -164,7 +184,8 @@ async def shipping_options(user_id: str, address_id: str, selected_ids: list[str
         settings = client.settings
         _shipping_address_valid(address)
         destination = await canonical_shipping_location(address, client)
-        fingerprint, snapshot = shipping_fingerprint(items, address, settings)
+        fingerprint, snapshot = shipping_fingerprint(items, address, settings, payment_mode)
+        snapshot['cod_goods'] = str(cod_goods) if cod_goods is not None else None
         value = sum((item.subtotal for item in items), ZERO).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
         if value <= 0:
             raise HTTPException(422, "Nilai barang untuk pengiriman harus lebih besar dari nol")
@@ -173,11 +194,16 @@ async def shipping_options(user_id: str, address_id: str, selected_ids: list[str
             "destination_postal_code": destination['postal_code'], "destination_sub_district_name": destination['subdistrict'],
             "weight": float(Decimal(weight) / 1000), "item_price": int(value), "package_type_id": settings.package_type_id,
             "shipment_type": settings.shipment_type, "length": settings.length_cm, "width": settings.width_cm,
-            "height": settings.height_cm, "is_cod": False, "is_use_insurance": settings.insurance, "include_flat_rate": False,
+            "height": settings.height_cm, "is_cod": payment_mode == 'cod', "is_use_insurance": settings.insurance, "include_flat_rate": False,
         }
+        if cod_goods is not None: request.update(cod_price=int(cod_goods), item_price=int(cod_goods))
+        coordinates = all(v is not None for v in (settings.origin_latitude, settings.origin_longitude, address.latitude, address.longitude))
+        if coordinates:
+            request.update(origin_latitude=settings.origin_latitude, origin_longitude=settings.origin_longitude,
+                destination_latitude=float(address.latitude), destination_longitude=float(address.longitude))
     try:
         response = await client.rates(request)
-        options = _rate_options(response)
+        options = _rate_options(response, coordinates=coordinates, cod=payment_mode == 'cod')
     except ProviderError as exc:
         raise _safe_error(exc, "menghitung ongkir") from None
     expires = utcnow() + timedelta(seconds=settings.quote_ttl_seconds)
@@ -188,7 +214,7 @@ async def shipping_options(user_id: str, address_id: str, selected_ids: list[str
         if current_address is None or current_address.user_id != user_id:
             raise HTTPException(409, "Alamat berubah; hitung kembali ongkir")
         current_items, _ = await priced_cart(s, user_id, selected_ids)
-        if shipping_fingerprint(current_items, current_address, settings)[0] != fingerprint:
+        if shipping_fingerprint(current_items, current_address, settings, payment_mode)[0] != fingerprint:
             raise HTTPException(409, "Keranjang/alamat berubah; hitung kembali ongkir")
         for option in options:
             row = m.ShippingQuote(
@@ -218,14 +244,15 @@ async def validated_shipping_quote(s, user: m.User, req, address: m.Address, ite
     if row.expires_at <= utcnow():
         raise HTTPException(409, "Penawaran ongkir kedaluwarsa; hitung kembali ongkir")
     settings = EverproSettings.from_env()
-    if row.cart_fingerprint != shipping_fingerprint(items, address, settings)[0]:
+    if row.cart_fingerprint != shipping_fingerprint(items, address, settings, getattr(req, 'payment_mode', 'online'))[0]:
         raise HTTPException(409, "Keranjang/alamat berubah; hitung kembali ongkir")
     if row.courier_code != req.courier_code or row.service_code != req.service_code:
         raise HTTPException(422, "Layanan pengiriman tidak sesuai penawaran")
     return {"quote_id": row.id, "courier_code": row.courier_code, "service_code": row.service_code,
             "service_label": row.service_label or row.service_code,
             "courier_name": (row.response_payload or {}).get("logistic_name", row.courier_code),
-            "cost": row.cost + row.insurance_cost, "provider": "everpro"}
+            "cost": row.cost + row.insurance_cost, "provider": "everpro",
+            'cod_goods': (row.request_payload or {}).get('cod_goods')}
 
 
 async def _order_and_payment(s, order_id: str, *, lock: bool = False, provider: str | None = None):
@@ -284,6 +311,8 @@ async def ensure_doku_payment(order_id: str) -> dict:
             }
             if not user.email:
                 request['customer'].pop('email', None)
+            from integrations.doku_payload import enrich_request
+            request = await enrich_request(s, request, order, user, address, settings)
             if settings.notification_override_url:
                 request["additional_info"] = {"override_notification_url": settings.notification_override_url}
             s.add(m.PaymentLog(id=gen_id("plg"), order_id=order_id, payment_id=payment.id, provider="doku",
@@ -337,6 +366,8 @@ async def ensure_doku_payment(order_id: str) -> dict:
             item_ids = select(m.OrderItem.id).where(m.OrderItem.order_id == order_id)
             await s.execute(update(m.FlashSaleReservation).where(m.FlashSaleReservation.order_item_id.in_(item_ids),
                 m.FlashSaleReservation.status == "active").values(expires_at=expiry))
+            await s.execute(update(m.AddonFlashReservation).where(m.AddonFlashReservation.order_id == order_id,
+                m.AddonFlashReservation.status == 'active').values(expires_at=expiry))
         s.add(m.PaymentLog(id=gen_id("plg"), order_id=order_id, payment_id=payment.id, provider="doku",
                            action="doku_created", response={"token_id": external, "expires_at": expiry.isoformat()}))
         await s.flush()
@@ -350,9 +381,29 @@ async def ensure_payment(order_id: str) -> dict:
     if provider == "doku-mock":
         from mysql.commerce import ensure_mock_payment
         return await ensure_mock_payment(order_id)
+    if provider == 'cod':
+        return await ensure_cod_order(order_id)
     if provider != "doku":
         raise HTTPException(409, "Penyedia pembayaran order memerlukan rekonsiliasi")
     return await ensure_doku_payment(order_id)
+
+
+async def ensure_cod_order(order_id):
+    """A durable COD intent has no DOKU invoice or payment redirect."""
+    async with read_session() as s:
+        order, payment = await _order_and_payment(s, order_id, provider='cod')
+        if order.payment_mode != 'cod': raise HTTPException(409, 'Pesanan bukan COD')
+        shipment = await s.scalar(select(m.Shipment).where(m.Shipment.order_id == order_id))
+        provider = shipment.provider
+    if provider == 'everpro':
+        times = await shipment_pickup_times(order_id)
+        pickup = times['times'][0]['value'] if times['times'] else None
+        if times['shipment_type'] == 'PICKUP' and pickup is None:
+            raise HTTPException(409, 'Pesanan COD tersimpan. Jadwal penjemputan belum tersedia; toko dapat mencoba kembali.')
+        await book_shipment(order_id, pickup)
+    async with read_session() as s:
+        order, payment = await _order_and_payment(s, order_id, provider='cod')
+        return payment_payload(order, payment)
 
 
 async def apply_doku_event(payload: dict, event_key: str, payload_hash: str, *, source: str = "notification",
@@ -544,7 +595,8 @@ async def _shipment_context(s, order_id: str, *, lock: bool = False):
     shipment = await s.scalar(sq.with_for_update() if lock else sq)
     if order is None or shipment is None:
         raise HTTPException(404, "Pengiriman Everpro tidak ditemukan")
-    if order.payment_status != "paid" or order.status not in {"paid", "processing", "shipped", "completed"}:
+    payable_cod = order.payment_mode == 'cod' and order.payment_status == 'cod_pending'
+    if (order.payment_status != "paid" and not payable_cod) or order.status not in {"paid", "processing", "shipped", "completed"}:
         raise HTTPException(409, "Pengiriman hanya tersedia untuk pesanan yang sudah dibayar")
     return order, shipment
 
@@ -604,7 +656,7 @@ def _booking_payload(order: m.Order, address: m.OrderAddress, quote: m.ShippingQ
         "package_type_id": origin["package_type_id"], "package_count": 1,
         "weight": float(Decimal(quote.weight_gram) / 1000),
         "length": origin["length"], "width": origin["width"], "height": origin["height"],
-        "is_cod": False, "is_use_insurance": quote.insurance_cost > 0, "insurance_price": int(quote.insurance_cost),
+        "is_cod": order.payment_mode == 'cod', "is_use_insurance": quote.insurance_cost > 0, "insurance_price": int(quote.insurance_cost),
         "rate_code": quote.service_code, "shipment_price": int(quote.cost), "shipment_type": origin["shipment_type"],
         "receiver_name": address.recipient, "receiver_phone": address.phone, "receiver_address": address.street,
         "receiver_postal_code": address.postal_code, "receiver_sub_district_name": address.subdistrict or "",
@@ -613,6 +665,13 @@ def _booking_payload(order: m.Order, address: m.OrderAddress, quote: m.ShippingQ
     }
     if origin.get("email"):
         payload["shipper_email"] = origin["email"]
+    if order.payment_mode == 'cod':
+        payload.update(cod_price=int(order.total), package_price=int(order.total - quote.cost - quote.insurance_cost))
+        if payload['package_price'] <= 0 or payload['package_price'] != rate_request['item_price']:
+            raise HTTPException(409, 'Nilai COD tidak cocok dengan penawaran ongkir. Hubungi toko.')
+    if origin.get('latitude') is not None and address.latitude is not None:
+        payload.update(shipper_latitude=origin['latitude'], shipper_longitude=origin['longitude'],
+            receiver_latitude=float(address.latitude), receiver_longitude=float(address.longitude))
     if payload["shipment_type"] == "PICKUP":
         if not pickup_time:
             raise HTTPException(422, "Pilih waktu penjemputan Everpro")
@@ -739,7 +798,7 @@ TRACKING_STATUS = {
 }
 
 
-def _tracking_update(s, order: m.Order, shipment: m.Shipment, data: dict) -> None:
+async def _tracking_update(s, order: m.Order, shipment: m.Shipment, data: dict) -> None:
     awb = data.get("awb_number")
     if awb:
         if not isinstance(awb, str) or len(awb) > 191 or (shipment.tracking_number and shipment.tracking_number != awb):
@@ -772,6 +831,25 @@ def _tracking_update(s, order: m.Order, shipment: m.Shipment, data: dict) -> Non
             except (ValueError, OverflowError, OSError):
                 shipment.delivered_at = utcnow()
     shipment.last_checked_at = utcnow()
+    if order.payment_mode == 'cod' and order.payment_status == 'cod_pending' and shipment.status == 'delivered':
+        from .commerce import _resolve_stock, _resolve_promotions
+        await _resolve_stock(s, order, sold=True, status='confirmed')
+        await _resolve_promotions(s, order, sold=True, status='confirmed')
+        order.payment_status = 'paid'
+        payment = await s.scalar(select(m.Payment).where(m.Payment.order_id == order.id, m.Payment.provider == 'cod'))
+        payment.status, payment.paid_at = 'paid', utcnow()
+        s.add(m.PaymentLog(id=gen_id('plg'), order_id=order.id, payment_id=payment.id, provider='cod',
+            action='cod_delivered', payload={'collection': str(order.total), 'note': 'Delivered; settlement kurir direkonsiliasi terpisah'}))
+    elif order.payment_mode == 'cod' and order.payment_status == 'cod_pending' and shipment.status in ('returned', 'cancelled'):
+        from .commerce import _resolve_stock, _resolve_promotions
+        from .points import release
+        await _resolve_stock(s, order, sold=False, status='cancelled')
+        await _resolve_promotions(s, order, sold=False, status='cancelled')
+        await release(s, await s.get(m.User, order.user_id), order, 'cancelled')
+        order.status, order.payment_status = 'cancelled', 'cancelled'
+        payment = await s.scalar(select(m.Payment).where(m.Payment.order_id == order.id, m.Payment.provider == 'cod'))
+        payment.status = 'cancelled'
+        s.add(m.OrderStatusLog(id=gen_id('ols'), order_id=order.id, status='cancelled', note='COD dikembalikan/dibatalkan kurir'))
 
 
 async def refresh_shipment(order_id: str) -> dict:
@@ -816,7 +894,7 @@ async def refresh_shipment(order_id: str) -> dict:
             if not isinstance(reference, str) or not 1 <= len(reference) <= 191:
                 raise HTTPException(502, "Referensi pengiriman tidak valid")
             shipment.external_id = reference
-        _tracking_update(s, order, shipment, data)
+        await _tracking_update(s, order, shipment, data)
         if label:
             shipment.label_url = label
         s.add(m.ShipmentLog(id=gen_id("slg"), order_id=order_id, shipment_id=shipment.id,
@@ -843,12 +921,12 @@ async def apply_everpro_event(payload: dict, payload_hash: str, *, kind: str) ->
     event_key = kind + ":" + payload_hash
     async with session_scope() as s:
         await lock_user(s, owner, active=False)
-        order, shipment = await _shipment_context(s, order_id, lock=True)
         existing = await s.scalar(select(m.IntegrationWebhookEvent.id).where(
             m.IntegrationWebhookEvent.provider == "everpro", m.IntegrationWebhookEvent.event_key == event_key))
         if existing:
             return {"ok": True, "duplicate": True}
-        _tracking_update(s, order, shipment, payload)
+        order, shipment = await _shipment_context(s, order_id, lock=True)
+        await _tracking_update(s, order, shipment, payload)
         s.add(m.IntegrationWebhookEvent(id=gen_id("evt"), provider="everpro", event_key=event_key,
             payload_hash=payload_hash, order_id=order_id, event_type=kind, signature_verified=True,
             payload=payload, status="processed", attempts=1, processed_at=utcnow()))

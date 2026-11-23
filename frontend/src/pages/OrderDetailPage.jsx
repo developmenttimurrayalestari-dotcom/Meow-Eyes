@@ -40,6 +40,7 @@ const OrderDetailPage = () => {
                   <img src={imageSrc(it.main_image)} alt="" className="w-16 h-16 rounded-xl object-cover" />
                   <div className="flex-1">
                     <p className="font-bold">{it.product_name}</p>
+                    {it.components?.filter(c => c.component_type === 'add_on').map(c => <p key={c.id} className="text-xs text-meow-gray">+ {c.product_name} · {c.quantity} × {formatIDR(c.unit_price)}</p>)}
                     {it.variant_label && <p className="text-xs text-meow-gray">{it.variant_label}</p>}
                     <p className="text-sm">{it.quantity} × {formatIDR(it.unit_price)}</p>
                   </div>
@@ -93,12 +94,13 @@ const OrderDetailPage = () => {
             </dl>
             <p className="text-xs text-meow-gray mt-3">
               Status: <span className="font-bold text-meow-midnight">{o.status}</span><br />
-              Bayar: <span className="font-bold">{o.payment_status}</span>
+              Bayar: <span className="font-bold">{o.payment_mode === 'cod' ? (o.payment_status === 'paid' ? 'COD diterima' : o.payment_status === 'cancelled' ? 'COD dibatalkan' : 'COD · Bayar saat diterima') : o.payment_status}</span>
             </p>
           </div>
         </div>
       </div>
-      {o.payment_status === "paid" && !o.payment_reconciliation_required && <PurchaseRatings orderId={o.id} />}
+      {o.payment_status === "paid" && o.shipment_status === 'delivered' && !o.payment_reconciliation_required && <PurchaseRatings orderId={o.id} />}
+      {o.payment_mode === 'cod' && <p className="mt-4 p-4 bg-amber-50 rounded-2xl text-sm">Pembayaran COD: {o.payment_status === 'paid' ? 'Diterima oleh kurir' : 'Bayar kepada kurir saat pesanan diterima'} · {formatIDR(o.total)}</p>}
       <OrderReturns order={o} />
       {o.status === "pending_payment" && <Link to={`/payment/${o.order_number}`} className="btn-primary inline-block mt-6">Lanjutkan Pembayaran</Link>}
     </div>

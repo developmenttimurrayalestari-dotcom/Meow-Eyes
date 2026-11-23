@@ -35,6 +35,7 @@ export default function CheckoutPage() {
   const [shippingError, setShippingError] = useState("");
   const [shippingReload, setShippingReload] = useState(0);
   const [voucher, setVoucher] = useState("");
+  const [paymentMode, setPaymentMode] = useState('online');
   const [voucherDraft, setVoucherDraft] = useState("");
   const [usePoints, setUsePoints] = useState(0);
   const [pointWallet, setPointWallet] = useState(null);
@@ -83,6 +84,9 @@ export default function CheckoutPage() {
     return () => clearInterval(timer);
   }, []);
 
+  const flashSaleExclusive = cartItems.some(item => item.flash_sale_active);
+  const shippingRequestKey = JSON.stringify({ address_id: addressId, selected_item_ids: selectedItemIds, payment_mode: paymentMode,
+    ...(paymentMode === 'cod' ? { voucher_code: flashSaleExclusive ? null : voucher || null, use_points: flashSaleExclusive ? 0 : usePoints || 0, roulette_spin_id: flashSaleExclusive ? null : rouletteSpinId } : {}) });
   useEffect(() => {
     const controller = new AbortController();
     setShipping(null); setShippingOptions([]); setShippingError(""); setPreview(null);
@@ -90,27 +94,27 @@ export default function CheckoutPage() {
     setShippingLoading(false);
     if (!addressId || !selectedKey || initialLoading || initialError || showAddForm) return () => controller.abort();
     setShippingLoading(true);
-    api.post("/checkout/shipping-options", { address_id: addressId, selected_item_ids: selectedItemIds }, { signal: controller.signal }).then(({ data }) => {
+    api.post("/checkout/shipping-options", JSON.parse(shippingRequestKey), { signal: controller.signal }).then(({ data }) => {
       if (controller.signal.aborted) return;
       setShippingOptions(data.options || []);
-      setShipping(data.options?.[0] ? { ...data.options[0], address_id: addressId } : null);
+      setShipping(data.options?.[0] ? { ...data.options[0], address_id: addressId, request_key: shippingRequestKey } : null);
       setShippingCartVersion(cartVersion);
       if (!data.options?.length) setShippingError("Belum ada layanan pengiriman untuk alamat ini. Periksa kode pos atau hubungi toko.");
     }).catch((err) => { if (!controller.signal.aborted) setShippingError(apiError(err, "Ongkir belum dapat dihitung. Periksa alamat dan coba lagi.")); })
       .finally(() => { if (!controller.signal.aborted) setShippingLoading(false); });
     return () => controller.abort();
-  }, [addressId, selectedKey, selectedItemIds, cartVersion, shippingReload, initialLoading, initialError, showAddForm]);
+  }, [addressId, selectedKey, selectedItemIds, cartVersion, shippingReload, initialLoading, initialError, showAddForm, shippingRequestKey]);
 
-  const flashSaleExclusive = cartItems.some(item => item.flash_sale_active);
   const payload = useMemo(() => ({
+    payment_mode: paymentMode,
     address_id: addressId, courier_code: shipping?.courier_code, service_code: shipping?.service_code,
     shipping_quote_id: shipping?.quote_id || null, voucher_code: flashSaleExclusive ? null : voucher || null,
     use_points: flashSaleExclusive ? 0 : usePoints || 0, roulette_spin_id: flashSaleExclusive ? null : rouletteSpinId, selected_item_ids: selectedItemIds,
-  }), [addressId, shipping, voucher, usePoints, rouletteSpinId, selectedItemIds, flashSaleExclusive]);
+  }), [addressId, shipping, voucher, usePoints, rouletteSpinId, selectedItemIds, flashSaleExclusive, paymentMode]);
   const payloadKey = JSON.stringify(payload);
   const requestFingerprint = JSON.stringify({ payload, cartVersion });
   const shippingExpired = Boolean(shipping?.expires_at && new Date(shipping.expires_at).getTime() <= now);
-  const currentShipping = Boolean(!showAddForm && shipping && shipping.address_id === addressId && !shippingExpired && shippingCartVersion === cartVersion);
+  const currentShipping = Boolean(!showAddForm && shipping && shipping.address_id === addressId && shipping.request_key === shippingRequestKey && !shippingExpired && shippingCartVersion === cartVersion);
   useEffect(() => {
     const controller = new AbortController();
     setPreview(null); setPreviewKey(""); setPreviewError("");
@@ -134,7 +138,9 @@ export default function CheckoutPage() {
   const hasUnsavedPrescription = Object.values(dirtyPrescriptions).some(Boolean);
   const validPreview = preview && previewKey === payloadKey && previewCartVersion === cartVersion && currentShipping && !previewLoading;
   const lensSubtotal = Number(preview?.lens_subtotal ?? cartItems.reduce((sum, item) => sum + Number(item.lens_price || 0) * item.quantity, 0));
-  const productSubtotal = Number(preview?.product_subtotal ?? (Number(preview?.subtotal || 0) - lensSubtotal));
+  const addonSubtotal = Number(preview?.addon_subtotal ?? cartItems.reduce((sum, item) => sum + Number(item.addon_price || 0) * item.quantity, 0));
+  const productSubtotal = Number(preview?.product_subtotal ?? (Number(preview?.subtotal || 0) - lensSubtotal - addonSubtotal));
+  const paymentReady = paymentMode === 'cod' ? integrations?.cod?.ready : integrations?.payment?.ready;
   const setPinAt = (index, value) => {
     if (!/^\d?$/.test(value)) return;
     setPin((current) => current.map((digit, i) => i === index ? value : digit));
@@ -155,6 +161,11 @@ export default function CheckoutPage() {
       const { data } = await api.post("/checkout/confirm", { ...payload, pin: pin.join("") }, { headers: { "Idempotency-Key": requestRef.current.key } });
       try { sessionStorage.removeItem(`meow_checkout_items_${user.user_id}`); sessionStorage.removeItem(`meow_checkout_request_${user.user_id}`); } catch { /* optional session storage */ }
       refreshMe(); refreshCartCount();
+      if (data.order.payment_mode === 'cod') {
+        toast.success('Pesanan COD dibuat. Bayar kepada kurir saat barang diterima.');
+        if (data.payment_error) toast.warning(data.payment_error);
+        navigate(`/orders/${data.order.id}`); return;
+      }
       toast.success("Pesanan dibuat. Lanjutkan pembayaran.");
       navigate(`/payment/${data.order.order_number}`, { state: { order: data.order, payment: data.payment, payment_error: data.payment_error } });
     } catch (err) { setSubmitError(apiError(err, "Pesanan belum terkonfirmasi. Coba lagi dengan pilihan yang sama, atau periksa daftar pesanan Anda.")); }
@@ -189,6 +200,7 @@ export default function CheckoutPage() {
             <img src={imageSrc(item.product.main_image)} alt="" className="w-14 h-14 rounded-xl object-cover" />
             <div className="flex-1 min-w-0 text-sm">
               <p className="font-bold">{item.product.name}</p>
+              {item.addons?.map(a => <p key={a.product_id} className="text-xs text-meow-gray">+ {a.name} · {formatIDR(a.unit_price)} / produk</p>)}
               {(item.lens_index || item.lens_product) && <div className="text-xs text-meow-gray space-y-1 my-1" data-testid={`checkout-item-pricing-${item.id}`}>
                 <p>{item.product.product_type === 'frame' ? 'Frame' : 'Produk'}{item.flash_sale_active ? ' (Flash Sale)' : ''}: {formatIDR(item.frame_price)} / produk</p>
                 <p>Lensa{item.lens_product ? ` ${item.lens_product.name}` : ''}{item.lens_index ? ` · ${item.lens_index.name}` : ''}: {formatIDR(item.lens_price)}{item.product.product_type === 'package' ? ' (termasuk harga paket)' : ' / produk'}</p>
@@ -202,13 +214,14 @@ export default function CheckoutPage() {
           <div><h2 className="font-heading font-extrabold text-xl flex items-center gap-2"><Glasses className="h-5 w-5 text-meow-salmon" />Lensa & Resep per Item (Opsional)</h2><p className="text-sm text-meow-gray mt-1">Untuk produk Frame, Anda boleh membeli frame saja tanpa lensa, catatan, atau foto resep. Isi bagian ini hanya jika diperlukan. Klik Simpan Resep jika ada perubahan; setiap baris produk disimpan terpisah.</p></div>
           {cartItems.map((item) => <PrescriptionForm key={item.id} item={item} onDirtyChange={handleDirty} onSaved={handlePrescriptionSaved} disabled={submitting} showMeasurements={false} selectLens />)}
         </section>}
+        <section className="bg-white rounded-3xl p-5 md:p-6" data-testid="payment-method-section"><h2 className="font-heading font-extrabold text-xl mb-3">Metode Pembayaran</h2><div className="grid sm:grid-cols-2 gap-3">{[['online', 'Bayar Online', 'Transfer, kartu, dan PayLater melalui DOKU'], ...(integrations?.cod?.ready ? [['cod', 'COD · Bayar di Tempat', 'Bayar kepada kurir ketika paket diterima']] : [])].map(([value, label, hint]) => <label key={value} className={`flex items-start gap-2 rounded-2xl border-2 p-3 text-sm ${paymentMode === value ? 'border-meow-salmon bg-rose-50' : ''}`}><input type="radio" name="payment-mode" value={value} checked={paymentMode === value} disabled={submitting} onChange={() => setPaymentMode(value)} /><span><strong>{label}</strong><small className="block mt-1 text-meow-gray">{hint}</small></span></label>)}</div></section>
         {addressId && <section className="bg-white rounded-3xl p-5 md:p-6" data-testid="shipping-section">
           <div className="flex items-center justify-between gap-2 mb-3"><h2 className="font-heading font-extrabold text-xl flex items-center gap-2"><Truck className="h-5 w-5 text-meow-mint" />Pengiriman</h2><button type="button" onClick={() => setShippingReload((value) => value + 1)} disabled={shippingLoading || submitting} className="text-xs font-bold flex items-center gap-1"><RefreshCw className={`h-3.5 w-3.5 ${shippingLoading ? "animate-spin" : ""}`} />Cek ulang</button></div>
           {shippingLoading ? <p role="status" className="text-sm text-meow-gray">Menghitung ongkir…</p> : shippingError ? <p role="alert" className="text-sm text-red-600">{shippingError}</p> : <div className="space-y-2 max-h-80 overflow-y-auto">{shippingOptions.map((option, index) => {
             const key = option.quote_id || `${option.courier_code}-${option.service_code}-${index}`;
             const checked = shipping?.quote_id ? shipping.quote_id === option.quote_id : shipping?.courier_code === option.courier_code && shipping?.service_code === option.service_code;
             return <label key={key} className={`flex items-start gap-2 p-3 rounded-2xl border-2 cursor-pointer ${checked ? "border-meow-salmon bg-meow-salmon/5" : "border-meow-midnight/5"}`}>
-              <input type="radio" name="checkout-shipping" disabled={submitting} checked={checked} onChange={() => setShipping({ ...option, address_id: addressId })} className="mt-1" />
+              <input type="radio" name="checkout-shipping" disabled={submitting} checked={checked} onChange={() => setShipping({ ...option, address_id: addressId, request_key: shippingRequestKey })} className="mt-1" />
               <span className="text-sm flex-1"><span className="font-bold">{option.courier_name || option.courier_code} · {option.service_label || option.service_code}</span>{option.etd && <span className="block text-xs text-meow-gray">Estimasi {option.etd}</span>}{Number(option.insurance_cost) > 0 && <span className="block text-xs text-meow-gray">Termasuk asuransi {formatIDR(option.insurance_cost)}</span>}</span>
               <span className="text-sm font-bold text-meow-salmon">{formatIDR(option.cost)}</span>
             </label>;
@@ -235,6 +248,7 @@ export default function CheckoutPage() {
         <div className="space-y-2 text-sm" aria-busy={previewLoading}>
           <Row label="Harga produk" testId="checkout-product-subtotal" value={validPreview ? formatIDR(productSubtotal) : "—"} />
           <Row label="Tambahan lensa" testId="checkout-lens-subtotal" value={validPreview ? formatIDR(lensSubtotal) : "—"} />
+          {addonSubtotal > 0 && <Row label="Add On" testId="checkout-addon-subtotal" value={validPreview ? formatIDR(addonSubtotal) : '—'} />}
           <Row label="Subtotal" value={validPreview ? formatIDR(preview.subtotal) : "—"} />
           <Row label="Voucher" value={validPreview ? `−${formatIDR(preview.voucher_discount)}` : "—"} />
           <Row label="Poin" value={validPreview ? `−${formatIDR(preview.points_discount)}` : "—"} />
@@ -244,10 +258,10 @@ export default function CheckoutPage() {
         </div>
         {previewError && <p role="alert" className="text-sm text-red-600 mt-3">{previewError}</p>}
         {hasUnsavedPrescription && <p role="alert" className="text-sm text-amber-700 mt-3">Simpan perubahan resep sebelum membuat pesanan.</p>}
-        {!integrations.payment?.ready && <p role="alert" className="text-sm text-amber-700 mt-3">Pembayaran sementara belum tersedia. Silakan coba lagi atau hubungi toko.</p>}
+        {!paymentReady && <p role="alert" className="text-sm text-amber-700 mt-3">Pembayaran sementara belum tersedia. Silakan coba lagi atau hubungi toko.</p>}
         {submitError && <p role="alert" className="text-sm text-red-600 mt-3">{submitError}</p>}
-        <button type="button" onClick={submit} disabled={submitting || !validPreview || !user.has_pin || hasUnsavedPrescription || !integrations.payment?.ready} className="w-full btn-primary mt-5 disabled:opacity-50" data-testid="submit-order-btn">{submitting ? "Membuat Pesanan…" : "Buat Pesanan & Bayar"}</button>
-        <p className="text-xs text-meow-gray mt-3 text-center">Selesaikan pembayaran sebelum batas waktu pada halaman pembayaran.</p>
+        <button type="button" onClick={submit} disabled={submitting || !validPreview || !user.has_pin || hasUnsavedPrescription || !paymentReady} className="w-full btn-primary mt-5 disabled:opacity-50" data-testid="submit-order-btn">{submitting ? "Membuat Pesanan…" : paymentMode === 'cod' ? 'Buat Pesanan COD' : "Buat Pesanan & Bayar"}</button>
+        <p className="text-xs text-meow-gray mt-3 text-center">{paymentMode === 'cod' ? 'Siapkan pembayaran saat kurir mengantarkan pesanan.' : 'Selesaikan pembayaran sebelum batas waktu pada halaman pembayaran.'}</p>
         {integrations.payment?.mock && <p className="text-xs text-amber-700 mt-2 text-center">Mode demo: pembayaran disimulasikan.</p>}
       </div></aside>
     </div>

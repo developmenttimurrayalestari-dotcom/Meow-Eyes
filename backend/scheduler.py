@@ -69,7 +69,7 @@ async def job_poll_shipments() -> None:
         live_ids = list((await s.scalars(select(m.Shipment.order_id).join(m.Order).where(
             m.Shipment.provider == "everpro", m.Shipment.status.in_(("pending", "created", "picked_up", "in_transit", "failed")),
             or_(m.Shipment.external_id.is_not(None), m.Shipment.tracking_number.is_not(None), m.Shipment.id.in_(attempted)),
-            m.Order.payment_status == "paid", m.Order.status.in_(("paid", "processing", "shipped")),
+            m.Order.payment_status.in_(("paid", 'cod_pending')), m.Order.status.in_(("paid", "processing", "shipped")),
         ).order_by(m.Shipment.last_checked_at, m.Shipment.id).limit(200))).all())
     for order_id in live_ids:
         try:
@@ -188,6 +188,11 @@ async def job_expire_points() -> None:
         async with session_scope() as s:
             await expire(s, await lock_user(s, user_id, active=False))
 
+
+async def job_customer_rewards() -> None:
+    from mysql.customer_growth import deliver_rewards
+    await deliver_rewards()
+
 def start_scheduler() -> None:
     defaults = {"max_instances": 1, "coalesce": True, "misfire_grace_time": 60}
     for job_id, handler, minutes in (
@@ -198,6 +203,7 @@ def start_scheduler() -> None:
         ("reconcile-payments", job_reconcile_payments, ORDER_EXPIRE_INTERVAL_MIN),
         ("expire-meowsurement-photos", job_expire_meowsurement_photos, 60),
         ("expire-points", job_expire_points, 5),
+        ('customer-rewards', job_customer_rewards, 1),
     ):
         scheduler.add_job(handler, id=job_id, replace_existing=True,
                           trigger=IntervalTrigger(minutes=max(minutes, 1)), **defaults)

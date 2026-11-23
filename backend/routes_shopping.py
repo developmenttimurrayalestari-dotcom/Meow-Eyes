@@ -6,7 +6,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import delete, func, select, update
 
-from auth import current_user
+from auth import current_user, current_user_optional
 from database import read_session, session_scope
 from models import AddressCreate, CartItemCreate, CartUpdate, User, gen_id
 from mysql import models as m
@@ -28,6 +28,8 @@ async def _cart_payload(s, item: PricedItem) -> dict[str, Any]:
     available = variant.stock - variant.reserved
     if item.lens_variant:
         available = min(available, item.lens_variant.stock - item.lens_variant.reserved)
+    for addon in item.addons:
+        available = min(available, addon['variant'].stock - addon['variant'].reserved)
     return {
         "id": item.cart.id, "product_id": product.id, "variant_id": variant.id,
         "quantity": item.cart.quantity,
@@ -40,9 +42,13 @@ async def _cart_payload(s, item: PricedItem) -> dict[str, Any]:
         "lens_variant": row_dict(item.lens_variant) if item.lens_variant else None,
         "lens_index": row_dict(item.lens_index) if item.lens_index else None,
         "lens_price": float(item.lens_price), "frame_price": float(item.frame_price),
+        "addon_price": float(item.addon_price),
+        "addons": [{'product_id': a['product'].id, 'variant_id': a['variant'].id,
+            'name': a['product'].name, 'sku': a['variant'].sku, 'unit_price': float(a['price'])}
+            for a in item.addons],
         "unit_price": float(item.unit_price), "subtotal": float(item.subtotal),
         "available_stock": max(available, 0),
-        "flash_sale_active": item.flash_item is not None,
+        "flash_sale_active": item.has_flash,
         "prescription": await prescription_payload(s, item.cart.prescription_id),
     }
 
@@ -72,6 +78,18 @@ async def add_to_cart(req: CartItemCreate, user: User = Depends(current_user)):
         if product is None:
             raise HTTPException(404, "Produk tidak ditemukan")
         variant = await resolve_variant(s, product, req.variant_id)
+        addons = []
+        if req.addons and product.sale_role != 'main':
+            raise HTTPException(422, 'Add On hanya dapat dipasang pada Main Product')
+        if len({a.product_id for a in req.addons}) != len(req.addons):
+            raise HTTPException(422, 'Add On yang sama tidak boleh dipilih dua kali')
+        for selection in sorted(req.addons, key=lambda a: a.product_id):
+            addon = await s.scalar(select(m.Product).where(m.Product.id == selection.product_id,
+                m.Product.sale_role == 'add_on', m.Product.is_active.is_(True), m.Product.deleted_at.is_(None)))
+            if not addon or addon.id in (product.id, req.lens_product_id):
+                raise HTTPException(422, 'Add On tidak tersedia atau sudah menjadi komponen lensa paket')
+            av = await resolve_variant(s, addon, selection.variant_id)
+            addons.append((addon.id, av.id))
         from mysql.lenses import validate_index
         await validate_index(s, product, req.lens_index_id, lock=True)
         lens_variant = None
@@ -86,12 +104,13 @@ async def add_to_cart(req: CartItemCreate, user: User = Depends(current_user)):
                 m.LensIndex.id == req.lens_index_id, m.LensIndex.is_active.is_(True)
             )) is None:
                 raise HTTPException(400, "Indeks lensa tidak tersedia")
-        if not req.lens_product_id and not req.prescription and not req.lens_index_id:
+        if not req.lens_product_id and not req.prescription and not req.lens_index_id and not addons:
             existing = await s.scalar(select(m.CartItem).where(
                 m.CartItem.user_id == user.user_id, m.CartItem.product_id == product.id,
                 m.CartItem.variant_id == variant.id, m.CartItem.lens_product_id.is_(None),
                 m.CartItem.prescription_id.is_(None),
                 m.CartItem.lens_index_id.is_(None),
+                ~select(m.CartAddon.cart_item_id).where(m.CartAddon.cart_item_id == m.CartItem.id).exists(),
             ).order_by(m.CartItem.id).with_for_update())
             if existing:
                 existing.quantity = integer(existing.quantity + quantity, "Jumlah", 1, MAX_CART_QUANTITY)
@@ -108,6 +127,8 @@ async def add_to_cart(req: CartItemCreate, user: User = Depends(current_user)):
             lens_index_id=req.lens_index_id, prescription_id=prescription.id if prescription else None,
         )
         s.add(item)
+        await s.flush()
+        s.add_all([m.CartAddon(cart_item_id=item.id, product_id=pid, variant_id=vid) for pid, vid in addons])
         await s.flush()
         return {"ok": True, "id": item.id}
 
@@ -239,18 +260,32 @@ async def remove_wishlist(product_id: str, user: User = Depends(current_user)):
 
 
 @router.get("/vouchers/active")
-async def list_active_vouchers():
+async def list_active_vouchers(user: User | None = Depends(current_user_optional)):
     now = utcnow()
     async with read_session() as s:
         vouchers = (await s.scalars(select(m.Voucher).where(
             m.Voucher.is_active.is_(True), m.Voucher.start_at <= now, m.Voucher.end_at > now,
             m.Voucher.used_count < m.Voucher.quota,
         ).order_by(m.Voucher.end_at, m.Voucher.id).limit(50))).all()
-        return {"vouchers": [row_dict(v) for v in vouchers]}
+        grants = set((await s.scalars(select(m.VoucherGrant.voucher_id).where(m.VoucherGrant.user_id == user.user_id))).all()) if user else set()
+        fresh = await s.get(m.User, user.user_id) if user else None
+        result = []
+        for voucher in vouchers:
+            if voucher.audience == 'referral' and voucher.id not in grants: continue
+            data = row_dict(voucher)
+            data.update(claimed=voucher.id in grants, eligible=True, eligibility_reason=None)
+            if voucher.audience != 'general':
+                if not fresh: data.update(eligible=False, eligibility_reason='Masuk dan verifikasi email untuk klaim voucher')
+                else:
+                    from mysql.customer_growth import voucher_eligible
+                    try: await voucher_eligible(s, fresh, voucher)
+                    except HTTPException as exc: data.update(eligible=False, eligibility_reason=str(exc.detail))
+            result.append(data)
+        return {"vouchers": result}
 
 
 @router.post("/vouchers/validate")
-async def validate_voucher(payload: dict[str, Any]):
+async def validate_voucher(payload: dict[str, Any], user: User = Depends(current_user)):
     code = payload.get("code") or ""
     if not isinstance(code, str):
         raise HTTPException(400, "Kode voucher tidak valid")
@@ -261,6 +296,9 @@ async def validate_voucher(payload: dict[str, Any]):
         voucher = await s.scalar(select(m.Voucher).where(m.Voucher.code == code.upper()))
         if voucher is None:
             raise HTTPException(404, "Voucher tidak ditemukan")
+        from mysql.customer_growth import voucher_eligible
+        fresh = await s.get(m.User, user.user_id)
+        await voucher_eligible(s, fresh, voucher)
         discount, free_shipping = voucher_amount(voucher, subtotal)
         return {"voucher": row_dict(voucher), "discount": float(discount), "free_shipping": free_shipping}
 
@@ -293,7 +331,7 @@ async def create_review(product_id: str, payload: dict[str, Any], user: User = D
         # snapshots include reviews committed by the previous lock holder.
         query = select(m.OrderItem, m.Order).join(m.Order, m.Order.id == m.OrderItem.order_id).where(
             m.OrderItem.product_id == product_id, m.Order.user_id == user.user_id,
-            m.Order.status.in_(PAID_ORDER_STATUSES), m.Order.payment_status == "paid",
+            m.Order.shipment_status == 'delivered', m.Order.payment_status == "paid",
         )
         if order_id:
             query = query.where(m.Order.id == order_id)
@@ -305,7 +343,7 @@ async def create_review(product_id: str, payload: dict[str, Any], user: User = D
             # purchases too; retain their exact immutable component identity.
             query = select(m.OrderItemComponent, m.Order).join(m.Order, m.Order.id == m.OrderItemComponent.order_id).where(
                 m.OrderItemComponent.product_id == product_id, m.Order.user_id == user.user_id,
-                m.Order.status.in_(PAID_ORDER_STATUSES), m.Order.payment_status == "paid",
+                m.Order.shipment_status == 'delivered', m.Order.payment_status == "paid",
             )
             if order_id:
                 query = query.where(m.Order.id == order_id)
@@ -313,7 +351,7 @@ async def create_review(product_id: str, payload: dict[str, Any], user: User = D
                 m.OrderItemComponent.id).limit(1))).first()
             component_purchase = row is not None
         if row is None:
-            raise HTTPException(400, "Ulasan hanya tersedia untuk produk yang dibeli dan pembayarannya berhasil")
+            raise HTTPException(400, "Ulasan hanya tersedia setelah pesanan diterima (Delivered)")
         item, order = row
         existing = await s.scalar(select(m.ProductReview.id).where(
             m.ProductReview.user_id == user.user_id, m.ProductReview.product_id == product_id,

@@ -179,8 +179,9 @@ def test_new_tables_and_guard_predicates_cover_all_metadata_without_organization
     old, new, loyalty = load_revision(), load_meowsurement_revision(), load_loyalty_revision()
     assert len(new.ALL_TABLES) == 11
     assert not set(old.ALL_TABLES).intersection(new.ALL_TABLES)
-    from mysql.check_integrity import load_lens_index_types_revision, load_accessories_revision
-    assert set(old.ALL_TABLES).union(new.ALL_TABLES, loyalty.ALL_TABLES, load_lens_index_types_revision().ALL_TABLES) == set(Base.metadata.tables)
+    from mysql.check_integrity import load_lens_index_types_revision, load_accessories_revision, load_growth_revision
+    growth = load_growth_revision()
+    assert set(old.ALL_TABLES).union(new.ALL_TABLES, loyalty.ALL_TABLES, load_lens_index_types_revision().ALL_TABLES, growth.TABLE_DDL) == set(Base.metadata.tables)
     assert not any(name.startswith("of_") or name in {"organizations", "patients", "operators"} for name in new.ALL_TABLES)
     expected = {str(check.name): (table.name, str(check.sqltext)) for table in Base.metadata.tables.values()
                 for check in table.constraints if isinstance(check, CheckConstraint)}
@@ -189,13 +190,14 @@ def test_new_tables_and_guard_predicates_cover_all_metadata_without_organization
     updated, flat = load_accessories_revision(), load_flat_master_revision()
     old.RULES['products'] = updated.RULES['products']
     flat.RULES['categories'] = updated.RULES['categories']
-    for revision in (old, new, loyalty, flat):
+    old.RULES = {key: value for key, value in old.RULES.items() if key not in growth.RULES}
+    for revision in (old, new, loyalty, flat, growth):
         for table, rules in revision.RULES.items():
             for name, predicate, qualified in rules:
                 assert qualified.replace("NEW.", "") == predicate
                 actual[name] = (table, predicate.replace("`", ""))
     assert actual == expected
-    assert len(expected) == 139
+    assert len(expected) == 149
 
 
 def test_manual_frame_source_enforces_absent_catalog_ids(graph):

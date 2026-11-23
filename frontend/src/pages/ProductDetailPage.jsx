@@ -7,6 +7,7 @@ import HtmlContent from "../components/HtmlContent";
 import VirtualTryOn from "../components/VirtualTryOn";
 import ProductMeowsurement from "../components/ProductMeowsurement";
 import PrescriptionPhotoInput from "../components/PrescriptionPhotoInput";
+import AddonChooser from '../components/AddonChooser';
 import { ChevronRight, Heart, Truck, ShieldCheck, Sparkles, Star, BellRing, Cat } from "lucide-react";
 import { toast } from "sonner";
 import { isTryOnProduct } from '../lib/tryOnProducts';
@@ -18,6 +19,7 @@ const ProductDetailPage = () => {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [adding, setAdding] = useState(false);
+  const [purchaseIntent, setPurchaseIntent] = useState(null);
   const [selectedImg, setSelectedImg] = useState(0);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [qty, setQty] = useState(1);
@@ -38,6 +40,7 @@ const ProductDetailPage = () => {
   useEffect(() => {
     const controller = new AbortController();
     setData(null); setError(""); setQty(1); setPrescriptionPhoto(null); setPrescriptionUploadId(null);
+    setPurchaseIntent(null);
     setSelectedImg(0); setSelectedVariant(null);
     setWantLens(false); setLensProductId(""); setLensIndexId("");
     setLensOptions({ lens_products: [], lens_indexes: [] }); setBundlePicks([]);
@@ -85,7 +88,7 @@ const ProductDetailPage = () => {
   const selectedLensVariant = selectedLens?.variants?.find((variant) => variant.is_active !== false);
   const lensStock = selectedLensVariant ? Math.max(0, Number(selectedLensVariant.stock || 0) - Number(selectedLensVariant.reserved || 0)) : 0;
 
-  const addToCart = async () => {
+  const addToCart = async (addons = []) => {
     if (!user) { navigate("/login"); return false; }
     if (stock <= 0 || qty > stock) { toast.error("Jumlah melebihi stok yang tersedia"); return false; }
     if (wantLens && !lensProductId) { toast.error("Pilih jenis lensa terlebih dahulu"); return false; }
@@ -97,6 +100,7 @@ const ProductDetailPage = () => {
         product_id: p.id,
         variant_id: selectedVariant?.id,
         quantity: qty,
+        addons,
       };
       if (wantLens && lensProductId) {
         body.lens_product_id = lensProductId;
@@ -124,8 +128,13 @@ const ProductDetailPage = () => {
     } finally { setAdding(false); }
   };
 
-  const buyNow = async () => {
-    if (await addToCart()) navigate("/cart");
+  const beginPurchase = async (intent) => {
+    if (!user) { navigate('/login'); return; }
+    if ((p.sale_role || 'main') === 'main') { setPurchaseIntent(intent); return; }
+    if (await addToCart()) { if (intent === 'buy') navigate('/cart'); }
+  };
+  const confirmAddons = async (addons) => {
+    if (await addToCart(addons)) { const intent = purchaseIntent; setPurchaseIntent(null); if (intent === 'buy') navigate('/cart'); }
   };
 
   // One-click checkout for a curated Basic / Popular / Premium bundle pick.
@@ -343,8 +352,8 @@ const ProductDetailPage = () => {
           )}
 
           <div className="grid grid-cols-2 gap-3">
-            <button onClick={addToCart} disabled={adding || stock <= 0} className="btn-secondary disabled:opacity-50" data-testid="add-to-cart-btn">+ Tambah ke Cart</button>
-            <button onClick={buyNow} disabled={adding || stock <= 0} className="btn-primary disabled:opacity-50" data-testid="buy-now-btn">Beli Sekarang</button>
+            <button onClick={() => beginPurchase('cart')} disabled={adding || stock <= 0} className="btn-secondary disabled:opacity-50" data-testid="add-to-cart-btn">+ Tambah ke Cart</button>
+            <button onClick={() => beginPurchase('buy')} disabled={adding || stock <= 0} className="btn-primary disabled:opacity-50" data-testid="buy-now-btn">Beli Sekarang</button>
           </div>
           <div className="flex gap-2 text-xs">
             <button onClick={toggleWishlist} className="flex items-center gap-1 text-meow-gray hover:text-meow-salmon" data-testid="add-wishlist-btn">
@@ -407,6 +416,7 @@ const ProductDetailPage = () => {
       )}
 
       {/* Related */}
+      {purchaseIntent && <AddonChooser quantity={qty} busy={adding} onConfirm={confirmAddons} onClose={() => setPurchaseIntent(null)} />}
       {data.related?.length > 0 && (
         <section className="mt-12" data-testid="pd-related-section">
           <h3 className="font-heading text-2xl font-extrabold mb-4">Produk Terkait</h3>

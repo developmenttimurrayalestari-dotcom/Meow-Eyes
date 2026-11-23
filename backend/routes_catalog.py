@@ -57,6 +57,7 @@ async def list_brands():
 
 def _to_card(p: Dict[str, Any]) -> Dict[str, Any]:
     fields = ("id", "name", "slug", "sku", "main_image", "price", "discount_price",
+              "sale_role", "variants",
               "flash_sale_price", "badges", "rating_avg", "rating_count", "sold_count",
               "brand_id", "segments", "product_type", "category_ids", "is_new_arrival",
               "new_arrival_until", "supports_try_on", "flash_sale_id", "flash_sale_item_id",
@@ -74,9 +75,11 @@ async def list_products(
     badge: Optional[str] = None, sort: str = "newest", new_arrival: Optional[bool] = None,
     page: int = Query(1, ge=1), limit: int = Query(15, ge=1, le=100),
     category_ids: Optional[str] = None,
+    sale_role: Optional[str] = Query(None, pattern='^(main|add_on)$'),
 ):
     async with read_session() as s:
         conditions = [m.Product.is_active.is_(True)]
+        if sale_role: conditions.append(m.Product.sale_role == sale_role)
         if q:
             conditions.append(m.Product.name.icontains(q, autoescape=True))
         conditions.extend(await master_filter_conditions(s, category_ids))

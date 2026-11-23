@@ -210,3 +210,43 @@ Sediakan satu worker scheduler aktif melalui `SCHEDULER_ENABLED=1`; worker API t
 - [Everpro Open API](https://developer.everpro.id/)
 
 Referensi ditinjau pada implementasi ini; konfigurasi production dan kanal yang disetujui harus mengikuti akun merchant masing-masing.
+
+## Audit tambahan 20 November 2026: profil, pinpoint, dan COD
+
+Audit kode menemukan alamat belum mempunyai koordinat, kelompok tarif Instant/Sameday diabaikan, dan booking selalu mengirim `is_cod=false`. Implementasi baru menyimpan pasangan `latitude`/`longitude` pada alamat dan snapshot pesanan. Peta mendukung pemilihan titik, koordinat manual, serta lokasi perangkat. Koordinat tujuan dan toko ikut mengikat fingerprint quote; perubahan titik membatalkan quote lama.
+
+| Kebutuhan Everpro | Implementasi |
+| --- | --- |
+| Titik toko | `EVERPRO_ORIGIN_LATITUDE`, `EVERPRO_ORIGIN_LONGITUDE` |
+| Permintaan tarif | `origin_latitude/longitude`, `destination_latitude/longitude` |
+| Booking | `shipper_latitude/longitude`, `receiver_latitude/longitude` |
+| COD | `is_cod=true`, `cod_price`, nilai paket dan ongkir sesuai quote |
+
+Instant/Sameday ditawarkan ketika kedua titik lengkap dan layanan dikembalikan provider. Pilihan COD meminta tarif COD baru; quote online ditolak untuk checkout COD. [Kontrak resmi Everpro](https://developer.everpro.id/).
+
+### Audit DOKU Hosted Checkout
+
+Profil sudah memiliki nama/email; alamat menyediakan telepon, jalan, kota, provinsi dan kode pos. Kekurangan utama berada pada payload, sehingga tidak ditambahkan kolom tanggal lahir atau data kartu.
+
+| Metode | Parameter yang dilengkapi |
+| --- | --- |
+| PayLater | `order.line_items`: `id`, `name`, `price`, `quantity`, `sku`, `category`, `url`, `image_url`, `type` |
+| Kredivo/Indodana | `shipping_address`; Indodana juga `billing_address` |
+| Akulaku | `customer.state` dan alamat lengkap |
+| Kontak | Telepon dinormalisasi `628…`; email mengikuti batas 128 karakter |
+| Credit Card | Invoice baru maksimal 30 karakter |
+| KKI | Invoice/id/nama item memakai karakter alfanumerik; rincian dijumlahkan sesuai total |
+
+Nama lengkap dipisah untuk alamat; nama tunggal diulang pada `last_name`. Kategori barang menggunakan `health-and-personal-care`. Pembulatan/diskon dibagi ke item dalam rupiah utuh; ongkir menjadi rincian positif. Request DOKU yang sudah tersimpan tidak diubah saat retry. Data kartu tetap dikumpulkan di Hosted Checkout. [Dokumentasi backend DOKU](https://developers.doku.com/accept-payments/doku-checkout/integration-guide/backend-integration).
+
+`DOKU_PAYMENT_METHOD_TYPES` dapat membatasi kanal yang telah disetujui merchant. Tanpa konfigurasi ini, payload lengkap menyerahkan pemilihan kanal kepada DOKU; kontak/gambar yang belum lengkap dibatasi ke metode dasar. Format URL gambar belum membuktikan gambar dapat diakses penyedia. Invoice historis dengan simbol belum disertifikasi untuk KKI. Aktivasi kanal, format nama tunggal dan penerimaan payload wajib dikonfirmasi melalui sandbox akun merchant sebelum produksi.
+
+### Operasi COD
+
+COD membuat ledger pembayaran lokal ber-provider `cod`, tanpa invoice, URL pembayaran, atau panggilan DOKU. Pesanan masuk `processing` dengan `payment_status=cod_pending`. Backend meneruskan booking Everpro setelah commit; untuk PICKUP dipilih slot valid terawal. Kegagalan provider mempertahankan identitas pesanan dan dapat dicoba kembali melalui pengiriman di admin. Retry merekonsiliasi referensi yang sama.
+
+Stok/promo dicadangkan sampai Delivered. Callback/poll Everpro yang terautentikasi menyelesaikan ledger sekali; status kembali/batal sebelum Delivered melepas reservasi serta poin. Pencairan dana dari kurir ke rekening toko masih perlu direkonsiliasi pada dashboard Everpro. Biaya layanan COD provider menjadi biaya merchant; sistem tidak menambahkan biaya perkiraan kepada customer.
+
+Voucher/poin diskon nominal didukung pada COD dan mengubah penawaran tarif. Promo gratis ongkir belum ditawarkan untuk COD: backend menolaknya secara eksplisit agar jumlah tagihan memenuhi kontrak `package_price + shipment_price + insurance_price`. Customer dapat memilih pembayaran online untuk promo tersebut. Tidak ada pengujian transaksi atau booking sungguhan dalam pengembangan ini.
+
+Peta memakai tile OpenStreetMap, atribusi terlihat dan cache browser standar. Koordinat tetap dapat diketik jika peta/GPS tidak tersedia. Host tile dapat diganti pada komponen `AddressPinpoint`; untuk trafik besar siapkan penyedia tile sesuai [kebijakan OpenStreetMap](https://operations.osmfoundation.org/policies/tiles/).

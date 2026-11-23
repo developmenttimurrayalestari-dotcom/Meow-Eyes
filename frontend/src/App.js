@@ -12,6 +12,8 @@ import AuthCallback from "./components/AuthCallback";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
+import VerifyEmailPage from './pages/VerifyEmailPage';
+import AdminCustomerGrowth from './pages/admin/AdminCustomerGrowth';
 import SetupPinPage from "./pages/SetupPinPage";
 import ProductsPage from "./pages/ProductsPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
@@ -64,6 +66,7 @@ function AppRouter() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/setup-pin" element={<ProtectedRoute><SetupPinPage /></ProtectedRoute>} />
 
@@ -88,6 +91,7 @@ function AppRouter() {
         <Route path="/admin/cashback-events" element={<AdminCashback />} />
         <Route path="/admin/returns" element={<AdminReturns />} />
         <Route path="/admin/users" element={<AdminUsers />} />
+        <Route path="/admin/customer-growth" element={<AdminCustomerGrowth />} />
         <Route path="/admin/newsletter" element={<AdminNewsletter />} />
         <Route path="/admin/reports" element={<AdminReports />} />
         <Route path="/admin/articles" element={<AdminArticles />} />

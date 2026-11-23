@@ -99,6 +99,7 @@ const CartPage = () => {
                     )}
                     {!it.lens_product && it.lens_index && <p className="text-xs text-meow-mint mt-1">Lensa: <span className="font-bold">{it.lens_index.name}</span>{it.product.product_type === 'package' ? ' · Termasuk harga paket' : ''}</p>}
                     <p className="font-heading font-extrabold text-meow-salmon mt-1">{formatIDR(it.unit_price)}</p>
+                    {it.addons?.map(a => <p key={a.product_id} className="text-xs text-meow-gray">+ {a.name} · {formatIDR(a.unit_price)} / produk</p>)}
                     {it.lens_price > 0 && (
                       <p className="text-[10px] text-meow-gray">Frame {formatIDR(it.frame_price)} + Lensa {formatIDR(it.lens_price)}</p>
                     )}

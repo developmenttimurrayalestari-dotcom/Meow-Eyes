@@ -74,7 +74,7 @@ export default function AdminOrders() {
     } catch (err) { setError(adminError(err, "Permintaan pengiriman belum berhasil.")); }
     finally { setBusy(false); }
   };
-  const canBook = detail?.shipment_provider === "everpro" && detail?.payment_status === "paid" && ["paid", "processing"].includes(detail.status) && !detail.tracking_number;
+  const canBook = detail?.shipment_provider === "everpro" && ['paid', 'cod_pending'].includes(detail?.payment_status) && ["paid", "processing"].includes(detail.status) && !detail.tracking_number;
   return <div data-testid="admin-orders" className="space-y-4">
     <header className="flex justify-between items-center"><h1 className="font-heading text-3xl font-black">Pesanan</h1><button type="button" disabled={loading || busy} onClick={load} className="btn-secondary text-sm inline-flex items-center gap-2"><RefreshCw size={15} /> Perbarui</button></header>
     <div className="flex gap-2 overflow-x-auto pb-2" data-testid="admin-order-tabs">{STATUSES.map(status => <button key={status} onClick={() => setTab(status)} className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap ${tab === status ? "bg-meow-midnight text-white" : "bg-white border border-zinc-200"}`} data-testid={`admin-tab-${status}`}>{status.replaceAll("_", " ")}</button>)}</div>

@@ -37,6 +37,7 @@ const NAV = [
   { to: "/admin/integrations", icon: Plug, label: "Integrasi", testid: "admin-nav-integrations", section: "account", perm: null },
   { to: "/admin/contact-setting", icon: MessageSquare, label: "Contact", testid: "admin-nav-contact", section: "content", perm: "setting.update" },
   { to: "/admin/users", icon: Users, label: "Pelanggan", testid: "admin-nav-users", section: "account", perm: null },
+  { to: '/admin/customer-growth', icon: Coins, label: 'Program Member & COD', testid: 'admin-nav-customer-growth', section: 'engage', perm: null },
   { to: "/admin/staff", icon: ShieldCheck, label: "Staff", testid: "admin-nav-staff", section: "account", perm: null },
   { to: "/admin/reports", icon: FileBarChart, label: "Laporan", testid: "admin-nav-reports", section: "account", perm: "report.view" },
 ];

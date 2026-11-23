@@ -37,6 +37,8 @@ class User(BaseModel):
     provider: Literal["password", "google", "facebook"] = "password"
     is_active: bool = True
     points_balance: int = 0
+    email_verified_at: Optional[str] = None
+    referral_code: Optional[str] = None
     permissions: List[str] = Field(default_factory=list)
     created_at: str = Field(default_factory=now_iso)
     updated_at: str = Field(default_factory=now_iso)
@@ -52,11 +54,14 @@ class UserPublic(BaseModel):
     provider: str
     has_pin: bool = False
     points_balance: int = 0
+    email_verified_at: Optional[str] = None
+    referral_code: Optional[str] = None
     permissions: List[str] = Field(default_factory=list)
     created_at: str
 
 
 class RegisterRequest(BaseModel):
+    referral_code: Optional[str] = Field(default=None, max_length=32)
     email: Optional[EmailStr] = None
     phone: Optional[str] = None
     name: str = Field(min_length=1, max_length=255)
@@ -96,11 +101,13 @@ class PinVerifyRequest(BaseModel):
 
 
 class FacebookLoginRequest(BaseModel):
+    referral_code: Optional[str] = Field(default=None, max_length=32)
     model_config = ConfigDict(extra='forbid')
     access_token: str = Field(min_length=1, max_length=8192)
 
 
 class GoogleLoginRequest(BaseModel):
+    referral_code: Optional[str] = Field(default=None, max_length=32)
     model_config = ConfigDict(extra="forbid")
     credential: str = Field(min_length=1, max_length=16384)
     nonce: str = Field(min_length=32, max_length=128, pattern=r"^[A-Za-z0-9_-]+$")
@@ -132,6 +139,15 @@ class EverproLocationSelection(BaseModel):
 
 
 class AddressCreate(BaseModel):
+    latitude: Optional[float] = Field(default=None, ge=-90, le=90, allow_inf_nan=False)
+    longitude: Optional[float] = Field(default=None, ge=-180, le=180, allow_inf_nan=False)
+
+    @model_validator(mode='after')
+    def paired_coordinates(self):
+        if (self.latitude is None) != (self.longitude is None):
+            raise ValueError('Latitude dan longitude harus diisi berpasangan')
+        return self
+
     label: str
     recipient: str
     phone: str
@@ -217,6 +233,7 @@ class ProductVariant(BaseModel):
 
 
 class Product(BaseModel):
+    sale_role: Literal['main', 'add_on'] = 'main'
     id: str = Field(default_factory=lambda: gen_id("prd"))
     name: str
     slug: str
@@ -251,6 +268,7 @@ class Product(BaseModel):
 
 
 class ProductUpdate(BaseModel):
+    sale_role: Optional[Literal['main', 'add_on']] = None
     name: Optional[str] = None
     slug: Optional[str] = None
     sku: Optional[str] = None
@@ -277,6 +295,7 @@ class ProductUpdate(BaseModel):
 
 
 class ProductCreate(BaseModel):
+    sale_role: Literal['main', 'add_on'] = 'main'
     name: str
     slug: Optional[str] = None
     sku: Optional[str] = None
@@ -317,7 +336,13 @@ class CartItem(BaseModel):
     created_at: str = Field(default_factory=now_iso)
 
 
+class CartAddonCreate(BaseModel):
+    product_id: str = Field(min_length=1, max_length=64)
+    variant_id: Optional[str] = Field(default=None, max_length=64)
+
+
 class CartItemCreate(BaseModel):
+    addons: List[CartAddonCreate] = Field(default_factory=list, max_length=30)
     product_id: str
     variant_id: Optional[str] = None
     quantity: int = 1
@@ -411,6 +436,7 @@ class ShipmentLog(BaseModel):
 
 # ---------- Promo / Voucher / Flash Sale ----------
 class Voucher(BaseModel):
+    audience: Literal['general', 'new_member', 'referral'] = 'general'
     id: str = Field(default_factory=lambda: gen_id("vch"))
     code: str
     name: str
@@ -521,6 +547,7 @@ class WishlistEntry(BaseModel):
 
 # ---------- Checkout payload ----------
 class CheckoutPreview(BaseModel):
+    payment_mode: Literal['online', 'cod'] = 'online'
     shipping_quote_id: Optional[str] = None
     address_id: str
     courier_code: str = "jne"  # e.g. jne, jnt, sicepat

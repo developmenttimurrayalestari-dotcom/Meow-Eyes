@@ -43,7 +43,8 @@ async def shipping_options(payload: dict[str, Any], user: User = Depends(current
     selected = payload.get("selected_item_ids") or []
     if not isinstance(selected, list) or len(selected) > 200 or any(not isinstance(x, str) for x in selected):
         raise HTTPException(400, "Item checkout tidak valid")
-    return await provider_shipping_options(user.user_id, payload.get("address_id"), selected)
+    return await provider_shipping_options(user.user_id, payload.get("address_id"), selected,
+        payment_mode=payload.get('payment_mode', 'online'), benefits=payload)
 
 
 @router.post("/checkout/preview")
@@ -59,7 +60,7 @@ async def checkout_confirm(
     req: CheckoutConfirm, user: User = Depends(current_user),
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
 ):
-    require_payment_provider()
+    if req.payment_mode != 'cod': require_payment_provider()
     # PIN attempt accounting deliberately commits in its own small transaction;
     # a failed checkout must not roll back failed-PIN/lockout counters.
     await verify_pin_or_raise(user, req.pin)

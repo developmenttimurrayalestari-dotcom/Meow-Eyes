@@ -70,6 +70,11 @@ def _int_env(name: str, default: int, lo: int, hi: int) -> int:
         raise HTTPException(503, f"Konfigurasi {name} tidak valid") from None
 
 
+def public_frontend_url() -> str:
+    local = os.getenv('APP_ENV', 'development') in ('development', 'test')
+    return _http_url(os.getenv('PUBLIC_FRONTEND_URL', ''), 'PUBLIC_FRONTEND_URL', local=local)
+
+
 @dataclass(frozen=True)
 class DokuSettings:
     client_id: str
@@ -138,6 +143,8 @@ class EverproSettings:
     height_cm: int = 8
     insurance: bool = False
     quote_ttl_seconds: int = 600
+    origin_latitude: float | None = None
+    origin_longitude: float | None = None
 
     @classmethod
     def from_env(cls) -> "EverproSettings":
@@ -172,6 +179,13 @@ class EverproSettings:
         address = os.environ["EVERPRO_SHIPPER_ADDRESS"].strip()
         if len(name) < 3 or not 3 <= len(address) <= 250:
             raise HTTPException(503, "Konfigurasi nama/alamat pengirim tidak valid")
+        try:
+            lat = float(os.environ['EVERPRO_ORIGIN_LATITUDE']) if os.getenv('EVERPRO_ORIGIN_LATITUDE') else None
+            lng = float(os.environ['EVERPRO_ORIGIN_LONGITUDE']) if os.getenv('EVERPRO_ORIGIN_LONGITUDE') else None
+            if (lat is None) != (lng is None) or (lat is not None and not (-90 <= lat <= 90 and -180 <= lng <= 180)):
+                raise ValueError()
+        except ValueError:
+            raise HTTPException(503, 'Koordinat pengirim Everpro tidak valid') from None
         return cls(
             client_key=os.environ["EVERPRO_CLIENT_KEY"], client_secret=os.environ["EVERPRO_CLIENT_SECRET"],
             base_url=base, environment=env, webhook_key=os.environ.get("EVERPRO_WEBHOOK_KEY", ""),
@@ -184,6 +198,7 @@ class EverproSettings:
             height_cm=_int_env("EVERPRO_PACKAGE_HEIGHT_CM", 8, 1, 300),
             insurance=os.environ.get("EVERPRO_USE_INSURANCE", "0") == "1",
             quote_ttl_seconds=_int_env("EVERPRO_QUOTE_TTL_SECONDS", 600, 60, 1800),
+            origin_latitude=lat, origin_longitude=lng,
         )
 
 

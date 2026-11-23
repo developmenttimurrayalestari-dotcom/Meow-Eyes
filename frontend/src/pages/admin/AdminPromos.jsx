@@ -1,13 +1,21 @@
 import React, { useEffect, useState } from "react";
-import { api, formatIDR } from "../../lib/api";
+import { api, apiError, formatIDR } from "../../lib/api";
 import { toast } from "sonner";
 import { Plus, Trash2, Ticket, Zap, Target } from "lucide-react";
+
+const localDateTime = value => {
+  if (!value) return '';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '' : new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0,16);
+};
 
 export const AdminVouchers = () => {
   const [items, setItems] = useState([]);
   const [show, setShow] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({
     code: "", name: "", discount_type: "percent", discount_value: 10,
+    audience: 'general',
     min_purchase: 0, max_discount: 100000, quota: 100,
     start_at: new Date().toISOString(),
     end_at: new Date(Date.now() + 30 * 86400000).toISOString(),
@@ -17,15 +25,17 @@ export const AdminVouchers = () => {
   useEffect(() => { load(); }, []);
   const submit = async (e) => {
     e.preventDefault();
-    await api.post("/admin/vouchers", form);
-    toast.success("Voucher dibuat");
-    setShow(false); load();
+    try {
+      if (editingId) await api.put(`/admin/vouchers/${editingId}`, form); else await api.post("/admin/vouchers", form);
+      toast.success(editingId ? 'Voucher diperbarui' : "Voucher dibuat");
+      setShow(false); setEditingId(null); load();
+    } catch (err) { toast.error(apiError(err)); }
   };
   return (
     <div data-testid="admin-vouchers">
       <div className="flex justify-between mb-4">
         <h1 className="font-heading text-3xl font-black flex items-center gap-2"><Ticket /> Voucher</h1>
-        <button onClick={() => setShow(true)} className="btn-primary text-sm" data-testid="add-voucher-btn"><Plus className="inline h-4 w-4 mr-1" /> Voucher Baru</button>
+        <button onClick={() => { setEditingId(null); setForm(current => ({ ...current, code: '', name: '', audience: 'general', used_count: 0, quota: 100, is_active: true })); setShow(true); }} className="btn-primary text-sm" data-testid="add-voucher-btn"><Plus className="inline h-4 w-4 mr-1" /> Voucher Baru</button>
       </div>
       <div className="bg-white rounded-3xl border border-zinc-200 overflow-x-auto">
         <table className="w-full text-sm">
@@ -45,13 +55,14 @@ export const AdminVouchers = () => {
             {items.map((v) => (
               <tr key={v.id} className="border-t border-zinc-100" data-testid={`voucher-row-${v.code}`}>
                 <td className="px-4 py-3 font-mono">{v.code}</td>
-                <td className="px-4 py-3">{v.name}</td>
+                <td className="px-4 py-3">{v.name}<small className="block text-meow-gray">{v.audience === 'new_member' ? 'Member Baru · Terverifikasi · 1×' : v.audience === 'referral' ? 'Reward Referral' : 'Umum'}</small></td>
                 <td className="px-4 py-3 text-xs">{v.discount_type}</td>
                 <td className="px-4 py-3">{v.discount_type === "percent" ? `${v.discount_value}%` : formatIDR(v.discount_value)}</td>
                 <td className="px-4 py-3">{formatIDR(v.min_purchase || 0)}</td>
                 <td className="px-4 py-3">{v.used_count}/{v.quota}</td>
                 <td className="px-4 py-3 text-xs">{v.is_active ? "Aktif" : "Nonaktif"}</td>
                 <td className="px-4 py-3 text-right">
+                  <button type="button" onClick={() => { setEditingId(v.id); setForm({ ...v, audience: v.audience || 'general' }); setShow(true); }} className="text-meow-salmon font-bold mr-3">Edit</button>
                   <button onClick={async () => { await api.delete(`/admin/vouchers/${v.id}`); load(); }} className="text-red-500" data-testid={`del-voucher-${v.code}`}><Trash2 className="h-4 w-4" /></button>
                 </td>
               </tr>
@@ -62,8 +73,9 @@ export const AdminVouchers = () => {
 
       {show && (
         <div className="fixed inset-0 bg-black/60 z-50 grid place-items-center p-4" onClick={() => setShow(false)}>
-          <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl p-6 max-w-md w-full space-y-3" data-testid="voucher-form">
-            <h3 className="font-heading font-extrabold text-xl">Voucher Baru</h3>
+          <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl p-6 max-w-md w-full max-h-[90dvh] overflow-y-auto space-y-3" data-testid="voucher-form">
+            <h3 className="font-heading font-extrabold text-xl">{editingId ? 'Edit Voucher' : 'Voucher Baru'}</h3>
+            <label className="block text-sm">Sasaran voucher<select aria-label="Sasaran voucher" value={form.audience} onChange={e => setForm({ ...form, audience: e.target.value })} className="block w-full mt-1 p-2 rounded-xl bg-meow-bg"><option value="general">Umum</option><option value="new_member">Member Baru (Email Verified, Transaksi Pertama, 1×)</option><option value="referral">Penerima Reward Referral</option></select></label>
             <input placeholder="Kode (otomatis jika kosong)" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid="v-code" />
             <input required placeholder="Nama" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid="v-name" />
             <select value={form.discount_type} onChange={(e) => setForm({ ...form, discount_type: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid="v-type">
@@ -74,6 +86,8 @@ export const AdminVouchers = () => {
             <input type="number" placeholder="Nilai" value={form.discount_value} onChange={(e) => setForm({ ...form, discount_value: Number(e.target.value) })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" />
             <input type="number" placeholder="Min purchase" value={form.min_purchase} onChange={(e) => setForm({ ...form, min_purchase: Number(e.target.value) })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" />
             <input type="number" placeholder="Quota" value={form.quota} onChange={(e) => setForm({ ...form, quota: Number(e.target.value) })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" />
+            <label className="block text-sm">Maksimal potongan (Rp)<input type="number" min="0" value={form.max_discount ?? ''} onChange={e => setForm({ ...form, max_discount: e.target.value === '' ? null : Number(e.target.value) })} className="mt-1 w-full p-2 border rounded-xl" /></label>
+            {[['start_at','Mulai berlaku'],['end_at','Berakhir']].map(([key,label]) => <label key={key} className="block text-sm">{label}<input type="datetime-local" required value={localDateTime(form[key])} onChange={e => setForm({ ...form, [key]: e.target.value ? new Date(e.target.value).toISOString() : null })} className="mt-1 w-full p-2 border rounded-xl" /></label>)}
             <div className="flex gap-2 pt-2">
               <button type="button" onClick={() => setShow(false)} className="btn-secondary flex-1">Batal</button>
               <button type="submit" className="btn-primary flex-1" data-testid="v-save">Simpan</button>

@@ -14,9 +14,10 @@ from sqlalchemy.schema import CreateTable, CreateIndex
 from mysql.base import Base
 from mysql import models  # noqa: F401
 from mysql.database import EXPECTED_SCHEMA_REVISION
-from mysql.check_integrity import load_meowsurement_revision, load_loyalty_revision
+from mysql.check_integrity import load_meowsurement_revision, load_loyalty_revision, load_growth_revision
 
 BACKEND = Path(__file__).resolve().parents[1]
+GROWTH_TABLES = set(load_growth_revision().TABLE_DDL)
 
 
 def offline(*args: str) -> str:
@@ -66,7 +67,7 @@ def test_upgrade_sql_matches_committed_export_and_current_metadata():
     # The released baseline export remains frozen at 0002. New DDL has its own
     # incremental export; a fresh replay still matches all current metadata.
     assert offline("upgrade", "20261106_0002", "--sql") == stored
-    assert generated.count("CREATE TABLE ") == len(Base.metadata.tables)  # 0010 adds lens_index_types later.
+    assert generated.count("CREATE TABLE ") == len(Base.metadata.tables) - len(GROWTH_TABLES)  # Later incremental tables.
     assert "version_num='20261111_0005'" in generated
     assert not re.search(r"\bCHECK\s*\(", generated)
     assert generated.count("CREATE TRIGGER ") == 92 + len(load_meowsurement_revision().trigger_definitions()) + len(load_loyalty_revision().trigger_definitions())
@@ -79,8 +80,13 @@ def test_upgrade_sql_matches_committed_export_and_current_metadata():
     emitted = {normalize(statement) for statement in re.split(r";\s*(?:\n|$)", no_comments) if statement.strip()}
     dialect = mysql.dialect()
     for table in Base.metadata.sorted_tables:
-        if table.name in ("categories", "lens_index_types"): continue  # Later incremental revisions.
+        if table.name in {"categories", "lens_index_types"} | GROWTH_TABLES: continue  # Later incremental revisions.
         ddl = str(CreateTable(table).compile(dialect=dialect))
+        for column in load_growth_revision().COLUMNS.get(table.name, ()):
+            if table.name in GROWTH_TABLES: continue
+            ddl = re.sub(r'(?m)^[ \t]*' + re.escape(column) + r' [^\n]*\n', '', ddl)
+        if table.name == 'users':
+            ddl = re.sub(r',\s*CONSTRAINT uq_users_referral_code UNIQUE \(referral_code\)', '', ddl)
         if table.name == 'users':
             ddl = re.sub(r'\s*facebook_subject VARCHAR\(128\) COLLATE utf8mb4_bin,', '', ddl)
             ddl = re.sub(r',\s*CONSTRAINT uq_users_facebook_subject UNIQUE \(facebook_subject\)', '', ddl)
@@ -113,10 +119,23 @@ def test_product_deletion_incremental_sql_preserves_existing_products():
     assert "version_num='20261112_0007'" in sql
 
 
+def test_customer_growth_incremental_sql_and_guards_are_frozen():
+    revision = load_growth_revision()
+    sql = offline('upgrade', '20261117_0014:20261120_0015', '--sql')
+    assert sql == (BACKEND / 'sql/015_customer_growth_cod_addons.sql').read_text(encoding='utf-8')
+    assert sql.count('CREATE TABLE ') == 7 and sql.count('CREATE TRIGGER ') == 20
+    assert 'DROP TABLE' not in sql and 'DELETE FROM' not in sql
+    assert 'UPDATE users SET referral_code=' in sql
+    assert 'email_verified_at DATETIME(6)' in sql and 'cod_pending' in sql
+    assert "version_num='20261120_0015'" in sql
+    for name, ddl in revision.TABLE_DDL.items():
+        assert normalize(ddl) == normalize(str(CreateTable(Base.metadata.tables[name]).compile(dialect=mysql.dialect())))
+
+
 def test_downgrade_sql_drops_children_before_parents():
     generated = offline("downgrade", "20261109_0003:base", "--sql")
     statements = generated.replace("`", "")
-    positions = {name: statements.index(f"DROP TABLE {name};") for name in Base.metadata.tables if name not in load_loyalty_revision().ALL_TABLES and name != 'lens_index_types'}
+    positions = {name: statements.index(f"DROP TABLE {name};") for name in Base.metadata.tables if name not in set(load_loyalty_revision().ALL_TABLES) | GROWTH_TABLES and name != 'lens_index_types'}
     for table in Base.metadata.tables.values():
         if table.name not in positions: continue
         for fk in table.foreign_key_constraints:

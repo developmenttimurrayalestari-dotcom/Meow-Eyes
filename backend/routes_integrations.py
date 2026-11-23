@@ -55,7 +55,12 @@ async def _body(request: Request) -> tuple[bytes, dict]:
 
 @router.get("/integrations/status")
 async def public_status():
-    return integration_status()
+    result = integration_status()
+    from mysql.customer_growth import config
+    async with read_session() as s:
+        cfg = await config(s)
+    result['cod'] = {'ready': bool(cfg['cod_enabled'] and result.get('shipping', {}).get('ready'))}
+    return result
 
 
 @router.get("/payments/{order_number}")

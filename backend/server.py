@@ -125,6 +125,8 @@ async def scheduler_run_now(job_id: str, admin: User = Depends(current_admin)):
 
 
 # Mount sub-routers
+from routes_customer_growth import router as customer_growth_router
+api_router.include_router(customer_growth_router)
 api_router.include_router(auth_router)
 api_router.include_router(catalog_router)
 api_router.include_router(shopping_router)

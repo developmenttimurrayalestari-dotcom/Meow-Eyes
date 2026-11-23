@@ -99,6 +99,7 @@ def strings(values: Any, *, limit: int = 500, max_length: int | None = None,
 
 
 PRODUCT_FIELDS = frozenset({
+    "sale_role",
     "name", "slug", "sku", "description", "spec", "product_type", "primary_category_id",
     "brand_id", "price", "discount_price", "flash_sale_price", "weight_gram", "dimension",
     "main_image", "min_stock_alert", "is_active", "seo_title", "seo_description",

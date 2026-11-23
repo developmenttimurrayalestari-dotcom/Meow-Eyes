@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { api, setToken } from "../lib/api";
+import { referralCode, clearReferral } from '../lib/referral';
 
 const AuthContext = createContext(null);
 
@@ -62,18 +63,23 @@ export const AuthProvider = ({ children }) => {
     const { data } = await api.post("/auth/register", payload);
     if (data.token) setToken(data.token);
     setUser(data.user);
+    clearReferral();
     return data.user;
   };
   const loginWithGoogle = async (credential, nonce) => {
-    const { data } = await api.post("/auth/google", { credential, nonce });
+    const ref = referralCode();
+    const { data } = await api.post("/auth/google", { credential, nonce, ...(ref ? { referral_code: ref } : {}) });
     if (data.token) setToken(data.token);
     setUser(data.user);
+    clearReferral();
     return data.user;
   };
   const loginWithFacebook = async (access_token) => {
-    const { data } = await api.post('/auth/facebook', { access_token });
+    const ref = referralCode();
+    const { data } = await api.post('/auth/facebook', { access_token, ...(ref ? { referral_code: ref } : {}) });
     if (data.token) setToken(data.token);
     setUser(data.user);
+    clearReferral();
     return data.user;
   };
   const logout = async () => {

@@ -182,6 +182,7 @@ const ProductForm = ({ product, onClose, onSaved, categories, brands }) => {
   const [form, setForm] = useState(product ? {
     name: product.name, sku: product.sku, description: product.description,
     product_type: product.product_type,
+    sale_role: product.sale_role || 'main',
     price: product.price, discount_price: product.discount_price,
     weight_gram: product.weight_gram,
     primary_category_id: product.primary_category_id,
@@ -197,6 +198,7 @@ const ProductForm = ({ product, onClose, onSaved, categories, brands }) => {
     new_arrival_until: product.new_arrival_until || null,
   } : {
     name: "", sku: "", description: "", product_type: "frame",
+    sale_role: 'main',
     price: 0, discount_price: null, weight_gram: 100,
     primary_category_id: null, category_ids: [],
     brand_id: null, segments: ["Unisex"],
@@ -247,6 +249,7 @@ const ProductForm = ({ product, onClose, onSaved, categories, brands }) => {
           <input required type="number" placeholder="Berat (g)" value={form.weight_gram} onChange={(e) => setForm({ ...form, weight_gram: Number(e.target.value) })} className="px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid="pf-weight" />
         </div>
         <ProductMasterFields categories={categories} brands={brands} form={form} onChange={setForm} />
+        <label className="block text-sm font-semibold">Klasifikasi penjualan<select aria-label="Klasifikasi penjualan" value={form.sale_role} onChange={e => setForm({ ...form, sale_role: e.target.value })} className="mt-1 block w-full px-3 py-2 rounded-xl bg-meow-bg"><option value="main">Main Product</option><option value="add_on">Add On</option></select><small className="block font-normal text-meow-gray mt-1">Add On dapat dipilih sebagai pelengkap produk utama.</small></label>
         <ImagePicker
           label="Gambar Utama Produk"
           value={form.main_image}

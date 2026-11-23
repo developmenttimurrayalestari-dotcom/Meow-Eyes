@@ -8,7 +8,7 @@ transactions. Optional local simulations are unavailable in production.
 from __future__ import annotations
 
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import timedelta
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 import hashlib
@@ -240,10 +240,19 @@ class PricedItem:
     lens_price: Decimal = ZERO
     index_surcharge: Decimal = ZERO
     flash_item: m.FlashSaleItem | None = None
+    addons: list = field(default_factory=list)
+
+    @property
+    def has_flash(self):
+        return self.flash_item is not None or any(a['flash_item'] is not None for a in self.addons)
+
+    @property
+    def addon_price(self):
+        return sum((a['price'] for a in self.addons), ZERO)
 
     @property
     def unit_price(self) -> Decimal:
-        return self.frame_price + self.lens_price
+        return self.frame_price + self.lens_price + self.addon_price
 
     @property
     def subtotal(self) -> Decimal:
@@ -268,12 +277,15 @@ class CheckoutQuote:
     free_shipping: bool
     total: Decimal
     point_plan: list | None = None
+    payment_mode: str = 'online'
 
     def payload(self) -> dict[str, Any]:
         return {
             "subtotal": float(self.subtotal),
+            "payment_mode": self.payment_mode,
             "product_subtotal": float(sum((item.frame_price * item.cart.quantity for item in self.items), ZERO)),
             "lens_subtotal": float(sum((item.lens_price * item.cart.quantity for item in self.items), ZERO)),
+            "addon_subtotal": float(sum((item.addon_price * item.cart.quantity for item in self.items), ZERO)),
             "voucher": row_dict(self.voucher) if self.voucher else None,
             "voucher_discount": float(self.voucher_discount),
             "points_used": self.points_used, "points_discount": float(self.points_discount),
@@ -287,7 +299,7 @@ class CheckoutQuote:
             },
             "free_shipping": self.free_shipping, "total": float(self.total),
             "items_count": len(self.items), "weight_gram": self.weight,
-            "flash_sale_exclusive": any(item.flash_item is not None for item in self.items),
+            "flash_sale_exclusive": any(item.has_flash for item in self.items),
         }
 
 
@@ -306,7 +318,9 @@ async def priced_cart(
         raise HTTPException(400, "Item pilihan tidak tersedia di keranjang Anda")
     if not carts:
         return [], 0
-    product_ids = sorted({pid for c in carts for pid in (c.product_id, c.lens_product_id) if pid})
+    addon_rows = (await s.scalars(select(m.CartAddon).where(m.CartAddon.cart_item_id.in_([c.id for c in carts]))
+        .order_by(m.CartAddon.cart_item_id, m.CartAddon.product_id))).all()
+    product_ids = sorted({pid for c in carts for pid in (c.product_id, c.lens_product_id) if pid} | {a.product_id for a in addon_rows})
     product_query = select(m.Product).where(m.Product.id.in_(product_ids)).order_by(m.Product.id)
     variant_query = select(m.ProductVariant).where(
         m.ProductVariant.product_id.in_(product_ids)
@@ -382,6 +396,19 @@ async def priced_cart(
             item.lens_index = lens_index
             item.index_surcharge = ZERO if product.product_type == 'package' else money(lens_index.additional_price)
             item.lens_price += item.index_surcharge
+        invalid_addon = False
+        for addon in (a for a in addon_rows if a.cart_item_id == cart.id):
+            ap, av = products.get(addon.product_id), variants.get(addon.variant_id)
+            if (product.sale_role != 'main' or ap is None or not ap.is_active or ap.deleted_at is not None
+                    or ap.sale_role != 'add_on' or av is None or not av.is_active or av.product_id != ap.id):
+                if skip_unavailable:
+                    invalid_addon = True
+                    break
+                raise HTTPException(409, 'Add On paket tidak tersedia. Tambahkan ulang paket.')
+            af = next((f for f in flash_items if f.product_id == ap.id and
+                f.quota - f.sold - f.reserved - flash_taken[f.id] >= cart.quantity), None)
+            item.addons.append({'product': ap, 'variant': av, 'price': money(af.flash_price) if af else base_price(ap, av), 'flash_item': af})
+        if invalid_addon: continue
         demands[variant.id] += cart.quantity
         weight += product.weight_gram * cart.quantity
         if item.lens_product and item.lens_variant:
@@ -389,6 +416,10 @@ async def priced_cart(
             weight += item.lens_product.weight_gram * cart.quantity
         if flash_item:
             flash_taken[flash_item.id] += cart.quantity
+        for addon in item.addons:
+            demands[addon['variant'].id] += cart.quantity
+            weight += addon['product'].weight_gram * cart.quantity
+            if addon['flash_item']: flash_taken[addon['flash_item'].id] += cart.quantity
         items.append(item)
     if require_stock:
         for variant_id, quantity in demands.items():
@@ -416,30 +447,7 @@ def voucher_amount(voucher: m.Voucher, subtotal: Decimal) -> tuple[Decimal, bool
     return min(subtotal, money(discount)), voucher.discount_type == "free_shipping"
 
 
-async def checkout_quote(s: AsyncSession, user: m.User, req: Any, *, lock: bool = False) -> CheckoutQuote:
-    from integrations.config import shipping_provider, payment_provider
-    address_query = select(m.Address).where(m.Address.id == req.address_id, m.Address.user_id == user.user_id)
-    address = await s.scalar(address_query.with_for_update() if lock else address_query)
-    if address is None:
-        raise HTTPException(404, "Alamat tidak ditemukan")
-    items, weight = await priced_cart(s, user.user_id, req.selected_item_ids, lock=lock)
-    if not items:
-        raise HTTPException(400, "Tidak ada item yang dipilih")
-    subtotal = sum((i.subtotal for i in items), ZERO)
-    flash_sale_exclusive = any(item.flash_item is not None for item in items)
-    if shipping_provider() == "mock":
-        from services_mock import everpro_cost
-        options = everpro_cost(address.province, max(weight, 100))
-        shipping = next((o for o in options if o["courier_code"] == req.courier_code
-                         and o["service_code"] == req.service_code), None)
-    elif shipping_provider() == "everpro":
-        from mysql.integration_services import validated_shipping_quote
-        shipping = await validated_shipping_quote(s, user, req, address, items, lock=lock)
-    else:
-        raise HTTPException(503, "Pengiriman belum diaktifkan")
-    if shipping is None:
-        raise HTTPException(400, "Layanan pengiriman tidak tersedia")
-    shipping_cost = money(shipping["cost"])
+async def checkout_benefits(s, user, req, subtotal, flash_sale_exclusive, *, lock=False):
     voucher = None
     voucher_discount = ZERO
     free_shipping = False
@@ -448,6 +456,8 @@ async def checkout_quote(s: AsyncSession, user: m.User, req: Any, *, lock: bool 
         voucher = await s.scalar(q.with_for_update() if lock else q)
         if voucher is None:
             raise HTTPException(404, "Voucher tidak ditemukan")
+        from .customer_growth import voucher_eligible
+        await voucher_eligible(s, user, voucher)
         voucher_discount, free_shipping = voucher_amount(voucher, subtotal)
         used = await s.scalar(select(func.count()).select_from(m.VoucherRedemption).where(
             m.VoucherRedemption.voucher_id == voucher.id, m.VoucherRedemption.user_id == user.user_id,
@@ -473,10 +483,49 @@ async def checkout_quote(s: AsyncSession, user: m.User, req: Any, *, lock: bool 
     requested_points = integer(req.use_points or 0, "Poin", 0, 9223372036854775807)
     points_used, points_discount, point_plan = await point_quote(s, user, 0 if flash_sale_exclusive else requested_points,
         max(ZERO, subtotal - voucher_discount - roulette_discount))
+    return voucher, voucher_discount, free_shipping, roulette, roulette_discount, points_used, points_discount, point_plan
+
+
+async def checkout_quote(s: AsyncSession, user: m.User, req: Any, *, lock: bool = False) -> CheckoutQuote:
+    from integrations.config import shipping_provider, payment_provider
+    address_query = select(m.Address).where(m.Address.id == req.address_id, m.Address.user_id == user.user_id)
+    address = await s.scalar(address_query.with_for_update() if lock else address_query)
+    if address is None:
+        raise HTTPException(404, "Alamat tidak ditemukan")
+    items, weight = await priced_cart(s, user.user_id, req.selected_item_ids, lock=lock)
+    if not items:
+        raise HTTPException(400, "Tidak ada item yang dipilih")
+    subtotal = sum((i.subtotal for i in items), ZERO)
+    mode = getattr(req, 'payment_mode', 'online')
+    if mode == 'cod':
+        from .customer_growth import config
+        if not (await config(s))['cod_enabled']: raise HTTPException(403, 'COD belum diaktifkan toko')
+    flash_sale_exclusive = any(item.has_flash for item in items)
+    if shipping_provider() == "mock":
+        from services_mock import everpro_cost
+        options = everpro_cost(address.province, max(weight, 100))
+        shipping = next((o for o in options if o["courier_code"] == req.courier_code
+                         and o["service_code"] == req.service_code), None)
+    elif shipping_provider() == "everpro":
+        from mysql.integration_services import validated_shipping_quote
+        shipping = await validated_shipping_quote(s, user, req, address, items, lock=lock)
+    else:
+        raise HTTPException(503, "Pengiriman belum diaktifkan")
+    if shipping is None:
+        raise HTTPException(400, "Layanan pengiriman tidak tersedia")
+    shipping_cost = money(shipping["cost"])
+    voucher, voucher_discount, free_shipping, roulette, roulette_discount, points_used, points_discount, point_plan = await checkout_benefits(
+        s, user, req, subtotal, flash_sale_exclusive, lock=lock)
     if free_shipping:
+        if mode == 'cod': raise HTTPException(422, 'Promo gratis ongkir belum mendukung COD. Pilih pembayaran online.')
         shipping_cost = ZERO
     total = money(subtotal - voucher_discount - roulette_discount - points_discount + shipping_cost)
-    if payment_provider() == "doku":
+    if mode == 'cod':
+        total = total.quantize(Decimal('1'), rounding=ROUND_HALF_UP).quantize(Decimal('.01'))
+        if total <= 0: raise HTTPException(422, 'Total COD harus lebih besar dari nol')
+        if shipping.get('cod_goods') is not None and money(shipping['cod_goods']) != money(total - shipping_cost):
+            raise HTTPException(409, 'Promo atau poin COD berubah. Hitung ulang ongkir.')
+    elif payment_provider() == "doku":
         # Hosted Checkout accepts IDR without decimal places. Round the final
         # payable amount once; the preview and persisted invoice agree.
         total = total.quantize(Decimal("1"), rounding=ROUND_HALF_UP).quantize(Decimal("0.01"))
@@ -484,7 +533,7 @@ async def checkout_quote(s: AsyncSession, user: m.User, req: Any, *, lock: bool 
             raise HTTPException(422, "Total pembayaran DOKU harus Rp1 sampai Rp999.999.999.999")
     return CheckoutQuote(address, user, items, subtotal, weight, shipping, shipping_cost,
                          voucher, voucher_discount, points_used, points_discount,
-                         roulette, money(roulette_discount), free_shipping, total, point_plan)
+                         roulette, money(roulette_discount), free_shipping, total, point_plan, mode)
 
 
 def checkout_identity(user_id: str, req: Any, key: str | None) -> tuple[str | None, str]:
@@ -509,10 +558,10 @@ def checkout_identity(user_id: str, req: Any, key: str | None) -> tuple[str | No
 async def _save_order(s: AsyncSession, quote: CheckoutQuote, key: str | None, fingerprint: str) -> m.Order:
     from integrations.config import payment_provider, DokuSettings
     now = utcnow()
-    provider = "doku-mock" if payment_provider() == "mock" else "doku"
+    provider = 'cod' if quote.payment_mode == 'cod' else "doku-mock" if payment_provider() == "mock" else "doku"
     expires = now + (timedelta(minutes=DokuSettings.from_env().due_minutes) if provider == "doku" else timedelta(hours=RESERVATION_HOURS))
     order = m.Order(
-        id=gen_id("ord"), order_number="MEOW-" + now.strftime("%y%m%d") + "-" + secrets.token_hex(6).upper(),
+        id=gen_id("ord"), order_number="MEOW" + now.strftime("%y%m%d") + secrets.token_hex(6).upper(),
         user_id=quote.user.user_id, subtotal=quote.subtotal,
         voucher_code=quote.voucher.code if quote.voucher else None,
         voucher_discount=quote.voucher_discount, points_used=quote.points_used,
@@ -520,8 +569,9 @@ async def _save_order(s: AsyncSession, quote: CheckoutQuote, key: str | None, fi
         shipping_courier=quote.shipping["courier_code"], shipping_service=quote.shipping["service_code"],
         shipping_cost=quote.shipping_cost, total=quote.total,
         shipping_quote_id=quote.shipping.get("quote_id"),
-        reservation_expires_at=expires, checkout_idempotency_key=key,
-        status="pending_payment", payment_status="pending", shipment_status="pending",
+        reservation_expires_at=None if provider == 'cod' else expires, checkout_idempotency_key=key,
+        status='processing' if provider == 'cod' else 'pending_payment',
+        payment_status='cod_pending' if provider == 'cod' else 'pending', payment_mode=quote.payment_mode, shipment_status="pending",
     )
     s.add(order)
     await s.flush()
@@ -529,6 +579,7 @@ async def _save_order(s: AsyncSession, quote: CheckoutQuote, key: str | None, fi
     snapshot_values = {name: getattr(address, name) for name in (
         "label", "recipient", "phone", "street", "subdistrict", "district", "city",
         "province", "postal_code", "country_code", "everpro_destination_id",
+        "latitude", "longitude",
     )}
     s.add(m.OrderAddress(order_id=order.id, source_address_id=address.id,
                          source_created_at=address.created_at, source_is_default=address.is_default,
@@ -549,16 +600,25 @@ async def _save_order(s: AsyncSession, quote: CheckoutQuote, key: str | None, fi
         if item.lens_product and item.lens_variant:
             components.append(("lens", item.lens_product, item.lens_variant,
                                item.lens_price, item.index_surcharge))
+        components.extend(('add_on', a['product'], a['variant'], a['price'], ZERO) for a in item.addons)
         for component_position, (kind, product, variant, price, surcharge) in enumerate(components):
-            s.add(m.OrderItemComponent(
+            component = m.OrderItemComponent(
                 id=gen_id("ocp"), order_item_id=row.id, order_id=order.id,
                 component_type=kind, product_id=product.id, variant_id=variant.id,
-                lens_index_id=item.lens_index.id if item.lens_index and (kind == "lens" or standalone_index) else None,
-                lens_index_name=item.lens_index.name if item.lens_index and (kind == "lens" or standalone_index) else None,
+                lens_index_id=item.lens_index.id if item.lens_index and (kind == "lens" or (kind == 'primary' and standalone_index)) else None,
+                lens_index_name=item.lens_index.name if item.lens_index and (kind == "lens" or (kind == 'primary' and standalone_index)) else None,
                 product_name=product.name, sku=variant.sku, variant_label=variant_label(variant),
                 quantity=item.cart.quantity, unit_price=price, index_surcharge=surcharge,
                 subtotal=price * item.cart.quantity, sort_order=component_position,
-            ))
+            )
+            s.add(component)
+            if kind == 'add_on':
+                addon_flash = next(a['flash_item'] for a in item.addons if a['product'].id == product.id)
+                if addon_flash:
+                    await s.flush()
+                    addon_flash.reserved += item.cart.quantity
+                    s.add(m.AddonFlashReservation(component_id=component.id, order_id=order.id, product_id=product.id,
+                        flash_sale_item_id=addon_flash.id, quantity=item.cart.quantity, status='active', expires_at=expires))
             reservation = m.StockReservation(
                 id=gen_id("res"), order_id=order.id, order_item_id=row.id,
                 product_id=product.id, variant_id=variant.id, quantity=item.cart.quantity,
@@ -599,16 +659,23 @@ async def _save_order(s: AsyncSession, quote: CheckoutQuote, key: str | None, fi
     await reserve_points(s, quote.user, order, quote.point_plan or [])
     await snapshot_cashback(s, order)
     s.add(m.OrderStatusLog(id=gen_id("ols"), order_id=order.id,
-                          status="pending_payment", note="Order dibuat"))
+                          status=order.status, note="Order COD dibuat" if provider == 'cod' else "Order dibuat"))
     await s.execute(delete(m.CartItem).where(
         m.CartItem.user_id == order.user_id, m.CartItem.id.in_([x.cart.id for x in quote.items])
     ))
     payment = m.Payment(
         id=gen_id("pay"), order_id=order.id, provider=provider,
         request_id="checkout:" + order.id, merchant_reference=order.order_number,
-        amount=order.total, method="VA" if provider == "doku-mock" else "CHECKOUT", status="pending", expires_at=expires,
+        amount=order.total, method='COD' if provider == 'cod' else "VA" if provider == "doku-mock" else "CHECKOUT",
+        status="pending", expires_at=None if provider == 'cod' else expires,
     )
     s.add(payment)
+    if provider == 'cod':
+        from integrations.config import shipping_provider
+        s.add(m.Shipment(id=gen_id('shp'), order_id=order.id,
+            provider='everpro' if shipping_provider() == 'everpro' else 'everpro-mock',
+            request_id='shipment:' + order.id, courier_code=order.shipping_courier,
+            service_code=order.shipping_service, cost=quote.shipping['cost'], currency=order.currency, status='pending'))
     await s.flush()
     s.add(m.PaymentLog(
         id=gen_id("plg"), order_id=order.id, payment_id=payment.id,
@@ -672,7 +739,7 @@ async def ensure_mock_payment(order_id: str) -> dict[str, Any]:
 async def create_checkout(user_id: str, req: Any, idempotency_key: str | None = None) -> dict[str, Any]:
     from integrations.config import require_payment_provider
     from mysql.integration_services import ensure_payment
-    require_payment_provider()
+    if getattr(req, 'payment_mode', 'online') != 'cod': require_payment_provider()
     if len(req.selected_item_ids) > 200:
         raise HTTPException(400, "Terlalu banyak item checkout")
     key, fingerprint = checkout_identity(user_id, req, idempotency_key)
@@ -785,6 +852,8 @@ async def _resolve_promotions(s: AsyncSession, order: m.Order, *, sold: bool, st
         m.OrderItem, m.FlashSaleReservation.order_item_id == m.OrderItem.id
     ).where(m.OrderItem.order_id == order.id, m.FlashSaleReservation.status == "active")
         .order_by(m.FlashSaleReservation.flash_sale_item_id, m.FlashSaleReservation.id))).all())
+    flash_rows.extend((await s.scalars(select(m.AddonFlashReservation).where(
+        m.AddonFlashReservation.order_id == order.id, m.AddonFlashReservation.status == 'active'))).all())
     flash_ids = sorted({r.flash_sale_item_id for r in flash_rows})
     flashes = {f.id: f for f in (await s.scalars(select(m.FlashSaleItem).where(
         m.FlashSaleItem.id.in_(flash_ids)
@@ -828,7 +897,12 @@ async def _release_locked(
     s: AsyncSession, order: m.Order, user: m.User, status: str,
     *, note: str | None = None, admin_id: str | None = None, provider_confirmed: bool = False,
 ) -> bool:
-    if order.status != "pending_payment":
+    cod = order.payment_mode == 'cod' and order.payment_status == 'cod_pending' and order.status == 'processing'
+    if cod:
+        attempted = await s.scalar(select(m.ShipmentLog.id).where(m.ShipmentLog.order_id == order.id,
+            m.ShipmentLog.action == 'everpro_request').limit(1))
+        if attempted: raise HTTPException(409, 'Pengiriman COD sudah diminta. Hubungi toko untuk pembatalan kurir.')
+    if order.status != "pending_payment" and not cod:
         return False
     if order.payment_status == "paid":
         raise HTTPException(409, "Pembayaran sudah diterima; gunakan proses pengembalian dana")
@@ -882,7 +956,7 @@ async def expire_order(
         order = await s.scalar(select(m.Order).where(m.Order.id == order_id).with_for_update())
         if order is None:
             return False
-        if owner_id is not None and order.status not in {"pending_payment", "cancelled"}:
+        if owner_id is not None and order.status not in {"pending_payment", "cancelled"} and not (order.payment_mode == 'cod' and order.status == 'processing'):
             raise HTTPException(400, "Order tidak bisa dibatalkan pada status ini")
         if due_only and (order.reservation_expires_at is None or order.reservation_expires_at > utcnow()):
             return False

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { api, apiError } from "../lib/api";
 import { toast } from "sonner";
 import EverproRegionFields from './EverproRegionFields';
+import AddressPinpoint from './AddressPinpoint';
 
 export default function AddressForm({ onSaved, onCancel, defaultAddress = false, initialAddress = null }) {
   const [form, setForm] = useState({ label: initialAddress?.label || 'Rumah', recipient: initialAddress?.recipient || '', phone: initialAddress?.phone || '', street: initialAddress?.street || '', is_default: initialAddress?.is_default ?? defaultAddress });
@@ -9,11 +10,13 @@ export default function AddressForm({ onSaved, onCancel, defaultAddress = false,
   const ready = ['province_id', 'city_id', 'district_id', 'subdistrict_id'].every(key => region[key]) && /^\d{5}$/.test(region.postal_code);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [coordinates, setCoordinates] = useState({ latitude: initialAddress?.latitude ?? '', longitude: initialAddress?.longitude ?? '' });
   const set = (key, value) => setForm((current) => ({ ...current, [key]: value }));
   const save = async (event) => {
     event.preventDefault(); if (!ready || saving) { setError('Pilih provinsi sampai kelurahan/desa dari data EVERPRO.'); return; } setSaving(true); setError("");
     try {
       const payload = { ...Object.fromEntries(Object.entries(form).map(([key, value]) => [key, typeof value === "string" ? value.trim() : value])),
+        latitude: coordinates.latitude === '' ? null : Number(coordinates.latitude), longitude: coordinates.longitude === '' ? null : Number(coordinates.longitude),
         ...Object.fromEntries(['province', 'city', 'district', 'subdistrict', 'postal_code'].map(key => [key, region[key]])), everpro_destination_id: region.subdistrict_id,
         everpro_location: Object.fromEntries(['province_id', 'city_id', 'district_id', 'subdistrict_id'].map(key => [key, region[key]])) };
       const { data } = initialAddress ? await api.patch('/addresses/' + encodeURIComponent(initialAddress.id), payload) : await api.post("/addresses", payload);
@@ -40,6 +43,7 @@ export default function AddressForm({ onSaved, onCancel, defaultAddress = false,
           placeholder="Nama jalan, nomor rumah, RT/RW, dan petunjuk pengiriman"
           className="block w-full mt-1 px-3 py-2.5 rounded-xl bg-meow-bg border border-meow-midnight/10 focus:border-meow-salmon outline-none" data-testid="addr-street" />
       </label>
+      <AddressPinpoint value={coordinates} onChange={setCoordinates} disabled={saving} />
       <label className="sm:col-span-2 flex items-center gap-2 text-xs"><input type="checkbox" checked={form.is_default} onChange={(event) => set("is_default", event.target.checked)} /> Jadikan alamat utama</label>
     </fieldset>
     {error && <p role="alert" className="text-red-600">{error}</p>}

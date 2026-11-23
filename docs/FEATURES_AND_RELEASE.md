@@ -691,3 +691,67 @@ protokol; pengujian akun sandbox tetap harus dilakukan sebelum produksi.
 Paket ini tidak mengirim email newsletter nyata; mekanisme simulasi newsletter
 warisan tetap diberi penanda `mocked`. Refund uang melalui gateway dan automatic
 face tracking bukan bagian dari fitur yang diaktifkan oleh implementasi ini.
+
+## Program member, COD, dan Add On — 20 November 2026
+
+Migrasi `20261120_0015` menambahkan tujuh tabel dan kolom tambahan, mempertahankan transaksi, harga produk, password, PIN, dan lot poin sebelumnya. Ekspor SQL tersedia di `backend/sql/015_customer_growth_cod_addons.sql`. Skema aplikasi menjadi 101 tabel bisnis.
+
+| Struktur | Kolom / relasi baru |
+| --- | --- |
+| `users` | `email_verified_at`, `referral_code` unik; akun lama memperoleh kode tanpa dianggap sudah memverifikasi email |
+| `email_verifications` | FK user, hash token unik, email tujuan, kedaluwarsa, waktu pemakaian |
+| `customer_referrals` | PK referee, FK referrer, snapshot aturan dan penanda reward; satu pengajak per akun baru |
+| `customer_growth_rewards` | Event unik, penerima, snapshot reward/rate, status antrean; mencegah pemberian berulang |
+| `customer_voucher_grants` | Pasangan user–voucher unik dan sumber klaim/reward |
+| `daily_checkins` | PK user–tanggal WIB, streak dan jumlah poin |
+| `vouchers` | `audience`: general, new_member, referral |
+| `products` | `sale_role`: main atau add_on; independen dari jenis Frame/Lensa/Paket/Aksesori |
+| `cart_item_addons` | FK baris cart dan pasangan produk–varian; satu SKU per produk Add On |
+| `orders` / `payments` | `payment_mode=online/cod`, `payment_status=cod_pending`, provider pembayaran `cod` |
+| `order_item_components` | Snapshot komponen `add_on` selain primary/lens; tetap satu baris paket di order |
+| `addon_flash_reservations` | FK komponen order dan Flash Sale; kuota Add On ikut dicadangkan/dikonsumsi/dilepas |
+| `addresses` / `order_addresses` | Latitude/longitude berpasangan dan tervalidasi; order mempertahankan snapshot titik tujuan |
+
+### Penggunaan customer dan admin
+
+- Profil customer menyediakan verifikasi email, kirim ulang, pembaruan kontak, tautan referral, serta check-in. Tautan verifikasi berlaku 30 menit; database hanya menyimpan hash. Pengiriman ulang memiliki jeda 60 detik, dan penggantian email membatalkan verifikasi lama. Google dengan email otoritatif dapat mengonfirmasi email melalui identitas Google yang sudah diverifikasi backend.
+- Admin membuka **Program Member & COD** untuk mengaktifkan referral, memilih trigger pendaftaran/transaksi pertama selesai, mengatur reward tiap pihak, serta poin harian/streak dan masa berlakunya. Reward referral dicatat melalui antrean idempoten; scheduler mengirimkannya tiap menit, atau saat akun penerima dibuka. Akun suspend tidak menerima reward sampai diaktifkan kembali.
+- Semua poin baru memakai lot/history yang sama dengan fitur lama. Rate dan versi dicatat saat hak reward diperoleh; perubahan rate berikutnya tidak mengubah nilai poin tersebut. Check-in maksimal sekali per tanggal WIB, streak putus setelah melewatkan satu hari dan siklus hadiah berulang setiap tujuh hari.
+- Pada menu **Voucher**, pilih sasaran **Member Baru**. Email wajib terverifikasi untuk klaim maupun checkout, hanya transaksi pertama dan sekali per akun. Order belum dibayar juga menahan kuota; pembatalan melepasnya. Voucher **Penerima Reward Referral** memerlukan grant pada akun yang bersangkutan.
+- Menu **Pelanggan** mendukung pencarian, filter Verified/Unverified/Aktif/Suspend, pagination, edit kontak, detail transaksi, saldo/nilai poin, history dan jumlah referral. Suspend mencabut sesi login. Admin tidak dapat memalsukan tanggal verifikasi melalui form edit.
+- Main Product menampilkan pilihan beberapa Add On ketika ditambahkan/dibeli. Pilihan opsional, setiap Add On mengikuti kuantitas produk utama. Server menghitung seluruh harga, berat dan kebutuhan stok; checkout menyimpan satu item dengan snapshot rincian komponen. Lens Index dan resep opsional yang sudah ada tetap mengikuti aturan Frame/Paket sebelumnya. Flash Sale pada komponen tetap menonaktifkan diskon lain.
+- Ulasan produk dan pesanan tersedia setelah `shipment_status=delivered`; pembayaran berhasil saja belum membuka form atau endpoint penilaian.
+
+### SMTP Zimbra
+
+Isi konfigurasi backend `.env.mysql`; contoh juga tersedia pada `.env.mysql.example`:
+
+```dotenv
+SMTP_HOST=mail.trl.co.id
+SMTP_PORT=587
+SMTP_SECURITY=starttls
+SMTP_AUTH_REQUIRED=true
+SMTP_USERNAME=admin@meoweyes.com
+SMTP_PASSWORD=isi_di_server
+SMTP_FROM_EMAIL=admin@meoweyes.com
+PUBLIC_FRONTEND_URL=https://meoweyes.com
+```
+
+Port 587/STARTTLS merupakan contoh konfigurasi; sesuaikan dengan layanan Zimbra. Jika memakai SMTPS, gunakan port 465 dan `SMTP_SECURITY=ssl`. Sertifikat TLS diverifikasi. Akun SMTP harus diizinkan mengirim sebagai `admin@meoweyes.com`. Password tetap berada di server. Pendaftaran tetap berhasil jika SMTP belum siap; UI menyediakan pengiriman ulang dan tidak menganggap email sudah terverifikasi.
+
+### Urutan penerapan
+
+1. Backup database dan hentikan penulisan aplikasi selama upgrade skema/guard MySQL. Jangan menggunakan `alembic stamp` untuk melewati migrasi.
+2. Dari direktori backend, gunakan Python venv yang sama dengan proses backend:
+
+   ```bash
+   .venv_backend/bin/python -m alembic upgrade head
+   .venv_backend/bin/python -m mysql.check_integrity
+   ```
+
+   Windows menggunakan `.venv_backend\Scripts\python.exe`. Migrasi harus selesai sebelum backend versi baru dijalankan agar tidak terjadi `schema_revision_mismatch`.
+3. Isi SMTP dan titik toko `EVERPRO_ORIGIN_LATITUDE/LONGITUDE`. Aktifkan program/reward melalui admin. Jalankan tepat satu scheduler aktif untuk penyaluran reward tertunda dan rekonsiliasi.
+4. Restart backend secara manual setelah environment diperbarui. Jika menggunakan PM2: `pm2 restart meow-backend --update-env`. Repository memakai frontend development loader pada PM2; restart `meow-frontend` setelah memperbarui kode/env. Jika hosting melayani build statis, jalankan `npm run build` dan terapkan build baru melalui alur deployment biasa.
+5. Ikuti audit dan pengujian sandbox pada [INTEGRATIONS.md](INTEGRATIONS.md). Tidak ada proses backend/PM2 yang dijalankan otomatis oleh pembaruan ini.
+
+Validasi lokal: 453 tes backend dan 252 tes frontend lulus. Build produksi lulus dengan peringatan MediaPipe/source map yang sudah ada. Sembilan alur desktop/mobile diperiksa dengan Edge headless dan API tiruan, tanpa error JavaScript. Uji MySQL konkurensi tetap terpisah pada database kosong `test_meow_*`; dua tes symlink Windows memerlukan hak akses khusus. SMTP dan akun merchant DOKU/Everpro belum diuji melalui jaringan nyata. Migrasi disediakan sebagai kode/SQL; belum diterapkan ke database operasional.

@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { MapPin, Coins, Ticket, BellRing, ShoppingBag, Shield, Mail } from "lucide-react";
 import CustomerProfileForm from "../components/CustomerProfileForm";
+import AccountBenefits from '../components/AccountBenefits';
 import { safeMeowsurementReturn } from "../lib/authReturn";
 
 const ProfilePage = () => {
@@ -44,6 +45,7 @@ const ProfilePage = () => {
         </div>
       </div>
 
+      <AccountBenefits key={'benefits-' + user.user_id} />
       <CustomerProfileForm key={user.user_id} userId={user.user_id} onSaved={refreshMe} returnTo={returnTo} />
 
       <div className="mt-6 grid grid-cols-2 md:grid-cols-3 gap-3" data-testid="profile-links">

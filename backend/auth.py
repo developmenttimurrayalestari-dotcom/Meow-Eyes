@@ -71,6 +71,7 @@ def public_user(u: User) -> UserPublic:
         user_id=u.user_id, email=u.email, phone=u.phone, name=u.name, picture=u.picture,
         role=u.role, provider=u.provider, has_pin=bool(u.pin_hash),
         points_balance=u.points_balance, permissions=u.permissions,
+        email_verified_at=u.email_verified_at, referral_code=u.referral_code,
         created_at=u.created_at,
     )
 

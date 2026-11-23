@@ -137,6 +137,8 @@ async def snapshot_cashback(s, order):
     await s.flush()
 
 async def complete_order(s, user, order):
+    from .customer_growth import queue_referral
+    await queue_referral(s, user, 'first_order', order)
     rows = (await s.scalars(select(m.PointRedemption).where(m.PointRedemption.order_id == order.id, m.PointRedemption.status == 'reserved'))).all()
     for row in rows: row.status = 'consumed'
     award = await s.get(m.CashbackAward, order.id)

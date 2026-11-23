@@ -67,6 +67,7 @@ test("prescription photo replaces manual fields and its private upload is linked
   expect(api.post).not.toHaveBeenCalled();
   api.post.mockResolvedValueOnce({ data: { id: "private-rx" } }).mockResolvedValueOnce({ data: { ok: true } });
   await click(host.querySelector('[data-testid="add-to-cart-btn"]'));
+  await click(host.querySelector('[data-testid="addon-skip"]'));
   expect(api.post.mock.calls[0][0]).toBe("/uploads/prescription");
   expect(api.post.mock.calls[0][1].get("file")).toBe(file);
   expect(api.post).toHaveBeenLastCalledWith("/cart", expect.objectContaining({ prescription: { attachment_upload_id: "private-rx" } }));
@@ -87,6 +88,7 @@ test("failed prescription upload prevents adding a cart item without its photo",
   await choosePrescriptionPhoto(new File(["photo"], "resep.jpg", { type: "image/jpeg" }));
   api.post.mockRejectedValueOnce(new Error("Upload failed"));
   await click(host.querySelector('[data-testid="buy-now-btn"]'));
+  await click(host.querySelector('[data-testid="addon-skip"]'));
   expect(api.post).toHaveBeenCalledTimes(1);
   expect(api.post.mock.calls[0][0]).toBe("/uploads/prescription");
   expect(mockNavigate).not.toHaveBeenCalled();
@@ -115,6 +117,7 @@ test("manual lens choice displays its selected SKU override and sends that exact
     select.dispatchEvent(new Event("change", { bubbles: true }));
   });
   await click(host.querySelector('[data-testid="add-to-cart-btn"]'));
+  await click(host.querySelector('[data-testid="addon-skip"]'));
   expect(api.post).toHaveBeenCalledWith("/cart", expect.objectContaining({ variant_id: "v1", lens_variant_id: "lens-first", lens_product_id: "lens", quantity: 1 }));
 });
 
