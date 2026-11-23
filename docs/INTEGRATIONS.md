@@ -118,6 +118,17 @@ Pada pemeriksaan 23 November 2026, pertukaran token menggunakan kredensial konfi
 
 Backend membaca `backend/.env.mysql` dengan `override=False`: environment yang sudah ada pada proses mempunyai prioritas atas file. Saat hasil server berbeda dari pengujian lokal, cocokkan `EVERPRO_CLIENT_KEY`, `EVERPRO_CLIENT_SECRET`, `EVERPRO_BASE_URL`, dan `EVERPRO_ENVIRONMENT` di server, termasuk override pada ecosystem/PM2. Setelah memperbarui konfigurasi, restart proses yang benar, misalnya `pm2 restart meow-backend --update-env`. Jangan menampilkan kredensial atau token dalam log diagnostik.
 
+Diagnostik aman tersedia tanpa menjalankan backend atau membuat pengiriman:
+
+```bash
+cd /home/vmnginx/Project/meow/Meow-Eyes/backend
+.venv_backend/bin/python -m integrations.check_everpro --check-auth
+# Linux: sertakan environment awal proses backend PM2 (jalankan sebagai pemilik proses).
+.venv_backend/bin/python -m integrations.check_everpro --pid "$(pm2 pid meow-backend)" --check-auth
+```
+
+Output hanya berisi sumber konfigurasi, kesesuaian dengan file, status HTTP dan klasifikasi tetap. `source=process` dengan `matches_file=false` menunjukkan override yang berbeda; periksa konfigurasi PM2/ecosystem/shell yang memasok variabel tersebut. Mode PID merekonstruksi konfigurasi dari environment awal proses dan file saat ini, sehingga tetap perlu restart setelah perubahan file; mode ini tidak membaca cache token atau environment Python yang dimutasi sesudah startup. `token_received` berarti pertukaran token berhasil, `client_not_found_in_environment` berarti respons `404 / user not found`, dan `network_or_tls_error` berarti koneksi/TLS gagal. Sukses token belum membuktikan lookup wilayah atau tarif berhasil: cocokkan dengan log terbaru saat checkout dibuka. Alat ini tidak menampilkan token, kredensial, atau body respons provider. Delapan tes lokal memverifikasi klasifikasi, override, dan pencegahan kebocoran secret.
+
 ### Ongkir dan data alamat
 
 Alamat checkout menggunakan `postal_code`, `subdistrict` untuk **Kelurahan/Desa**, dan `district` untuk **Kecamatan**. Rate request memakai kode pos dan nama kelurahan, berat paket dalam kilogram, nilai barang, dimensi kemasan, serta tipe pengiriman. Berat produk pada database tetap gram dan dikonversi di batas API.
