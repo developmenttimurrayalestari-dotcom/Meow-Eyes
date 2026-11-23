@@ -5,7 +5,15 @@ from types import SimpleNamespace
 import httpx
 import pytest
 
-from integrations.check_everpro import check_auth, environment_report
+from integrations.check_everpro import check_auth, environment_report, credential_fingerprint
+
+
+def test_fingerprint_compares_exact_credential_pairs_without_disclosing_them():
+    def tag(key='secret-key', secret='secret-value'):
+        return credential_fingerprint(SimpleNamespace(client_key=key, client_secret=secret))
+    assert tag() == tag() and len(tag()) == 16
+    assert len({tag(), tag(key='other-key'), tag(secret='other-secret'), tag(key='secret-key ')}) == 4
+    assert 'secret' not in tag()
 
 
 @pytest.mark.parametrize('status,body,reason', [

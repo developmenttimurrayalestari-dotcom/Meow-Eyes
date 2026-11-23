@@ -6,6 +6,8 @@ On Linux, --pid accepts the backend PID to include its startup environment.
 """
 import argparse
 import asyncio
+import hashlib
+import hmac
 import json
 import os
 from pathlib import Path
@@ -18,6 +20,13 @@ from integrations.config import EverproSettings
 from mysql.config import DEFAULT_ENV_FILE
 
 KEYS = ('EVERPRO_ENVIRONMENT', 'EVERPRO_BASE_URL', 'EVERPRO_CLIENT_KEY', 'EVERPRO_CLIENT_SECRET')
+
+
+def credential_fingerprint(settings):
+    # An opt-in comparison tag, never the key, secret or token itself. Keep the
+    # exact input bytes: whitespace and case differences must remain visible.
+    return hmac.new(settings.client_secret.encode('utf-8'),
+                    b'meow-eyes-everpro-v1\0' + settings.client_key.encode('utf-8'), hashlib.sha256).hexdigest()[:16]
 
 
 def environment_report(file_values, process_values):
@@ -67,6 +76,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--check-auth', action='store_true', help='Request a token only; never create an order')
     parser.add_argument('--pid', type=int, help='Linux backend PID; inspect its startup environment instead of this shell')
+    parser.add_argument('--fingerprint', action='store_true', help='Include an opaque comparison tag for the credential pair')
     args = parser.parse_args()
     file_values = dotenv_values(DEFAULT_ENV_FILE, interpolate=False)
     process_values = dict(os.environ)
@@ -93,6 +103,8 @@ def main():
         print(json.dumps(report, indent=2))
         return 1
     report.update(environment=settings.environment, base_url=settings.base_url, ok=True)
+    if args.fingerprint:
+        report['credential_fingerprint'] = credential_fingerprint(settings)
     if args.check_auth:
         report['authentication'] = asyncio.run(check_auth(settings))
         report['ok'] = report['authentication']['ok']
