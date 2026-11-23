@@ -1,13 +1,16 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Shield, Cat } from "lucide-react";
 import { api } from "../lib/api";
 import { useAuth } from "../contexts/AuthContext";
+import { navigateAfterAuthentication, requestedAuthReturn } from "../lib/authReturn";
 import { toast } from "sonner";
 
 const SetupPinPage = () => {
   const { user, refreshMe } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [busy, setBusy] = useState(false);
   const [pin, setPin] = useState(["", "", "", "", "", ""]);
   const [confirm, setConfirm] = useState(["", "", "", "", "", ""]);
   const [stage, setStage] = useState("enter");
@@ -47,14 +50,16 @@ const SetupPinPage = () => {
       setConfirm(["", "", "", "", "", ""]);
       return;
     }
+    if (busy) return;
+    setBusy(true);
     try {
       await api.post("/auth/pin/setup", { pin: pin.join("") });
       toast.success("PIN keamanan tersimpan!");
       await refreshMe();
-      navigate("/", { replace: true });
+      navigateAfterAuthentication(requestedAuthReturn(location) || "/", navigate);
     } catch (err) {
       toast.error(err?.response?.data?.detail || "Gagal menyimpan PIN");
-    }
+    } finally { setBusy(false); }
   };
 
   const current = stage === "enter" ? pin : confirm;
@@ -99,7 +104,7 @@ const SetupPinPage = () => {
           ) : (
             <div className="flex gap-2">
               <button onClick={() => { setStage("enter"); setConfirm(["", "", "", "", "", ""]); }} className="btn-secondary flex-1" data-testid="pin-back-btn">Ulang</button>
-              <button onClick={handleSave} className="btn-primary flex-1" data-testid="pin-save-btn">Simpan PIN</button>
+              <button disabled={busy} onClick={handleSave} className="btn-primary flex-1" data-testid="pin-save-btn">Simpan PIN</button>
             </div>
           )}
         </div>

@@ -1,9 +1,19 @@
 import {
   authDestination, rememberAuthReturn, requestedAuthReturn, safeLocalReturn,
-  safeMeowsurementReturn, takeAuthReturn, usesCustomerMeasurementFlow,
+  safeMeowsurementReturn, takeAuthReturn, usesCustomerMeasurementFlow, securitySetupPath,
 } from "./authReturn";
 
 afterEach(() => { sessionStorage.clear(); jest.restoreAllMocks(); });
+
+test.each(['google', 'facebook'])('social %s accounts complete password and PIN before continuing', provider => {
+  const user = { provider, has_password: false, has_pin: true };
+  expect(authDestination('/orders', true, user)).toBe('/setup-password?return_to=%2Forders');
+  expect(authDestination('/meowsurement/', true, user)).toBe('/setup-password?return_to=%2Fmeowsurement%2F');
+  expect(securitySetupPath({ ...user, has_password: true, has_pin: false })).toBe('/setup-pin');
+  expect(authDestination('/orders', true, { ...user, has_password: true })).toBe('/orders');
+  expect(safeLocalReturn('/setup-password')).toBe('/');
+  expect(safeLocalReturn('/setup-pin')).toBe('/');
+});
 
 test("only local safe returns survive sign-in, including encoded URL attacks", () => {
   for (const unsafe of ["https://outside.test", "//outside.test/x", "/\\outside.test", "/%2foutside.test", "/%5coutside.test", "/\noutside", "/login", "/register/", "/auth/callback", "javascript:alert(1)"]) {

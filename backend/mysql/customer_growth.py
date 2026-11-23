@@ -20,7 +20,7 @@ class RewardRule(BaseModel):
     kind: str = Field(default='none', pattern='^(none|points|voucher)$')
     points: int = Field(default=0, ge=0, le=1000000)
     voucher_id: str | None = Field(default=None, max_length=64)
-    expiry_days: int = Field(default=30, ge=1, le=3650)
+    expiry_days: int = Field(default=30, ge=0, le=3650)  # 0: no expiration
 
     @model_validator(mode='after')
     def voucher_required(self):
@@ -38,7 +38,7 @@ class GrowthConfig(BaseModel):
     daily_points: int = Field(default=1, ge=1, le=1000000)
     streak_points: list[int] = Field(default_factory=lambda: [1, 1, 1, 1, 1, 1, 5], min_length=7, max_length=7)
     use_streak: bool = False
-    checkin_expiry_days: int = Field(default=30, ge=1, le=3650)
+    checkin_expiry_days: int = Field(default=30, ge=0, le=3650)  # 0: no expiration
     cod_enabled: bool = True
 
     @model_validator(mode='after')

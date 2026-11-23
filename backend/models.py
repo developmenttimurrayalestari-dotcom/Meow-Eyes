@@ -53,6 +53,7 @@ class UserPublic(BaseModel):
     role: str
     provider: str
     has_pin: bool = False
+    has_password: bool = False
     points_balance: int = 0
     email_verified_at: Optional[str] = None
     referral_code: Optional[str] = None
@@ -94,6 +95,19 @@ class LoginRequest(BaseModel):
 
 class PinSetupRequest(BaseModel):
     pin: str = Field(min_length=6, max_length=6, pattern=r"^\d{6}$")
+
+
+class PasswordSetupRequest(BaseModel):
+    password: str = Field(min_length=8, max_length=72)
+    confirm_password: str = Field(min_length=8, max_length=72)
+
+    @model_validator(mode='after')
+    def matching_passwords(self):
+        if self.password != self.confirm_password:
+            raise ValueError('Konfirmasi password tidak cocok')
+        if len(self.password.encode('utf-8')) > 72:
+            raise ValueError('Password maksimal 72 byte UTF-8')
+        return self
 
 
 class PinVerifyRequest(BaseModel):
@@ -491,7 +505,7 @@ class RouletteSpin(BaseModel):
     reward_type: str
     reward_value: float
     used: bool = False
-    expires_at: str
+    expires_at: Optional[str] = None
     created_at: str = Field(default_factory=now_iso)
 
 

@@ -99,6 +99,8 @@ def test_upgrade_sql_matches_committed_export_and_current_metadata():
         if table.name == 'products':
             # 0007 adds the nullable deletion marker after the frozen 0005 export.
             ddl = re.sub(r'\s*deleted_at DATETIME\(6\),', '', ddl)
+        if table.name == 'roulette_spins':
+            ddl = ddl.replace('expires_at DATETIME(6),', 'expires_at DATETIME(6) NOT NULL,')
         if table.name == 'stock_movements':
             ddl = re.sub(r'\s*ttb_number VARCHAR\(128\),', '', ddl)  # Added by 0009.
         if table.name == 'meowsurement_sessions':
@@ -130,6 +132,21 @@ def test_customer_growth_incremental_sql_and_guards_are_frozen():
     assert "version_num='20261120_0015'" in sql
     for name, ddl in revision.TABLE_DDL.items():
         assert normalize(ddl) == normalize(str(CreateTable(Base.metadata.tables[name]).compile(dialect=mysql.dialect())))
+
+
+def test_optional_point_expiry_replaces_only_game_and_cashback_guards():
+    from mysql.check_integrity import load_point_expiry_revision
+    revision = load_point_expiry_revision()
+    sql = offline('upgrade', '20261120_0015:20261123_0016', '--sql')
+    assert sql == (BACKEND / 'sql/016_optional_point_expiry.sql').read_text(encoding='utf-8')
+    assert sql.count('CREATE TRIGGER ') == sql.count('DROP TRIGGER IF EXISTS ') == 4
+    assert 'ALTER TABLE roulette_spins MODIFY expires_at DATETIME(6) NULL' in sql
+    assert not any(token in sql for token in ('CREATE TABLE ', 'DROP TABLE ', 'DELETE FROM '))
+    assert not re.search(r'^UPDATE (?!alembic_version\b)', sql, re.MULTILINE)
+    previous = load_loyalty_revision()
+    assert set(revision.trigger_definitions()) == {name for name, d in previous.trigger_definitions().items() if d['table'] in revision.RULES}
+    for table, rules in revision.RULES.items():
+        assert tuple((n, p.replace('expiry_days > 0', 'expiry_days >= 0'), q.replace('expiry_days > 0', 'expiry_days >= 0')) for n, p, q in previous.RULES[table]) == rules
 
 
 def test_downgrade_sql_drops_children_before_parents():

@@ -69,7 +69,7 @@ async def get_session_user(token: str) -> Optional[User]:
 def public_user(u: User) -> UserPublic:
     return UserPublic(
         user_id=u.user_id, email=u.email, phone=u.phone, name=u.name, picture=u.picture,
-        role=u.role, provider=u.provider, has_pin=bool(u.pin_hash),
+        role=u.role, provider=u.provider, has_pin=bool(u.pin_hash), has_password=bool(u.password_hash),
         points_balance=u.points_balance, permissions=u.permissions,
         email_verified_at=u.email_verified_at, referral_code=u.referral_code,
         created_at=u.created_at,
@@ -88,13 +88,19 @@ async def current_user_optional(
     return await get_session_user(token)
 
 
-async def current_user(
+async def authenticated_user(
     user: Optional[User] = Depends(current_user_optional),
 ) -> User:
     if not user:
         raise HTTPException(status_code=401, detail="Tidak terautentikasi")
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Akun dinonaktifkan")
+    return user
+
+
+async def current_user(user: User = Depends(authenticated_user)) -> User:
+    if user.provider in ('google', 'facebook') and (not user.password_hash or not user.pin_hash):
+        raise HTTPException(403, 'Lengkapi password dan PIN keamanan terlebih dahulu')
     return user
 
 

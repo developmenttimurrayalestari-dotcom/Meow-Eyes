@@ -297,27 +297,121 @@ def canonical_body(value):
     return tuple(token if token.startswith("'") else token.strip('`').lower() for token in tokens)
 
 
-def table_issues(connection):
+# Contracts for columns added to pre-existing tables. A retry may skip an
+# existing column only when its type, nullability and default are compatible.
+# These definitions belong to this revision, not the current ORM metadata.
+ADDED_COLUMN_SHAPES = {
+    ('users', 'email_verified_at'): (sa.DateTime, {'fsp': 6}, True, None),
+    ('users', 'referral_code'): (sa.String, {'length': 32}, True, None),
+    ('products', 'sale_role'): (sa.String, {'length': 16}, False, 'main'),
+    ('addresses', 'latitude'): (sa.Numeric, {'precision': 10, 'scale': 7}, True, None),
+    ('addresses', 'longitude'): (sa.Numeric, {'precision': 10, 'scale': 7}, True, None),
+    ('order_addresses', 'latitude'): (sa.Numeric, {'precision': 10, 'scale': 7}, True, None),
+    ('order_addresses', 'longitude'): (sa.Numeric, {'precision': 10, 'scale': 7}, True, None),
+    ('orders', 'payment_mode'): (sa.String, {'length': 16}, False, 'online'),
+    ('vouchers', 'audience'): (sa.String, {'length': 16}, False, 'general'),
+}
+PRIMARY_KEYS = {
+    'email_verifications': ('id',),
+    'customer_referrals': ('referee_id',),
+    'customer_growth_rewards': ('id',),
+    'customer_voucher_grants': ('id',),
+    'daily_checkins': ('user_id', 'day'),
+    'cart_item_addons': ('cart_item_id', 'product_id'),
+    'addon_flash_reservations': ('id',),
+}
+
+
+def referential_action(value):
+    # MySQL 5.7 omits the default RESTRICT from SHOW CREATE TABLE. SQLAlchemy
+    # then reflects no ondelete option. NO ACTION has the same InnoDB behavior;
+    # CASCADE and SET NULL must still match explicitly.
+    action = ' '.join((value or '').upper().split())
+    return 'RESTRICT' if action in ('', 'NO ACTION', 'RESTRICT') else action
+
+
+def column_matches(column, shape):
+    kind, attributes, nullable, default = shape
+    actual_default = column.get('default')
+    if actual_default is not None:
+        actual_default = str(actual_default).strip()
+        if actual_default.upper() == 'NULL':
+            actual_default = None
+        elif actual_default.startswith("'") and actual_default.endswith("'"):
+            actual_default = actual_default[1:-1].replace("''", "'")
+    return (isinstance(column['type'], kind)
+            and all(getattr(column['type'], name, None) == value for name, value in attributes.items())
+            and column['nullable'] == nullable and actual_default == default)
+
+
+def index_definitions():
+    for sql in INDEX_DDL:
+        match = re.fullmatch(r'CREATE INDEX (\w+) ON (\w+) \(([^)]+)\)', sql)
+        name, table, columns = match.groups()
+        yield name, table, tuple(column.strip() for column in columns.split(',')), sql
+
+
+def table_issues(connection, *, allow_partial=False):
     inspector = sa.inspect(connection)
     issues = []
     for table, required in COLUMNS.items():
         if not inspector.has_table(table):
-            issues.append('missing_table:' + table)
+            if not (allow_partial and table in TABLE_DDL):
+                issues.append('missing_table:' + table)
             continue
-        actual = {c['name'] for c in inspector.get_columns(table)}
-        if not set(required) <= actual: issues.append('growth_columns_missing:' + table)
+        actual = {c['name']: c for c in inspector.get_columns(table)}
+        if not set(required) <= actual.keys() and not (allow_partial and table not in TABLE_DDL):
+            issues.append('growth_columns_missing:' + table)
+        for column in required:
+            shape = ADDED_COLUMN_SHAPES.get((table, column))
+            if shape and column in actual and not column_matches(actual[column], shape):
+                issues.append('growth_column_mismatch:' + table + '.' + column)
+    for table, expected in PRIMARY_KEYS.items():
+        if inspector.has_table(table) and tuple(inspector.get_pk_constraint(table)['constrained_columns']) != expected:
+            issues.append('growth_primary_key_mismatch:' + table)
     for table, expected in UNIQUES.items():
         if not inspector.has_table(table): continue
         actual = {tuple(c['column_names']) for c in inspector.get_unique_constraints(table)}
         if not set(expected) <= actual: issues.append('growth_unique_missing:' + table)
     if inspector.has_table('users'):
-        actual = {tuple(c['column_names']) for c in inspector.get_unique_constraints('users')}
-        if ('referral_code',) not in actual: issues.append('referral_code_unique_missing')
+        constraints = inspector.get_unique_constraints('users')
+        actual = {tuple(c['column_names']) for c in constraints}
+        if ('referral_code',) not in actual and not allow_partial:
+            issues.append('referral_code_unique_missing')
+        if any(c['name'] == 'uq_users_referral_code' and tuple(c['column_names']) != ('referral_code',) for c in constraints):
+            issues.append('referral_code_unique_mismatch')
     for table, expected in FKS.items():
         if not inspector.has_table(table): continue
-        actual = {(tuple(c['constrained_columns']), tuple(c['referred_table'] + '.' + col for col in c['referred_columns']), c.get('options', {}).get('ondelete')) for c in inspector.get_foreign_keys(table)}
+        actual = {(tuple(c['constrained_columns']), tuple(c['referred_table'] + '.' + col for col in c['referred_columns']), referential_action(c.get('options', {}).get('ondelete'))) for c in inspector.get_foreign_keys(table)}
         if not set(expected) <= actual: issues.append('growth_fk_missing:' + table)
+    for name, table, columns, _ in index_definitions():
+        if not inspector.has_table(table): continue
+        actual = next((index for index in inspector.get_indexes(table) if index['name'] == name), None)
+        if actual is None:
+            if not allow_partial: issues.append('growth_index_missing:' + name)
+        elif tuple(actual['column_names']) != columns or actual['unique']:
+            issues.append('growth_index_mismatch:' + name)
     return issues
+
+
+def resume_schema(connection):
+    # MySQL DDL commits even when the later preflight/guard installation fails.
+    # Check existing objects before any write, then finish only missing DDL.
+    issues = table_issues(connection, allow_partial=True)
+    if issues:
+        raise RuntimeError('Customer growth migration existing schema mismatch: ' + ', '.join(issues))
+    for sql in ALTER_COLUMNS[:-1]:
+        table, column = re.match(r'ALTER TABLE `([^`]+)` ADD COLUMN (\w+)', sql).groups()
+        if column not in {c['name'] for c in sa.inspect(connection).get_columns(table)}:
+            op.execute(sa.text(sql))
+    if ('referral_code',) not in {tuple(c['column_names']) for c in sa.inspect(connection).get_unique_constraints('users')}:
+        op.execute(sa.text(ALTER_COLUMNS[-1]))
+    for table, sql in TABLE_DDL.items():
+        if not sa.inspect(connection).has_table(table):
+            op.execute(sa.text(sql))
+    for name, table, _, sql in index_definitions():
+        if name not in {index['name'] for index in sa.inspect(connection).get_indexes(table)}:
+            op.execute(sa.text(sql))
 
 
 def row_issues(connection):
@@ -349,13 +443,19 @@ def trigger_issues(connection):
 
 
 def upgrade():
-    for sql in ALTER_COLUMNS: op.execute(sa.text(sql))
-    for sql in TABLE_DDL.values(): op.execute(sa.text(sql))
-    for sql in INDEX_DDL: op.execute(sa.text(sql))
+    offline = context.is_offline_mode()
+    if offline:
+        # Keep the reviewed SQL export unchanged. Resuming a partial deployment
+        # requires online inspection through `alembic upgrade head`.
+        for sql in ALTER_COLUMNS: op.execute(sa.text(sql))
+        for sql in TABLE_DDL.values(): op.execute(sa.text(sql))
+        for sql in INDEX_DDL: op.execute(sa.text(sql))
+    else:
+        resume_schema(op.get_bind())
     # Deterministic 96-bit public referral codes; email verification remains
     # unknown for legacy accounts until a real verification succeeds.
     op.execute(sa.text("UPDATE users SET referral_code=CONCAT('ME', UPPER(LEFT(SHA2(user_id,256),24))) WHERE referral_code IS NULL"))
-    if context.is_offline_mode():
+    if offline:
         output = op.get_context().impl.static_output
         output('DELIMITER $$')
         for name, definition in trigger_definitions().items():

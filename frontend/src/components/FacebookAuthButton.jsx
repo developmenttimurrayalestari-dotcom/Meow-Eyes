@@ -41,7 +41,7 @@ export default function FacebookAuthButton({ returnTo = '', disabled = false }) 
           try {
             const user = await loginWithFacebook(token); if (!live.current) return;
             rememberAuthReturn(''); toast.success('Selamat datang, ' + user.name + '!');
-            navigateAfterAuthentication(authDestination(returnTo, user.has_pin), navigate);
+            navigateAfterAuthentication(authDestination(returnTo, user.has_pin, user), navigate);
           } catch (err) { if (live.current) { setError(apiError(err, 'Gagal masuk dengan Facebook')); setPhase('ready'); } }
           finally { busy.current = false; }
         })();

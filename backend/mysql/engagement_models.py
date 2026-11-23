@@ -73,7 +73,7 @@ class PointRedemption(Base):
 
 class GameRule(Base):
     __tablename__ = 'game_rules'
-    __table_args__ = (CheckConstraint('cooldown_seconds >= 0 AND expiry_days > 0 AND max_duration_seconds >= 10 AND max_duration_seconds <= 600 AND max_points >= 0 AND points_per_unit > 0', name='bounds'), CheckConstraint("engine IN ('matching','slide_puzzle','space_war','roulette')", name='engine'))
+    __table_args__ = (CheckConstraint('cooldown_seconds >= 0 AND expiry_days >= 0 AND max_duration_seconds >= 10 AND max_duration_seconds <= 600 AND max_points >= 0 AND points_per_unit > 0', name='bounds'), CheckConstraint("engine IN ('matching','slide_puzzle','space_war','roulette')", name='engine'))
     game_key: Mapped[str] = mapped_column(String(32), ForeignKey('games.key', ondelete='RESTRICT'), primary_key=True)
     engine: Mapped[str] = mapped_column(String(32), nullable=False)
     cooldown_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=86400)
@@ -110,7 +110,7 @@ class GameSession(Base):
 
 class CashbackEvent(Base):
     __tablename__ = 'cashback_events'
-    __table_args__ = (CheckConstraint('percent > 0 AND percent <= 100 AND expiry_days > 0 AND end_at > start_at', name='bounds'),)
+    __table_args__ = (CheckConstraint('percent > 0 AND percent <= 100 AND expiry_days >= 0 AND end_at > start_at', name='bounds'),)
     id: Mapped[str] = mapped_column(ID, primary_key=True, default=identity)
     name: Mapped[str] = mapped_column(String(160), nullable=False)
     start_at: Mapped[datetime] = mapped_column(UTCDateTime(), nullable=False)

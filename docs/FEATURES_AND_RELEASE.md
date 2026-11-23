@@ -717,6 +717,7 @@ Migrasi `20261120_0015` menambahkan tujuh tabel dan kolom tambahan, mempertahank
 - Profil customer menyediakan verifikasi email, kirim ulang, pembaruan kontak, tautan referral, serta check-in. Tautan verifikasi berlaku 30 menit; database hanya menyimpan hash. Pengiriman ulang memiliki jeda 60 detik, dan penggantian email membatalkan verifikasi lama. Google dengan email otoritatif dapat mengonfirmasi email melalui identitas Google yang sudah diverifikasi backend.
 - Admin membuka **Program Member & COD** untuk mengaktifkan referral, memilih trigger pendaftaran/transaksi pertama selesai, mengatur reward tiap pihak, serta poin harian/streak dan masa berlakunya. Reward referral dicatat melalui antrean idempoten; scheduler mengirimkannya tiap menit, atau saat akun penerima dibuka. Akun suspend tidak menerima reward sampai diaktifkan kembali.
 - Semua poin baru memakai lot/history yang sama dengan fitur lama. Rate dan versi dicatat saat hak reward diperoleh; perubahan rate berikutnya tidak mengubah nilai poin tersebut. Check-in maksimal sekali per tanggal WIB, streak putus setelah melewatkan satu hari dan siklus hadiah berulang setiap tujuh hari.
+- Pada pengaturan referral dan Daily Check-in, centang **Berlaku selamanya** untuk poin tanpa kedaluwarsa. Lepas centang untuk mengisi jumlah hari (1–3650). Perubahan berlaku pada check-in berikutnya dan referral baru; aturan referral yang sudah terdaftar serta masa berlaku poin yang sudah diperoleh tetap mengikuti snapshot sebelumnya. Masa berlaku voucher tetap mengikuti pengaturan voucher.
 - Pada menu **Voucher**, pilih sasaran **Member Baru**. Email wajib terverifikasi untuk klaim maupun checkout, hanya transaksi pertama dan sekali per akun. Order belum dibayar juga menahan kuota; pembatalan melepasnya. Voucher **Penerima Reward Referral** memerlukan grant pada akun yang bersangkutan.
 - Menu **Pelanggan** mendukung pencarian, filter Verified/Unverified/Aktif/Suspend, pagination, edit kontak, detail transaksi, saldo/nilai poin, history dan jumlah referral. Suspend mencabut sesi login. Admin tidak dapat memalsukan tanggal verifikasi melalui form edit.
 - Main Product menampilkan pilihan beberapa Add On ketika ditambahkan/dibeli. Pilihan opsional, setiap Add On mengikuti kuantitas produk utama. Server menghitung seluruh harga, berat dan kebutuhan stok; checkout menyimpan satu item dengan snapshot rincian komponen. Lens Index dan resep opsional yang sudah ada tetap mengikuti aturan Frame/Paket sebelumnya. Flash Sale pada komponen tetap menonaktifkan diskon lain.
@@ -755,3 +756,52 @@ Port 587/STARTTLS merupakan contoh konfigurasi; sesuaikan dengan layanan Zimbra.
 5. Ikuti audit dan pengujian sandbox pada [INTEGRATIONS.md](INTEGRATIONS.md). Tidak ada proses backend/PM2 yang dijalankan otomatis oleh pembaruan ini.
 
 Validasi lokal: 453 tes backend dan 252 tes frontend lulus. Build produksi lulus dengan peringatan MediaPipe/source map yang sudah ada. Sembilan alur desktop/mobile diperiksa dengan Edge headless dan API tiruan, tanpa error JavaScript. Uji MySQL konkurensi tetap terpisah pada database kosong `test_meow_*`; dua tes symlink Windows memerlukan hak akses khusus. SMTP dan akun merchant DOKU/Everpro belum diuji melalui jaringan nyata. Migrasi disediakan sebagai kode/SQL; belum diterapkan ke database operasional.
+
+### Pemulihan migrasi 0015 pada MySQL 5.7 — 23 November 2026
+
+Error `Customer growth migration preflight failed: growth_fk_missing:...` pada tabel referral, reward, voucher grant, check-in, dan Add On dapat berasal dari pembacaan aturan foreign key. MySQL 5.7 dapat menghilangkan aturan default `ON DELETE RESTRICT` dari `SHOW CREATE TABLE`, sehingga SQLAlchemy mengembalikan opsi kosong. Pemeriksaan revisi `0015` kini memperlakukan opsi kosong, `RESTRICT`, dan `NO ACTION` sebagai aturan yang setara. `CASCADE`, `SET NULL`, kolom relasi, dan tabel tujuan tetap diperiksa.
+
+DDL MySQL yang selesai sebelum error tetap tersimpan meskipun Alembic belum mencatat revisi `0015`. Jalur migrasi online kini memeriksa struktur yang sudah ada, melewati kolom/tabel/index yang sesuai, menyelesaikan objek yang belum dibuat, lalu memasang dan mengaudit trigger. Struktur yang tidak sesuai tetap menghentikan migrasi; data transaksi dan kode referral yang sudah terisi tidak ditulis ulang. Ekspor SQL offline tetap merupakan skrip untuk penerapan awal, bukan untuk mengulang deployment parsial.
+
+1. Buat backup database, hentikan penulisan aplikasi selama pemulihan, dan perbarui kode server, khususnya `backend/migrations/versions/20261120_0015_customer_growth_cod_addons.py`.
+2. Jalankan dengan venv backend dari direktori server:
+
+   ```bash
+   cd /home/vmnginx/Project/meow/Meow-Eyes/backend
+   .venv_backend/bin/python -m alembic current
+   .venv_backend/bin/python -m alembic upgrade head
+   .venv_backend/bin/python -m alembic current
+   .venv_backend/bin/python -m mysql.check_integrity
+   ```
+
+   Hasil akhir `alembic current` harus `20261120_0015 (head)` dan audit integritas harus lulus. Jika muncul `existing schema mismatch`, periksa objek yang disebutkan sebelum melanjutkan; jangan melewati audit menggunakan `alembic stamp`, menghapus tabel, atau menonaktifkan foreign key.
+3. Setelah upgrade dan audit berhasil, jalankan kembali backend. Untuk proses PM2 yang sudah ada: `pm2 restart meow-backend --update-env`.
+
+Pengujian regresi mencakup hasil parser `SHOW CREATE TABLE` tanpa `ON DELETE`, perbedaan aturan foreign key yang sesungguhnya, struktur tidak sesuai, pengulangan deployment lengkap, serta kegagalan koneksi pada beberapa posisi DDL dan pemasangan trigger. Total 488 tes backend lulus; satu pengujian MySQL nyata dilewati karena memerlukan database kosong khusus, dan dua pengujian symlink Windows tidak dijalankan. Tes migrasi memakai simulasi inspector/DDL; penerapan ke database server tetap dilakukan melalui perintah di atas.
+
+### Poin berlaku selamanya — revisi 0016
+
+Checkbox **Berlaku selamanya** tersedia pada reward referral untuk masing-masing pihak, Daily Check-in, setiap game di **Manage Games** (termasuk Roulette), dan event cashback. Jika dicentang, kolom jumlah hari disembunyikan. Jika dilepas, jumlah hari sebelumnya muncul kembali; aturan permanen yang baru dibuka memakai 30 hari sebagai pilihan awal saat diubah menjadi terbatas. Customer melihat keterangan **berlaku selamanya**, bukan **0 hari**. Di API/database, nilai 0 tetap menjadi penanda aturan permanen, sedangkan tanggal kedaluwarsa lot/history disimpan NULL.
+
+Migrasi `20261123_0016` memperbarui empat guard MySQL 5.7 untuk menerima masa berlaku poin permanen pada game/cashback, serta mengizinkan tanggal kedaluwarsa kosong pada catatan hadiah poin Roulette. Saldo, rate, riwayat, tanggal kedaluwarsa lama, snapshot ronde, dan snapshot cashback yang sudah dibuat tidak ditulis ulang. Periode event cashback tetap wajib diisi; periode event menentukan pembelian yang memenuhi syarat, sedangkan checkbox menentukan masa berlaku poin hasilnya. Reward Roulette selain poin tetap mengikuti masa berlaku reward sebelumnya.
+
+Sebelum menerapkan kode backend terbaru, buat backup dan hentikan penulisan aplikasi. Dari direktori backend dengan venv yang biasa digunakan:
+
+```bash
+.venv_backend/bin/python -m alembic upgrade head
+.venv_backend/bin/python -m mysql.check_integrity
+```
+
+Head terbaru menjadi `20261123_0016`. Setelah migrasi dan audit berhasil, jalankan kembali backend, misalnya `pm2 restart meow-backend --update-env`, lalu terapkan frontend terbaru (restart proses development, atau build/deploy ulang jika memakai hosting statis). Ekspor DDL tersedia di `backend/sql/016_optional_point_expiry.sql`. Migrasi dan restart server dilakukan oleh operator, bukan otomatis oleh perubahan kode ini.
+
+Validasi pembaruan: 496 tes backend lulus; pengujian MySQL nyata membutuhkan database kosong khusus dan dua tes symlink Windows tidak dijalankan. Seluruh 254 tes frontend lulus, lalu tiga tes komponen masa berlaku lulus setelah penambahan kasus kolom hari kosong. Tes mencakup poin game/Roulette/cashback permanen, snapshot lama, serta checkbox yang menyembunyikan dan mengembalikan jumlah hari. Empat layar yang diubah juga lolos kompilasi JSX.
+
+### Password dan PIN untuk akun Google/Facebook
+
+Akun yang dibuat melalui Google/Facebook wajib melengkapi password Meow Eyes dan PIN keamanan. Setelah login, akun tanpa password diarahkan ke `/setup-password`, kemudian `/setup-pin` jika PIN belum tersedia. Akun sosial lama juga mengikuti alur ini saat belum lengkap. Password/PIN yang sudah ada dipertahankan; login berikutnya langsung melanjutkan ke tujuan semula. Tujuan lokal seperti checkout atau riwayat pesanan disimpan selama proses ini.
+
+Password baru minimal 8 karakter, maksimal 72 byte UTF-8, dan wajib dikonfirmasi. Backend menyimpan hash bcrypt pada kolom `users.password_hash` yang sudah ada. Endpoint `POST /api/auth/password/setup` hanya dapat dipakai oleh sesi aktif akun sosial yang belum mempunyai password; endpoint menolak penimpaan password. Setelah password dan PIN lengkap, customer juga bisa masuk menggunakan email dan password Meow Eyes. Password akun Google/Facebook tidak diminta.
+
+`GET /api/auth/me` menyertakan `has_password` dan tetap dapat digunakan selama proses pengisian. API privat menolak akun sosial tanpa password/PIN; akses untuk memeriksa akun, membuat password, mengatur PIN sesudah password dibuat, dan keluar tetap tersedia. Akun email/password mengikuti alur yang sudah ada. Tidak diperlukan migrasi database baru untuk perubahan ini. Terapkan kode frontend/backend dan restart prosesnya melalui alur deployment biasa; proses server tidak dijalankan otomatis.
+
+Validasi lokal: 500 tes backend dan 260 tes frontend lulus. Pengujian mencakup Google/Facebook dengan maupun tanpa PIN lama, penolakan akses API sebelum akun lengkap, password/konfirmasi yang tidak sesuai, pencegahan penimpaan password, login email dengan password baru, serta pengalihan ke tujuan awal sesudah pembuatan password. Satu pengujian MySQL nyata dilewati dan dua tes symlink Windows tidak dijalankan.

@@ -1,6 +1,7 @@
 import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { securitySetupPath, safeLocalReturn } from "../lib/authReturn";
 import { Cat } from "lucide-react";
 
 export const ProtectedRoute = ({ children, requireRole }) => {
@@ -22,6 +23,12 @@ export const ProtectedRoute = ({ children, requireRole }) => {
   }
   if (requireRole === "super_admin" && user.role !== "super_admin") {
     return <Navigate to="/" replace />;
+  }
+  const setup = securitySetupPath(user);
+  if (setup && location.pathname !== setup) {
+    const next = new URLSearchParams(location.search).get('return_to') || location.pathname + location.search + location.hash;
+    const destination = safeLocalReturn(next, '/');
+    return <Navigate to={setup + '?return_to=' + encodeURIComponent(destination)} replace />;
   }
   return children;
 };

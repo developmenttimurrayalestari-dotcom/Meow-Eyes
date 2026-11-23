@@ -77,7 +77,7 @@ async def spin_roulette(user: User = Depends(current_user)):
         spin = m.RouletteSpin(
             id=gen_id("spn"), user_id=user.user_id, reward_id=chosen.id,
             reward_label=chosen.label, reward_type=chosen.type, reward_value=awarded if chosen.type == 'points' else chosen.value,
-            used=chosen.type == 'points', expires_at=utcnow() + timedelta(days=rule.expiry_days if chosen.type == 'points' else ROULETTE_REWARD_TTL_DAYS),
+            used=chosen.type == 'points', expires_at=(None if chosen.type == 'points' and rule.expiry_days == 0 else utcnow() + timedelta(days=rule.expiry_days if chosen.type == 'points' else ROULETTE_REWARD_TTL_DAYS)),
         )
         s.add(spin)
         await wallet.credit(s, fresh, awarded, source='earn_roulette', key='roulette:' + spin.id, expiry_days=rule.expiry_days, note=chosen.label)

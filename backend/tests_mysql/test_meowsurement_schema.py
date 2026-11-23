@@ -191,7 +191,10 @@ def test_new_tables_and_guard_predicates_cover_all_metadata_without_organization
     old.RULES['products'] = updated.RULES['products']
     flat.RULES['categories'] = updated.RULES['categories']
     old.RULES = {key: value for key, value in old.RULES.items() if key not in growth.RULES}
-    for revision in (old, new, loyalty, flat, growth):
+    from mysql.check_integrity import load_point_expiry_revision
+    expiry = load_point_expiry_revision()
+    loyalty.RULES = {key: value for key, value in loyalty.RULES.items() if key not in expiry.RULES}
+    for revision in (old, new, loyalty, flat, growth, expiry):
         for table, rules in revision.RULES.items():
             for name, predicate, qualified in rules:
                 assert qualified.replace("NEW.", "") == predicate

@@ -14,6 +14,7 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import VerifyEmailPage from './pages/VerifyEmailPage';
 import AdminCustomerGrowth from './pages/admin/AdminCustomerGrowth';
+import SetupPasswordPage from "./pages/SetupPasswordPage";
 import SetupPinPage from "./pages/SetupPinPage";
 import ProductsPage from "./pages/ProductsPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
@@ -68,6 +69,7 @@ function AppRouter() {
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
+      <Route path="/setup-password" element={<ProtectedRoute><SetupPasswordPage /></ProtectedRoute>} />
       <Route path="/setup-pin" element={<ProtectedRoute><SetupPinPage /></ProtectedRoute>} />
 
       {/* Admin */}

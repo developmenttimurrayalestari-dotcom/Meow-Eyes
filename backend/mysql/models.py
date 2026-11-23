@@ -956,7 +956,7 @@ class RouletteSpin(CreatedMixin, Base):
     reward_type: Mapped[str] = mapped_column(String(32), nullable=False)
     reward_value: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
     used: Mapped[bool] = mapped_column(Boolean, server_default="0", nullable=False)
-    expires_at: Mapped[datetime] = mapped_column(UTCDateTime(), nullable=False)
+    expires_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
 
 
 class RouletteRedemption(CreatedMixin, Base):

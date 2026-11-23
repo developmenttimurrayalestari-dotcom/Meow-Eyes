@@ -120,6 +120,14 @@ def load_growth_revision():
     return revision
 
 
+def load_point_expiry_revision():
+    path = Path(__file__).resolve().parents[1] / 'migrations/versions/20261123_0016_optional_point_expiry.py'
+    spec = importlib.util.spec_from_file_location('_meow_point_expiry', path)
+    revision = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(revision)
+    return revision
+
+
 async def audit(*, preflight_only: bool = False) -> dict:
     database = Database(MySQLSettings.from_env())
     try:
@@ -138,38 +146,43 @@ async def audit(*, preflight_only: bool = False) -> dict:
             installed = []
             if await connection.run_sync(lambda conn: inspect(conn).has_table('alembic_version')):
                 installed = (await connection.execute(text('SELECT version_num FROM alembic_version'))).scalars().all()
-            if installed in (['20261111_0006'], ['20261112_0007'], ['20261112_0008'], ['20261112_0009'], ['20261112_0010'], ['20261112_0011'], ['20261112_0012'], ['20261117_0013'], ['20261117_0014'], ['20261120_0015']):
+            if installed in (['20261111_0006'], ['20261112_0007'], ['20261112_0008'], ['20261112_0009'], ['20261112_0010'], ['20261112_0011'], ['20261112_0012'], ['20261117_0013'], ['20261117_0014'], ['20261120_0015'], ['20261123_0016']):
                 # 0006 replaces the historical category predicates/guards only.
                 revisions[0].RULES = {key: value for key,value in revisions[0].RULES.items() if key != 'categories'}
                 revisions.append(load_flat_master_revision())
-            if installed in (['20261112_0007'], ['20261112_0008'], ['20261112_0009'], ['20261112_0010'], ['20261112_0011'], ['20261112_0012'], ['20261117_0013'], ['20261117_0014'], ['20261120_0015']):
+            if installed in (['20261112_0007'], ['20261112_0008'], ['20261112_0009'], ['20261112_0010'], ['20261112_0011'], ['20261112_0012'], ['20261117_0013'], ['20261117_0014'], ['20261120_0015'], ['20261123_0016']):
                 revisions.append(load_product_deletion_revision())
-            if installed in (['20261112_0008'], ['20261112_0009'], ['20261112_0010'], ['20261112_0011'], ['20261112_0012'], ['20261117_0013'], ['20261117_0014'], ['20261120_0015']):
+            if installed in (['20261112_0008'], ['20261112_0009'], ['20261112_0010'], ['20261112_0011'], ['20261112_0012'], ['20261117_0013'], ['20261117_0014'], ['20261120_0015'], ['20261123_0016']):
                 revisions.append(load_retired_collections_revision())
-            if installed in (['20261112_0009'], ['20261112_0010'], ['20261112_0011'], ['20261112_0012'], ['20261117_0013'], ['20261117_0014'], ['20261120_0015']):
+            if installed in (['20261112_0009'], ['20261112_0010'], ['20261112_0011'], ['20261112_0012'], ['20261117_0013'], ['20261117_0014'], ['20261120_0015'], ['20261123_0016']):
                 revisions.append(load_stock_ttb_revision())
-            if installed in (['20261112_0010'], ['20261112_0011'], ['20261112_0012'], ['20261117_0013'], ['20261117_0014'], ['20261120_0015']):
+            if installed in (['20261112_0010'], ['20261112_0011'], ['20261112_0012'], ['20261117_0013'], ['20261117_0014'], ['20261120_0015'], ['20261123_0016']):
                 revisions.append(load_lens_index_types_revision())
-            if installed in (['20261112_0011'], ['20261112_0012'], ['20261117_0013'], ['20261117_0014'], ['20261120_0015']):
+            if installed in (['20261112_0011'], ['20261112_0012'], ['20261117_0013'], ['20261117_0014'], ['20261120_0015'], ['20261123_0016']):
                 revisions.append(load_native_google_revision())
-            if installed in (['20261112_0012'], ['20261117_0013'], ['20261117_0014'], ['20261120_0015']):
+            if installed in (['20261112_0012'], ['20261117_0013'], ['20261117_0014'], ['20261120_0015'], ['20261123_0016']):
                 # Replace only the affected predicates; all other guards remain.
                 updated = load_accessories_revision()
                 revisions[0].RULES['products'] = updated.RULES['products']
                 for revision in revisions[1:]:
                     if 'categories' in revision.RULES:
                         revision.RULES['categories'] = updated.RULES['categories']
-            if installed in (['20261117_0013'], ['20261117_0014'], ['20261120_0015']):
+            if installed in (['20261117_0013'], ['20261117_0014'], ['20261120_0015'], ['20261123_0016']):
                 revisions.append(load_phone_accounts_revision())
-            if installed in (['20261117_0014'], ['20261120_0015']):
+            if installed in (['20261117_0014'], ['20261120_0015'], ['20261123_0016']):
                 revisions.append(load_facebook_revision())
-            if installed == ['20261120_0015']:
+            if installed in (['20261120_0015'], ['20261123_0016']):
                 growth = load_growth_revision()
                 for revision in revisions:
                     revision.RULES = {key: value for key, value in revision.RULES.items() if key not in growth.RULES}
                 revisions.append(growth)
+            if installed == ['20261123_0016']:
+                expiry = load_point_expiry_revision()
+                for item in revisions:
+                    item.RULES = {key: value for key, value in item.RULES.items() if key not in expiry.RULES}
+                revisions.append(expiry)
             issues = []
-            if not preflight_only and installed != ['20261120_0015']: issues.append('schema_revision_mismatch')
+            if not preflight_only and installed != ['20261123_0016']: issues.append('schema_revision_mismatch')
             for revision in revisions:
                 table_issues = await connection.run_sync(revision.table_issues)
                 # Before 0003, all its new tables may legitimately be absent.

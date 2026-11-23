@@ -99,13 +99,15 @@ def test_member_voucher_requires_verified_first_transaction_once():
     asyncio.run(run())
 
 
-def test_referral_rewards_once_to_both_wallets_with_original_rate():
+@pytest.mark.parametrize('expiry_days', [0, 30])
+def test_referral_rewards_once_to_both_wallets_with_original_rate(expiry_days):
     async def run():
         async with isolated_database():
             d = await seed_commerce_fixture(bundle=False)
             async with session_scope() as s:
                 await settings(s, referral_enabled=True, referral_trigger='registration',
-                    referrer={'kind':'points','points':7}, referee={'kind':'points','points':3})
+                    referrer={'kind':'points','points':7,'expiry_days':expiry_days},
+                    referee={'kind':'points','points':3,'expiry_days':expiry_days})
                 referrer = await s.get(m.User, d['bob']); code = growth.ensure_code(referrer)
                 await s.flush()
                 user = await s.get(m.User, d['alice'])
@@ -118,18 +120,23 @@ def test_referral_rewards_once_to_both_wallets_with_original_rate():
                 assert (await s.get(m.User,d['alice'])).points_balance == 103
                 lots = (await s.scalars(select(m.PointLot).where(m.PointLot.source=='referral'))).all()
                 assert len(lots) == 2 and all(lot.rate_snapshot == 100 and lot.rate_version == 1 for lot in lots)
-                assert all(lot.expires_at for lot in lots)
+                assert all((lot.expires_at is None) == (expiry_days == 0) for lot in lots)
+                history = (await s.scalars(select(m.PointHistory).where(m.PointHistory.source == 'referral'))).all()
+                assert len(history) == 2
+                assert all((row.expires_at is None) == (expiry_days == 0) for row in history)
     asyncio.run(run())
 
 
-def test_daily_checkin_timezone_streak_and_one_per_day(monkeypatch):
+@pytest.mark.parametrize('expiry_days', [0, 30])
+def test_daily_checkin_timezone_streak_and_one_per_day(monkeypatch, expiry_days):
     current = [datetime(2026,11,20,16,59,59,tzinfo=timezone.utc)]
     monkeypatch.setattr(growth, 'utcnow', lambda: current[0])
     async def run():
         async with isolated_database():
             d = await seed_commerce_fixture(bundle=False)
             async with session_scope() as s:
-                await settings(s, checkin_enabled=True, use_streak=True, streak_points=[2,3,4,5,6,7,20])
+                await settings(s, checkin_enabled=True, checkin_expiry_days=expiry_days,
+                    use_streak=True, streak_points=[2,3,4,5,6,7,20])
                 row = await growth.checkin(s, await lock_user(s,d['alice']))
                 assert row.day == '2026-11-20' and row.points == 2 and row.streak == 1
             async with session_scope() as s:
@@ -146,7 +153,25 @@ def test_daily_checkin_timezone_streak_and_one_per_day(monkeypatch):
             async with read_session() as s:
                 assert (await s.get(m.User,d['alice'])).points_balance == 107
                 assert await s.scalar(select(func.count()).select_from(m.PointHistory).where(m.PointHistory.source=='daily_checkin')) == 3
+                lots = (await s.scalars(select(m.PointLot).where(m.PointLot.source == 'daily_checkin'))).all()
+                assert len(lots) == 3
+                assert all((lot.expires_at is None) == (expiry_days == 0) for lot in lots)
+            if expiry_days == 0:
+                monkeypatch.setattr(points, 'utcnow', lambda: current[0] + timedelta(days=4000))
+                async with session_scope() as s:
+                    user = await lock_user(s, d['alice'])
+                    await points.expire(s, user)
+                    assert user.points_balance == 107
     asyncio.run(run())
+
+
+@pytest.mark.parametrize('days', [-1, 3651])
+def test_growth_expiry_rejects_invalid_limits(days):
+    from pydantic import ValidationError
+    with pytest.raises(ValidationError):
+        growth.GrowthConfig(checkin_expiry_days=days)
+    with pytest.raises(ValidationError):
+        growth.RewardRule(expiry_days=days)
 
 
 def test_addon_bundle_sums_prices_stock_weight_and_cancellation():

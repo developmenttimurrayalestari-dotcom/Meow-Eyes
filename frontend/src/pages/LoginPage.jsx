@@ -25,7 +25,7 @@ const LoginPage = () => {
       const user = await login(email, password);
       toast.success("Selamat datang, " + user.name + "!");
       rememberAuthReturn("");
-      navigateAfterAuthentication(authDestination(returnTo, user.has_pin), navigate);
+      navigateAfterAuthentication(authDestination(returnTo, user.has_pin, user), navigate);
     } catch (err) {
       toast.error(apiError(err, "Gagal masuk"));
     } finally {

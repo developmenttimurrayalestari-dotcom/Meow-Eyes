@@ -18,9 +18,9 @@ def test_mode(monkeypatch):
     monkeypatch.setenv('APP_ENV', 'test'); monkeypatch.setenv('ENABLE_MOCK_PAYMENTS', '1')
     monkeypatch.setenv('PAYMENT_PROVIDER', 'mock'); monkeypatch.setenv('SHIPPING_PROVIDER', 'mock')
 
-async def game_fixture(s, key='matching', engine='matching', cooldown=86400):
+async def game_fixture(s, key='matching', engine='matching', cooldown=86400, expiry_days=3):
     s.add(m.Game(key=key, name=key, max_points=50, is_active=True)); await s.flush()
-    s.add(m.GameRule(game_key=key, engine=engine, cooldown_seconds=cooldown, expiry_days=3, max_duration_seconds=180, max_points=50, points_per_unit=5)); await s.flush()
+    s.add(m.GameRule(game_key=key, engine=engine, cooldown_seconds=cooldown, expiry_days=expiry_days, max_duration_seconds=180, max_points=50, points_per_unit=5)); await s.flush()
 
 def test_old_and_new_point_rates_are_frozen_and_fifo_value_is_correct():
     async def run():
@@ -59,12 +59,13 @@ def test_expiry_removes_cached_balance_once_and_redemption_restores_original_lot
                 rows = (await s.scalars(select(m.PointRedemption))).all(); assert len(rows) == 1 and rows[0].status == 'released' and rows[0].rate_snapshot == 100
     asyncio.run(run())
 
-def test_game_round_idempotency_cooldown_rate_snapshot_and_forged_steps():
+@pytest.mark.parametrize('expiry_days', [0, 3])
+def test_game_round_idempotency_cooldown_rate_snapshot_and_forged_steps(expiry_days):
     async def run():
         async with isolated_database():
             d = await seed_commerce_fixture(bundle=False)
             async with session_scope() as s:
-                await game_fixture(s)
+                await game_fixture(s, expiry_days=expiry_days)
                 user = await lock_user(s, d['alice']); round_ = await games.start(s, user, 'matching')
                 assert (await games.start(s, user, 'matching'))['id'] == round_['id']
                 stored = await s.get(m.GameSession, round_['id']); stored.started_at -= timedelta(seconds=10)
@@ -77,6 +78,7 @@ def test_game_round_idempotency_cooldown_rate_snapshot_and_forged_steps():
                 assert await games.finish(s, user, round_['id'], {'moves': []}) == result
                 lot = await s.scalar(select(m.PointLot).where(m.PointLot.source == 'earn_game'))
                 assert lot.rate_snapshot == 100 and user.points_balance == 140
+                assert (lot.expires_at is None) == (expiry_days == 0)
                 with pytest.raises(HTTPException) as error: await games.start(s, user, 'matching')
                 assert error.value.status_code == 429
                 with pytest.raises(HTTPException) as error: await games.finish(s, await lock_user(s, d['bob']), round_['id'], {'moves': moves})
@@ -103,23 +105,26 @@ def test_puzzles_are_reachable_and_illegal_moves_are_rejected():
         empty = board.index(0)
         with pytest.raises(HTTPException): replay_puzzle(458, {'rows': size, 'columns': size, 'level': 1}, [empty])
 
-def test_cashback_order_snapshot_only_credits_on_completion_once():
+@pytest.mark.parametrize('expiry_days', [0, 14])
+def test_cashback_order_snapshot_only_credits_on_completion_once(expiry_days):
     async def run():
         async with isolated_database():
             d = await seed_commerce_fixture(bundle=False)
             async with session_scope() as s:
-                s.add(m.CashbackEvent(id='event', name='Cashback', start_at=utcnow() - timedelta(days=1), end_at=utcnow() + timedelta(days=1), percent=10, expiry_days=14, is_active=True)); await s.flush()
+                s.add(m.CashbackEvent(id='event', name='Cashback', start_at=utcnow() - timedelta(days=1), end_at=utcnow() + timedelta(days=1), percent=10, expiry_days=expiry_days, is_active=True)); await s.flush()
             result = await create_checkout(d['alice'], d['req']); order_id = result['order']['id']
             async with session_scope() as s:
                 award = await s.get(m.CashbackAward, order_id); expected = award.points
                 assert expected > 0 and award.credited_at is None
                 (await s.get(m.CashbackEvent, 'event')).percent = 99
+                (await s.get(m.CashbackEvent, 'event')).expiry_days = 30
                 config = await points.settings(s); config.rate = Decimal(999); await s.flush()
             await confirm_mock_payment(result['order']['order_number'], d['alice'])
             await admin_transition_order(order_id, 'completed', '', d['admin']); await admin_transition_order(order_id, 'completed', '', d['admin'])
             async with read_session() as s:
                 lots = (await s.scalars(select(m.PointLot).where(m.PointLot.source == 'cashback'))).all()
                 assert len(lots) == 1 and lots[0].earned == expected and lots[0].rate_snapshot == 100 and lots[0].valuation == 'locked'
+                assert (lots[0].expires_at is None) == (expiry_days == 0)
     asyncio.run(run())
 
 def test_replacement_requires_video_quantity_ownership_and_valid_state_and_debits_components_once():

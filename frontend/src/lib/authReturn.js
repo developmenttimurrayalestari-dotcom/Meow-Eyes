@@ -5,7 +5,7 @@ export function safeLocalReturn(value, fallback = "/") {
     const target = new URL(value, window.location.origin);
     if (target.origin !== window.location.origin || target.username || target.password) return fallback;
     const decoded = decodeURIComponent(target.pathname);
-    if (/^\/[\\/]/.test(decoded) || /[\\\u0000-\u001f\u007f]/.test(decoded) || ["/login", "/register", "/auth/callback"].includes(target.pathname.replace(/\/$/, ""))) return fallback;
+    if (/^\/[\\/]/.test(decoded) || /[\\\u0000-\u001f\u007f]/.test(decoded) || ["/login", "/register", "/auth/callback", "/setup-password", "/setup-pin"].includes(target.pathname.replace(/\/$/, ""))) return fallback;
     return target.pathname + target.search + target.hash;
   } catch { return fallback; }
 }
@@ -34,8 +34,16 @@ export function usesCustomerMeasurementFlow(destination) {
   return target.pathname === "/profile" && isMeowsurementPath(target.searchParams.get("return_to") || target.searchParams.get("next") || target.searchParams.get("returnTo"));
 }
 
-export function authDestination(destination, hasPin) {
+export function securitySetupPath(user) {
+  if (!user || !['google', 'facebook'].includes(user.provider)) return '';
+  if (user.has_password === false) return '/setup-password';
+  return user.has_pin ? '' : '/setup-pin';
+}
+
+export function authDestination(destination, hasPin, user) {
   const safe = safeLocalReturn(destination, "/");
+  const setup = securitySetupPath(user);
+  if (setup) return setup + (safe === '/' ? '' : '?return_to=' + encodeURIComponent(safe));
   return usesCustomerMeasurementFlow(safe) || hasPin ? safe : "/setup-pin";
 }
 

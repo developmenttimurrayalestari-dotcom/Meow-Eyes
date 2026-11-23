@@ -14,7 +14,8 @@ from google_identity import client_id, require_google_origin, verify_google_cred
 from phone_identity import normalize_phone
 from auth_features import phone_auth_enabled
 from facebook_identity import facebook_config, verify_facebook_token
-from models import FacebookLoginRequest
+from models import FacebookLoginRequest, PasswordSetupRequest
+from auth import authenticated_user
 from mysql import customer_growth as growth
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -167,7 +168,7 @@ async def google_login(req: GoogleLoginRequest, request: Request, response: Resp
 
 
 @router.get("/me")
-async def me(user: User = Depends(current_user)):
+async def me(user: User = Depends(authenticated_user)):
     return {"user": public_user(user).model_dump()}
 
 
@@ -181,15 +182,33 @@ async def logout(response: Response, user=Depends(current_user_optional)):
 
 
 @router.post("/pin/setup")
-async def setup_pin(req: PinSetupRequest, user: User = Depends(current_user)):
+async def setup_pin(req: PinSetupRequest, user: User = Depends(authenticated_user)):
     hashed = hash_secret(req.pin)
     async with session_scope() as session:
         row = await session.scalar(select(SQLUser).where(SQLUser.user_id == user.user_id).with_for_update())
         if row is None or not row.is_active:
             raise HTTPException(403, "Akun dinonaktifkan")
+        if row.provider in ('google', 'facebook') and not row.password_hash:
+            raise HTTPException(403, 'Buat password terlebih dahulu sebelum mengatur PIN')
         row.pin_hash, row.pin_failed_attempts, row.pin_locked_until = hashed, 0, None
         row.updated_at = utcnow()
     return {"ok": True}
+
+
+@router.post('/password/setup')
+async def setup_password(req: PasswordSetupRequest, user: User = Depends(authenticated_user)):
+    hashed = await run_in_threadpool(hash_secret, req.password)
+    async with session_scope() as session:
+        row = await session.scalar(select(SQLUser).where(SQLUser.user_id == user.user_id).with_for_update())
+        if row is None or not row.is_active:
+            raise HTTPException(403, 'Akun dinonaktifkan')
+        if row.password_hash:
+            raise HTTPException(409, 'Password sudah dibuat. Gunakan password yang sudah terdaftar.')
+        if row.provider not in ('google', 'facebook'):
+            raise HTTPException(403, 'Pembuatan password ini hanya untuk akun Google/Facebook')
+        row.password_hash = hashed
+        row.updated_at = utcnow()
+    return {'ok': True}
 
 
 @router.post("/pin/verify")

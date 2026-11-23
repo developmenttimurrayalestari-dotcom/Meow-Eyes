@@ -44,7 +44,7 @@ export default function GoogleAuthButton({ signup = false, returnTo = "", disabl
               if (disposed) return;
               rememberAuthReturn("");
               toast.success("Selamat datang, " + user.name + "!");
-              navigateAfterAuthentication(authDestination(latest.current.returnTo, user.has_pin), latest.current.navigate);
+              navigateAfterAuthentication(authDestination(latest.current.returnTo, user.has_pin, user), latest.current.navigate);
             } catch (err) {
               if (!disposed) { setError(apiError(err, "Gagal masuk dengan Google. Silakan coba lagi.")); setPhase("ready"); }
             } finally { exchanging = false; }

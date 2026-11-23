@@ -28,7 +28,7 @@ const GamesPage = () => {
             <div className="p-5 flex-1 flex flex-col">
               <p className="font-heading font-extrabold text-xl">{g.name}</p>
               <p className="text-sm text-meow-gray mt-1">{g.description}</p>
-              <p className="text-xs text-meow-gray mt-3">Maksimal {g.rule.max_points} poin · berlaku {g.rule.expiry_days} hari · jeda {g.rule.cooldown_seconds / 3600} jam</p>
+              <p className="text-xs text-meow-gray mt-3">Maksimal {g.rule.max_points} poin · {g.rule.expiry_days === 0 ? 'berlaku selamanya' : `berlaku ${g.rule.expiry_days} hari`} · jeda {g.rule.cooldown_seconds / 3600} jam</p>
               <Link to={`/games/${g.key}`} className="btn-gamified mt-4 text-center" data-testid={`play-game-${g.key}`}>
                 ▶ Main Sekarang
               </Link>

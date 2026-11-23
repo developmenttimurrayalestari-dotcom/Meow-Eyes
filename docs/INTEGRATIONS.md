@@ -112,6 +112,12 @@ Isi konfigurasi berikut dari proses onboarding Everpro:
 
 Tidak ada host production yang ditebak oleh aplikasi. `EVERPRO_ENVIRONMENT=production` membutuhkan `EVERPRO_BASE_URL` yang diberikan Everpro dan menolak host yang mengandung sandbox.
 
+Jika log menunjukkan `POST /auth/v1/token` mendapat `404`, periksa pasangan host dan kredensial. Endpoint autentikasi dapat mengembalikan `404` dengan pesan `user not found` ketika client tidak dikenali; status ini saja tidak membuktikan URL tidak tersedia. Membuka alamat di browser memakai GET dan tidak menguji POST JSON yang digunakan backend. `503` pada endpoint wilayah aplikasi dapat merupakan akibat lanjutan kegagalan token ini.
+
+Pada pemeriksaan 23 November 2026, pertukaran token menggunakan kredensial konfigurasi lokal berhasil (`200`) pada `https://client-api.everpro.id`, sedangkan host sandbox mengembalikan `404 / user not found`. Ini hanya memverifikasi kredensial lokal saat pengujian, bukan kredensial atau environment proses PM2 di server. Tidak ada order/pengiriman yang dibuat. Untuk kredensial tersebut, pasangan konfigurasi yang konsisten adalah environment `production` dengan host yang berhasil diuji; sandbox memerlukan kredensial sandbox tersendiri.
+
+Backend membaca `backend/.env.mysql` dengan `override=False`: environment yang sudah ada pada proses mempunyai prioritas atas file. Saat hasil server berbeda dari pengujian lokal, cocokkan `EVERPRO_CLIENT_KEY`, `EVERPRO_CLIENT_SECRET`, `EVERPRO_BASE_URL`, dan `EVERPRO_ENVIRONMENT` di server, termasuk override pada ecosystem/PM2. Setelah memperbarui konfigurasi, restart proses yang benar, misalnya `pm2 restart meow-backend --update-env`. Jangan menampilkan kredensial atau token dalam log diagnostik.
+
 ### Ongkir dan data alamat
 
 Alamat checkout menggunakan `postal_code`, `subdistrict` untuk **Kelurahan/Desa**, dan `district` untuk **Kecamatan**. Rate request memakai kode pos dan nama kelurahan, berat paket dalam kilogram, nilai barang, dimensi kemasan, serta tipe pengiriman. Berat produk pada database tetap gram dan dikonversi di batas API.

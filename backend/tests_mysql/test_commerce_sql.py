@@ -378,18 +378,21 @@ def test_direct_game_score_submission_is_rejected():
     asyncio.run(run())
 
 
-def test_roulette_points_are_used_with_configured_cooldown_and_expiry():
+@pytest.mark.parametrize('expiry_days', [0, 3])
+def test_roulette_points_are_used_with_configured_cooldown_and_expiry(expiry_days):
     from routes_engagement import spin_roulette
     from tests_mysql.test_loyalty_games_returns import game_fixture
     async def run():
         async with isolated_database():
             d = await seed_commerce_fixture(bundle=False)
             async with session_scope() as s:
-                await game_fixture(s, 'roulette', 'roulette', cooldown=0)
+                await game_fixture(s, 'roulette', 'roulette', cooldown=0, expiry_days=expiry_days)
                 (await s.get(m.RouletteReward, d["reward"])).is_active = False
                 s.add(m.RouletteReward(id=d["prefix"] + "_points", label="Ten points", type="points", value=10, probability=1, is_active=True))
                 await s.flush()
-            assert (await spin_roulette(d["user"]))["spin"]["used"] is True
+            spin = (await spin_roulette(d["user"]))["spin"]
+            assert spin["used"] is True
+            assert (spin["expires_at"] is None) == (expiry_days == 0)
             async with session_scope() as s:
                 (await s.get(m.GameRule, 'roulette')).cooldown_seconds = 10800
             with pytest.raises(HTTPException) as exc:
@@ -398,7 +401,7 @@ def test_roulette_points_are_used_with_configured_cooldown_and_expiry():
             async with read_session() as s:
                 assert (await s.get(m.User, d["alice"])).points_balance == 110
                 lot = await s.scalar(select(m.PointLot).where(m.PointLot.source == 'earn_roulette'))
-                assert lot.rate_snapshot == 100 and lot.expires_at is not None
+                assert lot.rate_snapshot == 100 and (lot.expires_at is None) == (expiry_days == 0)
     asyncio.run(run())
 
 

@@ -10,6 +10,9 @@ def test_frozen_loyalty_ddl_and_guards_match_metadata_and_export():
     assert sql==(Path(__file__).resolve().parents[1]/'sql/005_loyalty_games_returns.sql').read_text(encoding='utf-8')
     assert len(revision.ALL_TABLES)==14
     expected={str(c.name):str(c.sqltext) for t in Base.metadata.tables.values() if t.name in revision.ALL_TABLES for c in t.constraints if isinstance(c,CheckConstraint)}
+    # 0016 relaxes only these expiry bounds; 0005 stays frozen as released.
+    for name in ('ck_game_rules_bounds', 'ck_cashback_events_bounds'):
+        expected[name] = expected[name].replace('expiry_days >= 0', 'expiry_days > 0')
     actual={name:predicate for rules in revision.RULES.values() for name,predicate,_ in rules}
     assert actual==expected
     for rules in revision.RULES.values():

@@ -64,7 +64,7 @@ class GameInput(BaseModel):
     engine: Literal['matching', 'slide_puzzle', 'space_war', 'roulette']
     is_active: bool = True
     cooldown_seconds: int = Field(ge=0, le=31536000)
-    expiry_days: int = Field(ge=1, le=3650)
+    expiry_days: int = Field(ge=0, le=3650)
     max_duration_seconds: int = Field(ge=10, le=600)
     max_points: int = Field(ge=0, le=10000)
     points_per_unit: int = Field(ge=1, le=1000)
@@ -118,7 +118,7 @@ class EventInput(BaseModel):
     start_at: datetime
     end_at: datetime
     percent: Decimal = Field(gt=0, le=100, decimal_places=4)
-    expiry_days: int = Field(ge=1, le=3650)
+    expiry_days: int = Field(ge=0, le=3650)
     is_active: bool = True
     @model_validator(mode='after')
     def dates(self):

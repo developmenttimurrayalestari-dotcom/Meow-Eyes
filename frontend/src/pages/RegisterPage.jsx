@@ -30,7 +30,7 @@ const RegisterPage = () => {
     try {
       const user = await register({ name: form.name, password: form.password, [phoneEnabled ? method : "email"]: form[phoneEnabled ? method : "email"], ...(referral ? { referral_code: referral } : {}) });
       toast.success(usesCustomerMeasurementFlow(returnTo) ? "Akun berhasil dibuat. Lengkapi profil dan resep untuk Meowsurement." : "Pendaftaran berhasil! Yuk atur PIN keamanan.");
-      navigateAfterAuthentication(authDestination(returnTo, user?.has_pin), navigate);
+      navigateAfterAuthentication(authDestination(returnTo, user?.has_pin, user), navigate);
     } catch (err) {
       toast.error(apiError(err, "Pendaftaran gagal"));
     } finally {
