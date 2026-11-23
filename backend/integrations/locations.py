@@ -36,7 +36,7 @@ async def selected_location(selection):
             'everpro_destination_id': chosen['subdistricts']['id']}
 
 
-async def canonical_shipping_location(address, client):
+async def canonical_shipping_location(address, client, *, require_id=False):
     """Also protect legacy free-text addresses; never guess an ambiguous village.
 
     Everpro's postal endpoint can return numeric village IDs whereas its
@@ -57,4 +57,11 @@ async def canonical_shipping_location(address, client):
     if not matches:
         raise HTTPException(422, 'Wilayah alamat belum sesuai data EVERPRO. Klik Ubah pada alamat, lalu pilih provinsi sampai kelurahan/desa dan simpan kembali.')
     row = matches[0]
-    return {local: row[remote] for local, remote in fields} | {'postal_code': str(row['postal_code'])}
+    result = {local: row[remote] for local, remote in fields} | {'postal_code': str(row['postal_code'])}
+    if require_id:
+        from integrations.everpro_v3 import location_id
+        identities = {location_id(match.get('sub_district_id')) for match in matches}
+        if len(identities) != 1:
+            raise HTTPException(422, 'Wilayah tujuan EVERPRO ambigu. Pilih ulang alamat tujuan.')
+        result['sub_district_id'] = identities.pop()
+    return result

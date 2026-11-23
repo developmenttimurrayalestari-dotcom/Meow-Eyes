@@ -19,7 +19,7 @@ from fastapi import HTTPException
 from integrations.config import EverproSettings
 from mysql.config import DEFAULT_ENV_FILE
 
-KEYS = ('EVERPRO_ENVIRONMENT', 'EVERPRO_BASE_URL', 'EVERPRO_CLIENT_KEY', 'EVERPRO_CLIENT_SECRET')
+KEYS = ('EVERPRO_ENVIRONMENT', 'EVERPRO_BASE_URL', 'EVERPRO_CLIENT_KEY', 'EVERPRO_CLIENT_SECRET', 'EVERPRO_API_VERSION', 'EVERPRO_AUTH_VERSION')
 
 
 def credential_fingerprint(settings):
@@ -45,7 +45,7 @@ def environment_report(file_values, process_values):
 async def check_auth(settings, *, transport=None):
     try:
         async with httpx.AsyncClient(transport=transport, timeout=httpx.Timeout(20, connect=5), follow_redirects=False) as client:
-            response = await client.post(settings.base_url + '/auth/v1/token', headers={'Accept': 'application/json'},
+            response = await client.post(settings.base_url + getattr(settings, 'auth_path', '/auth/v1/token'), headers={'Accept': 'application/json'},
                 json={'client_key': settings.client_key, 'client_secret': settings.client_secret})
         report = {'http_status': response.status_code, 'ok': False}
         try:
@@ -102,7 +102,8 @@ def main():
         report.update(ok=False, reason='invalid_everpro_configuration')
         print(json.dumps(report, indent=2))
         return 1
-    report.update(environment=settings.environment, base_url=settings.base_url, ok=True)
+    report.update(environment=settings.environment, base_url=settings.base_url, api_version=settings.api_version,
+                  auth_path=settings.auth_path, ok=True)
     if args.fingerprint:
         report['credential_fingerprint'] = credential_fingerprint(settings)
     if args.check_auth:

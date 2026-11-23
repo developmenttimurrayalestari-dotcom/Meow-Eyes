@@ -1,6 +1,6 @@
-"""Everpro Open API 1.0: token, rates, orders, labels and tracking.
+"""Everpro legacy and v3 shipment contracts, with separately versioned auth.
 
-Official OpenAPI specification: https://developer.everpro.id/ . Production
+Official Swagger: https://client-api-sandbox.everpro.id/swagger/index.html . Production
 host and callback key are supplied by Everpro during merchant onboarding.
 """
 from __future__ import annotations
@@ -34,20 +34,20 @@ class EverproClient:
             async with httpx.AsyncClient(timeout=httpx.Timeout(20, connect=5), follow_redirects=False, transport=self.transport) as client:
                 response = await client.request(method, self.settings.base_url + target, headers=headers, json=payload, params=params)
         except httpx.HTTPError:
-            raise ProviderError("everpro", "network_error", 503, uncertain=method == "POST" and target == "/shipment/v1/orders") from None
+            raise ProviderError("everpro", "network_error", 503, uncertain=method == "POST" and target in ("/shipment/v1/orders", "/shipment/v3/orders")) from None
         if len(response.content) > 2_000_000:
-            raise ProviderError("everpro", "invalid_response")
+            raise ProviderError("everpro", "invalid_response", uncertain=method == "POST" and target in ("/shipment/v1/orders", "/shipment/v3/orders"))
         try:
             data = strict_json(response.content)
         except (ValueError, UnicodeError):
-            raise ProviderError("everpro", "invalid_response", uncertain=method == "POST" and target == "/shipment/v1/orders") from None
+            raise ProviderError("everpro", "invalid_response", uncertain=method == "POST" and target in ("/shipment/v1/orders", "/shipment/v3/orders")) from None
         return response.status_code, data
 
     async def _auth(self, *, force: bool = False) -> str:
         async with self._token_lock:
             if not force and self._token and time.monotonic() < self._expires:
                 return self._token
-            status, body = await self._send("POST", "/auth/v1/token", payload={
+            status, body = await self._send("POST", self.settings.auth_path, payload={
                 "client_key": self.settings.client_key, "client_secret": self.settings.client_secret,
             })
             data = body.get("data") or {}
@@ -122,13 +122,15 @@ class EverproClient:
         return sorted(result, key=lambda row: (row['name'].casefold(), row['id']))
 
     async def rates(self, payload: dict) -> dict:
-        return await self.request("POST", "/shipment/v2/rates", payload=payload)
+        path = '/shipment/v3/rates' if self.settings.api_version == 3 else '/shipment/v2/rates'
+        return await self.request("POST", path, payload=payload)
 
     async def create_shipment(self, payload: dict) -> dict:
         # client_order_no is persisted before the first call and NEVER changed
         # by retries. An ambiguous response is reconciled by GET, not recreated
         # with a new identifier.
-        return await self.request("POST", "/shipment/v1/orders", payload=payload)
+        path = '/shipment/v3/orders' if self.settings.api_version == 3 else '/shipment/v1/orders'
+        return await self.request("POST", path, payload=payload)
 
     async def order_detail(self, number: str) -> dict:
         return await self.request("GET", "/shipment/v1/orders/" + quote(number, safe=""))

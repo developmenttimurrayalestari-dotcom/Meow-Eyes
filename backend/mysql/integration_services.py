@@ -31,6 +31,7 @@ from integrations.config import DokuSettings, EverproSettings, payment_provider,
 from integrations.doku import get_doku_client, safe_checkout_url
 from integrations.everpro import get_everpro_client
 from integrations.locations import canonical_shipping_location
+from integrations import everpro_v3
 
 
 def _digest(value: Any) -> str:
@@ -72,6 +73,14 @@ async def _saved_doku_context(s, payment_id: str) -> dict | None:
     return log.payload if log else None
 
 
+def everpro_context(settings):
+    context = {'environment': settings.environment, 'base_url': settings.base_url,
+               'account': hashlib.sha256(settings.client_key.encode()).hexdigest()}
+    if settings.api_version == 3:
+        context.update(api_version=3, auth_path=settings.auth_path)
+    return context
+
+
 def shipping_fingerprint(items, address: m.Address, settings: EverproSettings, payment_mode='online') -> tuple[str, dict]:
     address_snapshot = {key: json_value(getattr(address, key)) for key in (
         "id", "recipient", "phone", "street", "subdistrict", "district", "city", "province", "postal_code", "country_code",
@@ -96,8 +105,7 @@ def shipping_fingerprint(items, address: m.Address, settings: EverproSettings, p
         "addons": [{'product_id': a['product'].id, 'variant_id': a['variant'].id, 'price': str(a['price']),
             'weight': a['product'].weight_gram} for a in item.addons],
     } for item in sorted(items, key=lambda x: x.cart.id)]
-    provider = {"environment": settings.environment, "base_url": settings.base_url,
-                "account": hashlib.sha256(settings.client_key.encode()).hexdigest()}
+    provider = everpro_context(settings)
     snapshot = {"address": address_snapshot, "origin": origin, "items": lines, "provider": provider, "version": 2, 'payment_mode': payment_mode}
     return _digest(snapshot), snapshot
 
@@ -111,7 +119,7 @@ def _shipping_address_valid(address: m.Address) -> None:
         raise HTTPException(422, "Nomor telepon penerima harus menggunakan nomor Indonesia yang valid")
 
 
-def _rate_options(body: dict, *, coordinates=False, cod=False) -> list[dict]:
+def _rate_options(body: dict, *, coordinates=False, cod=False, api_version=1) -> list[dict]:
     data = body.get("data")
     if not isinstance(data, dict):
         raise ProviderError("everpro", "invalid_rates_response")
@@ -137,6 +145,13 @@ def _rate_options(body: dict, *, coordinates=False, cod=False) -> list[dict]:
                 # booking contract; do not present an unbookable rate.
                 continue
             cost, insurance = _amount(rate.get("price"), "everpro"), _amount(rate.get("insurance_price", 0), "everpro")
+            if api_version == 3:
+                if cost != int(cost) or insurance != int(insurance):
+                    raise ProviderError('everpro', 'invalid_rates_response')
+                signed = rate.get('signed_key')
+                if not isinstance(signed, str) or not signed.strip() or len(signed) > 16384:
+                    continue  # v3 orders cannot be booked without this exact provider key.
+                everpro_v3.surcharge(rate)  # Validate the provider's breakdown; price is authoritative.
             seen.add(key)
             options.append({"courier_code": courier, "service_code": service,
                             "courier_name": str(rate.get("logistic_name") or courier)[:255],
@@ -183,7 +198,7 @@ async def shipping_options(user_id: str, address_id: str, selected_ids: list[str
         client = get_everpro_client()
         settings = client.settings
         _shipping_address_valid(address)
-        destination = await canonical_shipping_location(address, client)
+        destination = await canonical_shipping_location(address, client, require_id=settings.api_version == 3)
         fingerprint, snapshot = shipping_fingerprint(items, address, settings, payment_mode)
         snapshot['cod_goods'] = str(cod_goods) if cod_goods is not None else None
         value = sum((item.subtotal for item in items), ZERO).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
@@ -201,9 +216,17 @@ async def shipping_options(user_id: str, address_id: str, selected_ids: list[str
         if coordinates:
             request.update(origin_latitude=settings.origin_latitude, origin_longitude=settings.origin_longitude,
                 destination_latitude=float(address.latitude), destination_longitude=float(address.longitude))
+        if settings.api_version == 3:
+            try:
+                origin_location = await everpro_v3.origin_location(client, settings)
+            except ProviderError as exc:
+                raise _safe_error(exc, 'membaca wilayah pengirim') from None
+            request = everpro_v3.rate_request(settings, origin_location, destination, weight=weight,
+                price=cod_goods if cod_goods is not None else value, cod=payment_mode == 'cod',
+                coordinates=(settings.origin_latitude, settings.origin_longitude, float(address.latitude), float(address.longitude)) if coordinates else None)
     try:
         response = await client.rates(request)
-        options = _rate_options(response, coordinates=coordinates, cod=payment_mode == 'cod')
+        options = _rate_options(response, coordinates=coordinates, cod=payment_mode == 'cod', api_version=settings.api_version)
     except ProviderError as exc:
         raise _safe_error(exc, "menghitung ongkir") from None
     expires = utcnow() + timedelta(seconds=settings.quote_ttl_seconds)
@@ -646,6 +669,8 @@ async def shipment_pickup_times(order_id: str) -> dict:
 
 
 def _booking_payload(order: m.Order, address: m.OrderAddress, quote: m.ShippingQuote, pickup_time: int | None) -> dict:
+    if ((quote.request_payload or {}).get('provider') or {}).get('api_version') == 3:
+        return everpro_v3.booking_payload(order, address, quote, pickup_time)
     stored = quote.request_payload or {}
     origin, rate_request = stored.get("origin") or {}, stored.get("rate_request") or {}
     if not origin or not rate_request:
@@ -691,8 +716,7 @@ async def book_shipment(order_id: str, pickup_time: int | None = None) -> dict:
         quote = await s.get(m.ShippingQuote, order.shipping_quote_id) if order.shipping_quote_id else None
         if quote is None or quote.provider != "everpro":
             raise HTTPException(409, "Order tidak memiliki penawaran Everpro yang dapat dipakai untuk pemesanan")
-        expected_context = {"environment": client.settings.environment, "base_url": client.settings.base_url,
-                            "account": hashlib.sha256(client.settings.client_key.encode()).hexdigest()}
+        expected_context = everpro_context(client.settings)
         if (quote.request_payload or {}).get("provider") != expected_context:
             raise HTTPException(409, "Akun/lingkungan Everpro berbeda dari penawaran pesanan; lakukan rekonsiliasi")
         address = await s.get(m.OrderAddress, order_id)
@@ -972,6 +996,8 @@ def integration_status(*, admin: bool = False) -> dict:
                     if key == "shipping":
                         item["shipment_type"] = settings.shipment_type
                         item["webhook_ready"] = bool(settings.webhook_key)
+                        item['api_version'] = settings.api_version
+                        item['auth_path'] = settings.auth_path
         except HTTPException as error:
             item = {"provider": "doku" if key == "payment" else "everpro", "ready": False, "mock": False}
             if admin:

@@ -99,6 +99,8 @@ Isi konfigurasi berikut dari proses onboarding Everpro:
 | `EVERPRO_CLIENT_KEY`, `EVERPRO_CLIENT_SECRET` | Pertukaran token Bearer server |
 | `EVERPRO_ENVIRONMENT` | `sandbox` atau `production` |
 | `EVERPRO_BASE_URL` | Sandbox terdokumentasi: `https://client-api-sandbox.everpro.id`; host production harus sesuai onboarding |
+| `EVERPRO_API_VERSION` | `3` untuk tarif/pengiriman v3; `1` mempertahankan kontrak legacy (default jika belum diisi) |
+| `EVERPRO_AUTH_VERSION` | `2` untuk autentikasi v2 pada konfigurasi v3; boleh `1` bila diwajibkan onboarding |
 | `EVERPRO_WEBHOOK_KEY` | Shared secret header `x-everpro-key` dari onboarding |
 | `EVERPRO_ORIGIN_POSTAL_CODE` | Kode pos pengirim, 5 digit |
 | `EVERPRO_ORIGIN_SUBDISTRICT` | Kelurahan/desa pengirim |
@@ -111,6 +113,42 @@ Isi konfigurasi berikut dari proses onboarding Everpro:
 | `EVERPRO_QUOTE_TTL_SECONDS` | Masa berlaku quote lokal, default 600 detik |
 
 Tidak ada host production yang ditebak oleh aplikasi. `EVERPRO_ENVIRONMENT=production` membutuhkan `EVERPRO_BASE_URL` yang diberikan Everpro dan menolak host yang mengandung sandbox.
+
+### Integrasi v3 berdasarkan Swagger Everpro
+
+Spesifikasi pada [Swagger Everpro](https://client-api-sandbox.everpro.id/swagger/index.html#/) memakai [doc.json](https://client-api-sandbox.everpro.id/swagger/doc.json). Versi masing-masing layanan berdiri sendiri:
+
+| Fungsi | Endpoint pada konfigurasi v3 |
+| --- | --- |
+| Token | `POST /auth/v2/token` dengan JSON `client_key` dan `client_secret` |
+| Wilayah dan kode pos | Tetap `/location/v1/...` |
+| Tarif | `POST /shipment/v3/rates` |
+| Buat pengiriman | `POST /shipment/v3/orders` |
+| Detail, tracking, label, pickup | Tetap `/shipment/v1/...` sesuai Swagger |
+
+Swagger tidak mencantumkan `/auth/v3/token`. Untuk beralih ke kontrak v3 pada server, tambahkan pada `backend/.env.mysql`:
+
+```dotenv
+EVERPRO_API_VERSION=3
+EVERPRO_AUTH_VERSION=2
+```
+
+Pertahankan pasangan host/environment dan kredensial yang diberikan untuk akun tersebut. Jika onboarding mensyaratkan token v1, pilih `EVERPRO_AUTH_VERSION=1` secara eksplisit; aplikasi tidak mencoba berganti versi autentikasi otomatis setelah penolakan. Perbedaan fingerprint hanya membuktikan pasangan kredensial berbeda, bukan bahwa salah satu pasti tidak valid pada semua versi autentikasi.
+
+Payload tarif v3 berisi `origin` dan `destination` dengan ID kelurahan numerik dari lookup kode pos, serta objek `package` berisi berat kilogram, harga barang rupiah bulat, tipe paket (3/fragile dipetakan ke `GLASSWARE`), dan dimensi cm. Koordinat diteruskan jika titik toko dan tujuan sama-sama lengkap; lokasi ambigu ditolak. COD memakai `payment_type=COD`. Pilihan yang tidak memiliki `signed_key` tidak ditawarkan karena tidak dapat dipakai untuk booking v3.
+
+Quote menyimpan request v3 dan `signed_key`/rincian surcharge dari respons asli hanya di backend. Booking memakai objek `shipper`, `receiver`, `package` serta signed key milik tarif yang dipilih. `shipment_price` mengikuti nilai `price` dari tarif; surcharge diteruskan sebagai rincian provider dan tidak ditambahkan ulang ke harga tersebut. COD mempertahankan jumlah tagihan yang dihitung server. Versioning menjadi bagian fingerprint quote/context booking, sehingga quote lama perlu dihitung ulang setelah beralih versi. Pesanan lama dengan context versi berbeda memerlukan rekonsiliasi operator; aplikasi tidak mengirim ulang ke versi lain secara diam-diam. Timeout booking tetap direkonsiliasi melalui detail order menggunakan referensi transaksi yang sama.
+
+Setelah menerapkan kode backend dan memperbarui environment:
+
+```bash
+.venv_backend/bin/python -m integrations.check_everpro --fingerprint --check-auth
+pm2 restart meow-backend --update-env
+```
+
+Output diagnostik harus menunjukkan `api_version: 3` dan `auth_path: /auth/v2/token`. Keberhasilan token memerlukan `authentication.ok: true`; jika masih ditolak, cocokkan akses token v2 dengan onboarding Everpro. Setelah restart, hitung ulang ongkir pada checkout. Tidak ada migrasi database untuk perubahan ini. Pengujian kode tidak membuat order atau resi nyata.
+
+Validasi pembaruan v3: 527 tes backend lulus; satu tes MySQL nyata dilewati karena memerlukan database kosong khusus dan dua tes symlink Windows tidak dijalankan. Tes mencakup path autentikasi/diagnostik yang sama, lokasi numerik, koordinat bertingkat, signed key, rincian biaya, COD, dan pemulihan booking setelah timeout tanpa pengiriman ganda. HTTP provider dan booking memakai respons tiruan; token akun v3 production dan booking merchant tetap perlu diverifikasi di server.
 
 Jika log menunjukkan `POST /auth/v1/token` mendapat `404`, periksa pasangan host dan kredensial. Endpoint autentikasi dapat mengembalikan `404` dengan pesan `user not found` ketika client tidak dikenali; status ini saja tidak membuktikan URL tidak tersedia. Membuka alamat di browser memakai GET dan tidak menguji POST JSON yang digunakan backend. `503` pada endpoint wilayah aplikasi dapat merupakan akibat lanjutan kegagalan token ini.
 

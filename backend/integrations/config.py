@@ -145,6 +145,13 @@ class EverproSettings:
     quote_ttl_seconds: int = 600
     origin_latitude: float | None = None
     origin_longitude: float | None = None
+    api_version: int = 1
+    auth_version: int | None = None
+
+    @property
+    def auth_path(self):
+        version = self.auth_version or (2 if self.api_version == 3 else 1)
+        return f'/auth/v{version}/token'
 
     @classmethod
     def from_env(cls) -> "EverproSettings":
@@ -155,6 +162,10 @@ class EverproSettings:
         env = os.environ.get("EVERPRO_ENVIRONMENT", "sandbox").strip().lower()
         if env not in {"sandbox", "production"}:
             raise HTTPException(503, "Konfigurasi EVERPRO_ENVIRONMENT tidak valid")
+        api_version = _int_env('EVERPRO_API_VERSION', 1, 1, 3)
+        if api_version not in (1, 3):
+            raise HTTPException(503, 'EVERPRO_API_VERSION harus 1 (legacy) atau 3')
+        auth_version = _int_env('EVERPRO_AUTH_VERSION', 2 if api_version == 3 else 1, 1, 2)
         # The public specification lists the sandbox host. Production host is
         # supplied during onboarding; do not invent or silently switch it.
         base = os.environ.get("EVERPRO_BASE_URL", "")
@@ -199,6 +210,7 @@ class EverproSettings:
             insurance=os.environ.get("EVERPRO_USE_INSURANCE", "0") == "1",
             quote_ttl_seconds=_int_env("EVERPRO_QUOTE_TTL_SECONDS", 600, 60, 1800),
             origin_latitude=lat, origin_longitude=lng,
+            api_version=api_version, auth_version=auth_version,
         )
 
 
