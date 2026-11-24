@@ -76,8 +76,12 @@ async def _saved_doku_context(s, payment_id: str) -> dict | None:
 def everpro_context(settings):
     context = {'environment': settings.environment, 'base_url': settings.base_url,
                'account': hashlib.sha256(settings.client_key.encode()).hexdigest()}
+    if settings.data_source == 'database':
+        context.update(data_source='database', reference_database=settings.reference_database)
+        context['account'] = hashlib.sha256(('shared-database:' + settings.reference_database).encode()).hexdigest()
     if settings.api_version == 3:
-        context.update(api_version=3, auth_path=settings.auth_path)
+        context.update(api_version=3)
+        if settings.data_source == 'api': context['auth_path'] = settings.auth_path
     return context
 
 
@@ -997,12 +1001,16 @@ def integration_status(*, admin: bool = False) -> dict:
                         item["shipment_type"] = settings.shipment_type
                         item["webhook_ready"] = bool(settings.webhook_key)
                         item['api_version'] = settings.api_version
-                        item['auth_path'] = settings.auth_path
+                        item['data_source'] = settings.data_source
+                        item['auth_path'] = settings.auth_path if settings.data_source == 'api' else None
+                        if settings.data_source == 'database': item['reference_database'] = settings.reference_database
         except HTTPException as error:
             item = {"provider": "doku" if key == "payment" else "everpro", "ready": False, "mock": False}
             if admin:
                 item['configuration_error'] = str(error.detail)
         if admin:
+            if key == 'shipping' and os.environ.get('EVERPRO_DATA_SOURCE', 'api').strip().lower() == 'database':
+                required = tuple(name for name in required if name not in ('EVERPRO_CLIENT_KEY','EVERPRO_CLIENT_SECRET'))
             item["missing"] = [name for name in required if not os.environ.get(name)] if not item["mock"] and not item["ready"] else []
         data[key] = item
     if admin:

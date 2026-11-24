@@ -1,10 +1,11 @@
 import axios from "axios";
 
+
 const BACKEND_URL = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/+$/, "");
 export const API_BASE = `${BACKEND_URL}/api`;
 
 export const api = axios.create({
-  baseURL: API_BASE,
+  baseURL: API_BASE
 });
 
 // Attach token from localStorage as Bearer (fallback to httpOnly cookie)
@@ -15,7 +16,7 @@ api.interceptors.request.use((cfg) => {
 });
 
 api.interceptors.response.use(
-  (r) => r,
+  (response) => response,
   (err) => {
     if (err?.response?.status === 401 && !window.location.pathname.startsWith("/login")) {
       // soft signal
@@ -26,8 +27,8 @@ api.interceptors.response.use(
 );
 
 export const setToken = (t) => {
-  if (t) localStorage.setItem("meow_token", t);
-  else localStorage.removeItem("meow_token");
+  if (t) localStorage.setItem("meow_token", t);else
+  localStorage.removeItem("meow_token");
 };
 
 export const formatIDR = (v) => {

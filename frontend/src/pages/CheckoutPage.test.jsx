@@ -75,6 +75,75 @@ test("each selected cart line has its own photo and notes, including a quantity 
   expect(host.querySelector('[data-testid="submit-order-btn"]').disabled).toBe(false);
 });
 
+test('profile prescription copies zero, paired PD and notes only into the chosen cart line', async () => {
+  const originalGet = api.get.getMockImplementation();
+  const rx = { id: 'profile-rx', date: '2026-01-01', od: { sph: 0, cyl: 0, axis: null, add: null },
+    os: { sph: -1.25, cyl: -.5, axis: 90, add: 1 }, pd_total: null, pd_right: 31, pd_left: 30.5, notes: 'Catatan profil' };
+  api.get.mockImplementation((url, options) => {
+    if (url === '/customer/profile') return Promise.resolve({ data: { ready: false, profile: { prescription: rx } } });
+    if (url === '/cart') return Promise.resolve({ data: { items: [
+      { id:'cart-owned', quantity:2, product:{ name:'Frame A' }, prescription:{ attachment_upload_id:'previous-photo', notes:'Catatan lama' } },
+      { id:'cart-second', quantity:1, product:{ name:'Frame B' } },
+    ] } });
+    return originalGet(url, options);
+  });
+  api.patch.mockImplementation((url, payload) => Promise.resolve({ data: { prescription: payload } }));
+  await mountCheckout(['cart-owned','cart-second']);
+  expect(api.get.mock.calls.some(([url]) => url === '/customer/profile')).toBe(false);
+  const form = host.querySelector('[data-testid="prescription-cart-owned"]');
+  const second = host.querySelector('[data-testid="prescription-cart-second"]');
+  await click(form.querySelector('[data-testid="use-profile-prescription-cart-owned"]'));
+  expect(form.querySelector('textarea').value).toBe('Catatan profil');
+  expect(second.querySelector('textarea').value).toBe('');
+  expect(form.querySelector('[data-testid="prescription-summary"]').textContent).toContain('PD kanan: 31 mm');
+  expect(form.querySelector('input[type=number]')).toBeNull();
+  expect(form.textContent).not.toContain('Foto resep tersimpan');
+  expect(host.querySelector('[data-testid="submit-order-btn"]').disabled).toBe(true);
+  await act(async () => form.dispatchEvent(new Event('submit', { bubbles:true, cancelable:true })));
+  await flush(); await flush();
+  expect(api.patch).toHaveBeenCalledWith('/cart/cart-owned/prescription', expect.objectContaining({
+    od_sph:0, od_cyl:0, od_axis:null, os_sph:-1.25, os_cyl:-.5, os_axis:90, os_add:1,
+    pd_total:null, pd_right:31, pd_left:30.5, notes:'Catatan profil', attachment_upload_id:null,
+  }));
+  expect(api.patch).toHaveBeenCalledTimes(1);
+  expect(host.querySelector('[data-testid="submit-order-btn"]').disabled).toBe(false);
+  expect(form.querySelector('[data-testid="prescription-summary"]')).not.toBeNull();
+});
+
+test.each(['missing','network'])('unavailable profile (%s) keeps photo/note drafts and checkout optional', async failure => {
+  const originalGet = api.get.getMockImplementation();
+  api.get.mockImplementation((url, options) => url !== '/customer/profile' ? originalGet(url, options)
+    : failure === 'network' ? Promise.reject(new Error('offline')) : Promise.resolve({ data:{ profile:{ prescription:{ id:null } } } }));
+  await mountCheckout();
+  const form = host.querySelector('[data-testid="prescription-cart-owned"]');
+  await click(form.querySelector('[data-testid="use-profile-prescription-cart-owned"]'));
+  expect(form.querySelector('[role=alert]')).not.toBeNull();
+  expect(form.querySelector('input[type=file]')).not.toBeNull();
+  expect(form.querySelector('a[href="/profile#resep"]')).not.toBeNull();
+  expect(host.querySelector('[data-testid="submit-order-btn"]').disabled).toBe(false);
+  await type(form.querySelector('textarea'),'Catatan saya');
+  await click(form.querySelector('[data-testid="use-profile-prescription-cart-owned"]'));
+  expect(form.querySelector('textarea').value).toBe('Catatan saya');
+  expect(host.querySelector('[data-testid="submit-order-btn"]').disabled).toBe(true);
+  expect(api.patch).not.toHaveBeenCalled();
+});
+
+test('pending profile lookup blocks payment and copied sizes can be removed for photo-only checkout', async () => {
+  const originalGet = api.get.getMockImplementation();
+  let complete;
+  api.get.mockImplementation((url, options) => url === '/customer/profile' ? new Promise(resolve => { complete=resolve; }) : originalGet(url, options));
+  await mountCheckout();
+  const form = host.querySelector('[data-testid="prescription-cart-owned"]');
+  await click(form.querySelector('[data-testid="use-profile-prescription-cart-owned"]'));
+  expect(host.querySelector('[data-testid="submit-order-btn"]').disabled).toBe(true);
+  expect(form.querySelector('input[type=file]').disabled).toBe(true);
+  await act(async () => complete({ data:{ profile:{ prescription:{ id:'profile', od:{ sph:0 }, pd_total:62 } } } }));
+  expect(form.querySelector('[data-testid="prescription-summary"]')).not.toBeNull();
+  await click([...form.querySelectorAll('button')].find(button => button.textContent.includes('hapus ukuran')));
+  expect(form.querySelector('[data-testid="prescription-summary"]')).toBeNull();
+  expect(host.querySelector('[data-testid="submit-order-btn"]').disabled).toBe(false);
+});
+
 test("saving Frame and Paket Lens Index choices refreshes authoritative totals and keeps each row separate", async () => {
   const originalGet = api.get.getMockImplementation();
   const indexes = [{ id: 'standard', name: 'Standard', additional_price: 50000 }, { id: 'photo', name: 'Photochromic', additional_price: 75000 }];

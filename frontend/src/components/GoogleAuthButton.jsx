@@ -27,7 +27,7 @@ export default function GoogleAuthButton({ signup = false, returnTo = "", disabl
       try {
         const { data } = await api.get("/auth/google/config", { signal: controller.signal });
         if (disposed) return;
-        if (!data.enabled || !data.client_id) { setPhase("unconfigured"); return; }
+        if (!data.enabled || !data.client_id) {setPhase("unconfigured");return;}
         const google = await loadGoogleIdentity();
         if (disposed) return;
         const nonce = googleNonce();
@@ -35,7 +35,7 @@ export default function GoogleAuthButton({ signup = false, returnTo = "", disabl
           client_id: data.client_id, nonce, auto_select: false, ux_mode: "popup",
           callback: async ({ credential }) => {
             if (disposed || exchanging || latest.current.disabled) return;
-            if (!credential) { setError("Google belum mengirim identitas. Silakan coba lagi."); return; }
+            if (!credential) {setError("Google belum mengirim identitas. Silakan coba lagi.");return;}
             exchanging = true;
             setPhase("busy");
             setError("");
@@ -43,32 +43,32 @@ export default function GoogleAuthButton({ signup = false, returnTo = "", disabl
               const user = await latest.current.loginWithGoogle(credential, nonce);
               if (disposed) return;
               rememberAuthReturn("");
-              toast.success("Selamat datang, " + user.name + "!");
+              toast.success(`Selamat datang, ${user.name}!`);
               navigateAfterAuthentication(authDestination(latest.current.returnTo, user.has_pin, user), latest.current.navigate);
             } catch (err) {
-              if (!disposed) { setError(apiError(err, "Gagal masuk dengan Google. Silakan coba lagi.")); setPhase("ready"); }
-            } finally { exchanging = false; }
-          },
+              if (!disposed) {setError(apiError(err, "Gagal masuk dengan Google. Silakan coba lagi."));setPhase("ready");}
+            } finally {exchanging = false;}
+          }
         });
         google.renderButton(element, { type: "standard", theme: "outline", size: "large", shape: "pill",
           text: signup ? "signup_with" : "signin_with", locale: "id",
           width: Math.min(400, element.clientWidth || 300) });
         setPhase("ready");
       } catch (err) {
-        if (!disposed) { setError(apiError(err, err.message || "Login Google gagal dimuat.")); setPhase("error"); }
+        if (!disposed) {setError(apiError(err, err.message || "Login Google gagal dimuat."));setPhase("error");}
       }
     })();
-    return () => { disposed = true; controller.abort(); element?.replaceChildren(); };
+    return () => {disposed = true;controller.abort();element?.replaceChildren();};
   }, [signup, attempt]);
 
   return <div data-testid={signup ? "google-register-btn" : "google-login-btn"}>
     <div ref={host} className={`${phase === "unconfigured" || phase === "error" ? "hidden" : "flex"} justify-center min-h-[44px] ${disabled || phase === "busy" ? "pointer-events-none opacity-60" : ""}`}
-      aria-busy={phase === "busy"} />
-    {phase === "loading" && <p className="text-center text-sm text-meow-gray" role="status">Memuat tombol Google...</p>}
-    {phase === "busy" && <p className="text-center text-sm text-meow-gray" role="status">Memverifikasi akun Google...</p>}
-    {phase === "unconfigured" && <p className="text-center text-sm text-meow-gray">Daftar/masuk Google belum tersedia. Silakan gunakan email dan password.</p>}
+    aria-busy={phase === "busy"} />
+    {phase === "loading" && <p className="text-center text-sm text-meow-gray" role="status">{"Memuat tombol Google..."}</p>}
+    {phase === "busy" && <p className="text-center text-sm text-meow-gray" role="status">{"Memverifikasi akun Google..."}</p>}
+    {phase === "unconfigured" && <p className="text-center text-sm text-meow-gray">{"Daftar/masuk Google belum tersedia. Silakan gunakan email dan password."}</p>}
     {error && <p className="mt-2 text-center text-sm text-red-600" role="alert">{error}</p>}
     {phase === "error" && <button type="button" onClick={() => setAttempt((value) => value + 1)}
-      className="mt-2 w-full text-sm font-bold text-meow-salmon">Muat ulang tombol Google</button>}
+    className="mt-2 w-full text-sm font-bold text-meow-salmon">{"Muat ulang tombol Google"}</button>}
   </div>;
 }

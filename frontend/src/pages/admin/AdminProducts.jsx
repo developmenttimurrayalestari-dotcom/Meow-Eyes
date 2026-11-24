@@ -1,3 +1,4 @@
+import FormField from "../../components/FormField";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { api, apiError, formatIDR } from "../../lib/api";
 import { Plus, Edit2, Trash2, Search, Power, Ruler, Copy } from "lucide-react";
@@ -101,7 +102,7 @@ const AdminProducts = () => {
 
       <div className="flex items-center bg-white border border-zinc-200 rounded-full px-4 py-2 mb-4 max-w-md">
         <Search className="h-4 w-4 text-meow-gray mr-2" />
-        <input disabled={busy} value={q} onChange={(e) => { setQ(e.target.value); setPage(1); setSelected([]); }} placeholder="Cari produk..." className="bg-transparent flex-1 min-w-0 outline-none text-sm" data-testid="admin-product-search" />
+        <FormField label="Cari produk" className="flex-1"><input disabled={busy} value={q} onChange={(e) => { setQ(e.target.value); setPage(1); setSelected([]); }} placeholder="Cari produk..." className="bg-transparent flex-1 min-w-0 outline-none text-sm" data-testid="admin-product-search" /></FormField>
       </div>
 
       {error && <div role="alert" className="mb-4 p-4 bg-red-50 text-red-700 rounded-xl text-sm">{error}<button type="button" disabled={busy || loading} onClick={() => { setError(""); load(); }} className="underline ml-3">Muat ulang</button></div>}
@@ -116,7 +117,7 @@ const AdminProducts = () => {
         <table className="w-full text-sm" data-testid="admin-products-table">
           <thead className="bg-meow-bg text-xs uppercase tracking-wider text-meow-gray">
             <tr>
-              <th className="px-3 py-3 w-10"><input ref={selectAll} type="checkbox" aria-label="Pilih semua produk pada halaman ini" checked={allSelected} disabled={busy || loading || !products.length} onChange={() => setSelected(allSelected ? [] : products.map(product => product.id))} /></th>
+              <th className="px-3 py-3"><label className="flex flex-col items-center gap-1"><span>Semua</span><input ref={selectAll} type="checkbox" aria-label="Pilih semua produk pada halaman ini" checked={allSelected} disabled={busy || loading || !products.length} onChange={() => setSelected(allSelected ? [] : products.map(product => product.id))} /></label></th>
               <th className="text-left px-4 py-3">Produk</th>
               <th className="text-left px-4 py-3 hidden md:table-cell">Tipe</th>
               <th className="text-left px-4 py-3 hidden md:table-cell">Harga</th>
@@ -130,7 +131,7 @@ const AdminProducts = () => {
               const stock = (p.variants || []).reduce((s, v) => s + (v.stock || 0), 0);
               return (
                 <tr key={p.id} className={`border-t border-zinc-100 ${selected.includes(p.id) ? "bg-meow-salmon/5" : ""}`} data-testid={`product-row-${p.id}`}>
-                  <td className="px-3 py-3"><input type="checkbox" aria-label={`Pilih ${p.name}`} checked={selected.includes(p.id)} disabled={busy || loading} onChange={() => toggle(p.id)} /></td>
+                  <td className="px-3 py-3"><label className="flex flex-col items-center gap-1 text-xs"><span>Pilih</span><input type="checkbox" aria-label={`Pilih ${p.name}`} checked={selected.includes(p.id)} disabled={busy || loading} onChange={() => toggle(p.id)} /></label></td>
                   <td className="px-4 py-3 flex items-center gap-3">
                     <img src={p.main_image} alt="" className="h-12 w-12 rounded-xl object-cover" />
                     <div>
@@ -239,14 +240,14 @@ const ProductForm = ({ product, onClose, onSaved, categories, brands }) => {
       <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto space-y-3" data-testid="product-form">
         <h2 className="font-heading text-2xl font-black">{isEdit ? "Edit Produk" : "Produk Baru"}</h2>
         <div className="grid grid-cols-2 gap-2">
-          <input required placeholder="Nama produk" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid="pf-name" />
-          <input aria-label="SKU produk" placeholder="SKU produk (otomatis jika kosong)" value={form.sku || ''} onChange={e => setForm({ ...form, sku: e.target.value })} className="px-3 py-2 rounded-xl bg-meow-bg outline-none" />
+          <FormField label="Nama produk"><input required placeholder="Nama produk" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid="pf-name" /></FormField>
+          <FormField label="SKU produk (opsional)" hint="Kode produk dibuat otomatis jika dikosongkan."><input aria-label="SKU produk" placeholder="SKU produk (otomatis jika kosong)" value={form.sku || ''} onChange={e => setForm({ ...form, sku: e.target.value })} className="px-3 py-2 rounded-xl bg-meow-bg outline-none" /></FormField>
         </div>
         <RichTextEditor key={product?.id || 'new-product'} label="Deskripsi produk" value={form.description || ''} onChange={description => setForm(current => ({ ...current, description }))} testId="pf-desc" />
         <div className="grid grid-cols-3 gap-2">
-          <input required type="number" placeholder="Harga" value={form.price} onChange={(e) => setForm({ ...form, price: Number(e.target.value) })} className="px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid="pf-price" />
-          <input type="number" placeholder="Harga Diskon" value={form.discount_price || ""} onChange={(e) => setForm({ ...form, discount_price: e.target.value ? Number(e.target.value) : null })} className="px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid="pf-disc" />
-          <input required type="number" placeholder="Berat (g)" value={form.weight_gram} onChange={(e) => setForm({ ...form, weight_gram: Number(e.target.value) })} className="px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid="pf-weight" />
+          <FormField label="Harga produk (Rp)"><input required type="number" placeholder="Harga" value={form.price} onChange={(e) => setForm({ ...form, price: Number(e.target.value) })} className="px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid="pf-price" /></FormField>
+          <FormField label="Harga diskon (Rp, opsional)" hint="Isi harga jual setelah diskon, bukan persentase potongan. Kosongkan jika tidak ada diskon."><input type="number" placeholder="Harga Diskon" value={form.discount_price || ""} onChange={(e) => setForm({ ...form, discount_price: e.target.value ? Number(e.target.value) : null })} className="px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid="pf-disc" /></FormField>
+          <FormField label="Berat produk (gram)" hint="Berat digunakan dalam perhitungan ongkos kirim."><input required type="number" placeholder="Berat (g)" value={form.weight_gram} onChange={(e) => setForm({ ...form, weight_gram: Number(e.target.value) })} className="px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid="pf-weight" /></FormField>
         </div>
         <ProductMasterFields categories={categories} brands={brands} form={form} onChange={setForm} />
         <label className="block text-sm font-semibold">Klasifikasi penjualan<select aria-label="Klasifikasi penjualan" value={form.sale_role} onChange={e => setForm({ ...form, sale_role: e.target.value })} className="mt-1 block w-full px-3 py-2 rounded-xl bg-meow-bg"><option value="main">Main Product</option><option value="add_on">Add On</option></select><small className="block font-normal text-meow-gray mt-1">Add On dapat dipilih sebagai pelengkap produk utama.</small></label>
@@ -263,6 +264,7 @@ const ProductForm = ({ product, onClose, onSaved, categories, brands }) => {
             {(form.gallery || []).map((g, i) => (
               <ImagePicker
                 key={i}
+                label={`Gambar galeri ${i + 1}`}
                 value={g}
                 onChange={(url) => {
                   const next = [...(form.gallery || [])];
@@ -290,14 +292,15 @@ const ProductForm = ({ product, onClose, onSaved, categories, brands }) => {
           </div>
           <div className="space-y-2">
             {form.variants.map((v, i) => (
-              <div key={i} className="grid grid-cols-6 gap-1 text-xs">
-                <input placeholder="Warna" value={v.color || ""} onChange={(e) => updVariant(i, "color", e.target.value)} className="px-2 py-1 rounded bg-meow-bg outline-none" />
-                <input placeholder="#hex" value={v.color_hex || ""} onChange={(e) => updVariant(i, "color_hex", e.target.value)} className="px-2 py-1 rounded bg-meow-bg outline-none" />
-                <input placeholder="Size" value={v.size || ""} onChange={(e) => updVariant(i, "size", e.target.value)} className="px-2 py-1 rounded bg-meow-bg outline-none" />
-                <input placeholder="SKU" value={v.sku} onChange={(e) => updVariant(i, "sku", e.target.value)} className="px-2 py-1 rounded bg-meow-bg outline-none" />
-                <input type="number" placeholder="Stok" value={v.stock} onChange={(e) => updVariant(i, "stock", Number(e.target.value))} className="px-2 py-1 rounded bg-meow-bg outline-none" />
+              <fieldset key={i} className="rounded-xl border p-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
+                <legend className="font-semibold px-1">Varian {i + 1}</legend>
+                <FormField label="Warna varian"><input placeholder="Warna" value={v.color || ""} onChange={(e) => updVariant(i, "color", e.target.value)} className="px-2 py-1 rounded bg-meow-bg outline-none" /></FormField>
+                <FormField label="Kode warna HEX (opsional)" hint="Contoh: #000000."><input placeholder="#hex" value={v.color_hex || ""} onChange={(e) => updVariant(i, "color_hex", e.target.value)} className="px-2 py-1 rounded bg-meow-bg outline-none" /></FormField>
+                <FormField label="Ukuran varian (opsional)"><input placeholder="Size" value={v.size || ""} onChange={(e) => updVariant(i, "size", e.target.value)} className="px-2 py-1 rounded bg-meow-bg outline-none" /></FormField>
+                <FormField label="SKU varian"><input placeholder="SKU" value={v.sku} onChange={(e) => updVariant(i, "sku", e.target.value)} className="px-2 py-1 rounded bg-meow-bg outline-none" /></FormField>
+                <FormField label="Stok varian (unit)"><input type="number" placeholder="Stok" value={v.stock} onChange={(e) => updVariant(i, "stock", Number(e.target.value))} className="px-2 py-1 rounded bg-meow-bg outline-none" /></FormField>
                 <button type="button" onClick={() => delVariant(i)} className="text-red-500 text-xs">Hapus</button>
-              </div>
+              </fieldset>
             ))}
           </div>
         </div>

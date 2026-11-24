@@ -1,3 +1,4 @@
+import FormField from "../../components/FormField";
 import React, { useCallback, useEffect, useState } from "react";
 import { api, API_BASE } from "../../lib/api";
 import { Plus, Trash2, Edit2, FileText, BookOpen, Ticket } from "lucide-react";
@@ -71,25 +72,25 @@ export const AdminArticles = () => {
         <div className="fixed inset-0 bg-black/60 z-50 grid place-items-center p-4 overflow-y-auto" onClick={() => setEditing(null)}>
           <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl p-6 max-w-5xl w-full min-w-0 space-y-3 max-h-[90vh] overflow-y-auto" data-testid="article-form">
             <h3 className="font-heading font-extrabold text-xl">{editing.id ? "Edit" : "Buat"} Artikel</h3>
-            <input required placeholder="Judul" value={editing.title} onChange={(e) => setEditing({ ...editing, title: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid="art-title" />
-            <select value={editing.category_id || ""} onChange={(e) => setEditing({ ...editing, category_id: e.target.value || null })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid="art-cat">
+            <FormField label="Judul artikel"><input required placeholder="Judul" value={editing.title} onChange={(e) => setEditing({ ...editing, title: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid="art-title" /></FormField>
+            <FormField label="Kategori artikel (opsional)"><select value={editing.category_id || ""} onChange={(e) => setEditing({ ...editing, category_id: e.target.value || null })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid="art-cat">
               <option value="">-- Kategori --</option>
               {cats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            </select></FormField>
             <ImagePicker
               label="Thumbnail Artikel"
               value={editing.thumbnail || ""}
               onChange={(url) => setEditing({ ...editing, thumbnail: url })}
               testId="art-thumbnail-picker"
             />
-            <input placeholder="Excerpt (ringkasan)" value={editing.excerpt || ""} onChange={(e) => setEditing({ ...editing, excerpt: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" />
+            <FormField label="Ringkasan artikel (opsional)" hint="Teks singkat yang mewakili isi artikel pada daftar artikel."><input placeholder="Excerpt (ringkasan)" value={editing.excerpt || ""} onChange={(e) => setEditing({ ...editing, excerpt: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" /></FormField>
             <RichTextEditor key={editing.id || 'new-article'} label="Konten artikel" value={editing.content || ""} onChange={(content) => setEditing(current => ({ ...current, content }))} testId="art-content" />
-            <select value={editing.status} onChange={(e) => setEditing({ ...editing, status: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none">
+            <FormField label="Status publikasi" hint="Published menampilkan konten kepada customer; Draft menyimpan konsep."><select value={editing.status} onChange={(e) => setEditing({ ...editing, status: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none">
               <option value="draft">Draft</option>
               <option value="published">Published</option>
               <option value="unpublished">Unpublished</option>
               <option value="archived">Archived</option>
-            </select>
+            </select></FormField>
             <div className="flex gap-2 pt-2">
               <button type="button" onClick={() => setEditing(null)} className="btn-secondary flex-1">Batal</button>
               <button type="submit" className="btn-primary flex-1" data-testid="art-save">Simpan</button>
@@ -153,26 +154,26 @@ export const AdminKnowledge = () => {
         <div className="fixed inset-0 bg-black/60 z-50 grid place-items-center p-4 overflow-y-auto" onClick={() => setEditing(null)}>
           <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl p-6 max-w-5xl w-full min-w-0 space-y-3 max-h-[90vh] overflow-y-auto" data-testid="knowledge-form">
             <h3 className="font-heading font-extrabold text-xl">{editing.id ? "Edit" : "Buat"} Knowledge</h3>
-            <select value={editing.knowledge_type} onChange={(e) => setEditing({ ...editing, knowledge_type: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none">
+            <FormField label="Jenis product knowledge"><select value={editing.knowledge_type} onChange={(e) => setEditing({ ...editing, knowledge_type: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none">
               <option value="frame_shape">Frame Shape</option>
               <option value="material">Material</option>
               <option value="lens_type">Lens Type</option>
               <option value="lens_index">Lens Index</option>
               <option value="buying_guide">Buying Guide</option>
-            </select>
-            <input required placeholder="Judul" value={editing.title} onChange={(e) => setEditing({ ...editing, title: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" />
+            </select></FormField>
+            <FormField label="Judul product knowledge"><input required placeholder="Judul" value={editing.title} onChange={(e) => setEditing({ ...editing, title: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" /></FormField>
             <ImagePicker
               label="Gambar Ilustrasi"
               value={editing.image || ""}
               onChange={(url) => setEditing({ ...editing, image: url })}
               testId="knowledge-image-picker"
             />
-            <input placeholder="Deskripsi singkat" value={editing.description || ""} onChange={(e) => setEditing({ ...editing, description: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" />
-            <input placeholder="Cocok untuk wajah" value={editing.face_shape_recommendation || ""} onChange={(e) => setEditing({ ...editing, face_shape_recommendation: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" />
-            <input placeholder="Style" value={editing.style_recommendation || ""} onChange={(e) => setEditing({ ...editing, style_recommendation: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" />
+            <FormField label="Deskripsi singkat (opsional)"><input placeholder="Deskripsi singkat" value={editing.description || ""} onChange={(e) => setEditing({ ...editing, description: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" /></FormField>
+            <FormField label="Rekomendasi bentuk wajah (opsional)" hint="Contoh: wajah bulat atau oval."><input placeholder="Cocok untuk wajah" value={editing.face_shape_recommendation || ""} onChange={(e) => setEditing({ ...editing, face_shape_recommendation: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" /></FormField>
+            <FormField label="Rekomendasi gaya (opsional)" hint="Contoh: kasual, formal, atau sporty."><input placeholder="Style" value={editing.style_recommendation || ""} onChange={(e) => setEditing({ ...editing, style_recommendation: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" /></FormField>
             <RichTextEditor key={editing.id || 'new-knowledge'} label="Konten product knowledge" value={editing.content || ""} onChange={(content) => setEditing(current => ({ ...current, content }))} testId="knowledge-content" />
-            <input placeholder="Kelebihan (pisah dengan ;)" value={(editing.pros || []).join(";")} onChange={(e) => setEditing({ ...editing, pros: e.target.value.split(";").map(x => x.trim()).filter(Boolean) })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" />
-            <input placeholder="Kekurangan (pisah dengan ;)" value={(editing.cons || []).join(";")} onChange={(e) => setEditing({ ...editing, cons: e.target.value.split(";").map(x => x.trim()).filter(Boolean) })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" />
+            <FormField label="Kelebihan (opsional)" hint="Pisahkan setiap poin dengan tanda titik koma (;)."><input placeholder="Kelebihan (pisah dengan ;)" value={(editing.pros || []).join(";")} onChange={(e) => setEditing({ ...editing, pros: e.target.value.split(";").map(x => x.trim()).filter(Boolean) })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" /></FormField>
+            <FormField label="Kekurangan (opsional)" hint="Pisahkan setiap poin dengan tanda titik koma (;)."><input placeholder="Kekurangan (pisah dengan ;)" value={(editing.cons || []).join(";")} onChange={(e) => setEditing({ ...editing, cons: e.target.value.split(";").map(x => x.trim()).filter(Boolean) })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" /></FormField>
             <label className="block text-sm font-bold">Status publikasi<select value={editing.status || (editing.is_published ? "published" : "draft")} onChange={(e) => setEditing({ ...editing, status: e.target.value, is_published: e.target.value === "published" })} className="w-full px-3 py-2 mt-1 rounded-xl bg-meow-bg"><option value="draft">Draft</option><option value="published">Published</option><option value="unpublished">Unpublished</option><option value="archived">Archived</option></select></label>
             <div className="flex gap-2"><button type="button" onClick={() => setEditing(null)} className="btn-secondary flex-1">Batal</button><button type="submit" className="btn-primary flex-1">Simpan</button></div>
           </form>
@@ -278,9 +279,9 @@ export const AdminBannersV2 = () => {
       </div>
       {editing && (
         <div className="fixed inset-0 bg-black/60 z-50 grid place-items-center p-4 overflow-y-auto" onClick={() => setEditing(null)}>
-          <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl p-6 max-w-lg w-full space-y-3" data-testid="banner-form">
+          <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl p-6 max-w-lg w-full space-y-3 max-h-[90dvh] overflow-y-auto" data-testid="banner-form">
             <h3 className="font-heading font-extrabold text-xl">Banner</h3>
-            <input required placeholder="Judul" value={editing.title} onChange={(e) => setEditing({ ...editing, title: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" />
+            <FormField label="Judul banner"><input required placeholder="Judul" value={editing.title} onChange={(e) => setEditing({ ...editing, title: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" /></FormField>
             <ImagePicker
               label="Image Desktop (wajib)"
               value={editing.image_desktop || ""}
@@ -294,28 +295,28 @@ export const AdminBannersV2 = () => {
               testId="banner-image-mobile-picker"
             />
             <div className="grid grid-cols-2 gap-2">
-              <select value={editing.position} onChange={(e) => setEditing({ ...editing, position: e.target.value })} className="px-3 py-2 rounded-xl bg-meow-bg outline-none">
+              <FormField label="Lokasi banner"><select value={editing.position} onChange={(e) => setEditing({ ...editing, position: e.target.value })} className="px-3 py-2 rounded-xl bg-meow-bg outline-none">
                 <option value="hero">Hero</option><option value="promo">Promo</option>
                 <option value="shop_now">Shop Now</option><option value="article">Article</option>
                 <option value="footer">Footer</option>
-              </select>
-              <select value={editing.target_device} onChange={(e) => setEditing({ ...editing, target_device: e.target.value })} className="px-3 py-2 rounded-xl bg-meow-bg outline-none">
+              </select></FormField>
+              <FormField label="Perangkat tujuan"><select value={editing.target_device} onChange={(e) => setEditing({ ...editing, target_device: e.target.value })} className="px-3 py-2 rounded-xl bg-meow-bg outline-none">
                 <option value="all">All Device</option><option value="desktop">Desktop</option><option value="mobile">Mobile</option>
-              </select>
+              </select></FormField>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <select value={editing.link_type} onChange={(e) => setEditing({ ...editing, link_type: e.target.value })} className="px-3 py-2 rounded-xl bg-meow-bg outline-none">
+              <FormField label="Jenis tautan"><select value={editing.link_type} onChange={(e) => setEditing({ ...editing, link_type: e.target.value })} className="px-3 py-2 rounded-xl bg-meow-bg outline-none">
                 <option value="internal">Internal</option><option value="external">External</option>
                 <option value="shop_now">Shop Now</option><option value="category">Category</option>
                 <option value="article">Article</option><option value="flash_sale">Flash Sale</option>
                 <option value="none">None</option>
-              </select>
+              </select></FormField>
               <label className="text-xs font-bold">URL tujuan<input aria-label="URL tujuan banner" placeholder="/shop-now atau https://..." value={editing.link_url || ""} onChange={(e) => setEditing({ ...editing, link_url: e.target.value })} className="w-full px-3 py-2 mt-1 rounded-xl bg-meow-bg outline-none" /></label>
             </div>
-            <input placeholder="Alt text (SEO)" value={editing.alt_text || ""} onChange={(e) => setEditing({ ...editing, alt_text: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" />
+            <FormField label="Deskripsi gambar / alt text (opsional)" hint="Jelaskan isi gambar secara singkat untuk pembaca layar dan saat gambar tidak termuat."><input placeholder="Alt text (SEO)" value={editing.alt_text || ""} onChange={(e) => setEditing({ ...editing, alt_text: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" /></FormField>
             <div className="grid grid-cols-2 gap-2">
-              <input type="datetime-local" placeholder="Mulai" value={localDateTime(editing.start_at)} onChange={(e) => setEditing({ ...editing, start_at: utcDateTime(e.target.value) })} className="px-3 py-2 rounded-xl bg-meow-bg outline-none" />
-              <input type="datetime-local" placeholder="Selesai" value={localDateTime(editing.end_at)} onChange={(e) => setEditing({ ...editing, end_at: utcDateTime(e.target.value) })} className="px-3 py-2 rounded-xl bg-meow-bg outline-none" />
+              <FormField label="Mulai tampil (opsional)" hint="Tanggal dan jam mengikuti waktu lokal perangkat Anda."><input type="datetime-local" placeholder="Mulai" value={localDateTime(editing.start_at)} onChange={(e) => setEditing({ ...editing, start_at: utcDateTime(e.target.value) })} className="px-3 py-2 rounded-xl bg-meow-bg outline-none" /></FormField>
+              <FormField label="Selesai tampil (opsional)" hint="Tanggal dan jam mengikuti waktu lokal perangkat Anda."><input type="datetime-local" placeholder="Selesai" value={localDateTime(editing.end_at)} onChange={(e) => setEditing({ ...editing, end_at: utcDateTime(e.target.value) })} className="px-3 py-2 rounded-xl bg-meow-bg outline-none" /></FormField>
             </div>
             <label className="block text-sm font-bold">Urutan tampilan<input type="number" min="0" step="1" required value={editing.sort_order} onChange={(e) => setEditing({ ...editing, sort_order: Number(e.target.value) })} className="w-full px-3 py-2 mt-1 rounded-xl bg-meow-bg outline-none" /><span className="text-xs font-normal text-meow-gray">Angka lebih kecil tampil lebih dahulu.</span></label>
             <label className="flex items-center gap-2 text-sm">
@@ -364,12 +365,12 @@ export const AdminFAQs = () => {
       {editing && (
         <div className="fixed inset-0 bg-black/60 z-50 grid place-items-center p-4" onClick={() => setEditing(null)}>
           <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl p-6 max-w-md w-full space-y-3" data-testid="faq-form">
-            <input required placeholder="Pertanyaan" value={editing.question} onChange={(e) => setEditing({ ...editing, question: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid="faq-q" />
-            <textarea required rows={4} placeholder="Jawaban" value={editing.answer} onChange={(e) => setEditing({ ...editing, answer: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid="faq-a" />
-            <select value={editing.category_id || ""} onChange={(e) => setEditing({ ...editing, category_id: e.target.value || null })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none">
+            <FormField label="Pertanyaan FAQ"><input required placeholder="Pertanyaan" value={editing.question} onChange={(e) => setEditing({ ...editing, question: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid="faq-q" /></FormField>
+            <FormField label="Jawaban FAQ"><textarea required rows={4} placeholder="Jawaban" value={editing.answer} onChange={(e) => setEditing({ ...editing, answer: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid="faq-a" /></FormField>
+            <FormField label="Kategori FAQ (opsional)"><select value={editing.category_id || ""} onChange={(e) => setEditing({ ...editing, category_id: e.target.value || null })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none">
               <option value="">-- Kategori --</option>
               {cats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            </select></FormField>
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={editing.is_active} onChange={(e) => setEditing({ ...editing, is_active: e.target.checked })} /> Aktif</label>
             <div className="flex gap-2"><button type="button" onClick={() => setEditing(null)} className="btn-secondary flex-1">Batal</button><button type="submit" className="btn-primary flex-1">Simpan</button></div>
           </form>
@@ -417,19 +418,19 @@ export const AdminPages = () => {
       {editing && (
         <div className="fixed inset-0 bg-black/60 z-50 grid place-items-center p-4 overflow-y-auto" onClick={() => setEditing(null)}>
           <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl p-6 max-w-5xl w-full min-w-0 space-y-3 max-h-[90vh] overflow-y-auto" data-testid="page-form">
-            <select value={editing.page_type} onChange={(e) => setEditing({ ...editing, page_type: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none">
+            <FormField label="Jenis halaman CMS"><select value={editing.page_type} onChange={(e) => setEditing({ ...editing, page_type: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none">
               <option value="about">About</option>
               <option value="privacy_policy">Privacy Policy</option>
               <option value="terms_conditions">Terms & Conditions</option>
               <option value="refund_policy">Refund Policy</option>
               <option value="shipping_policy">Shipping Policy</option>
               <option value="custom">Custom</option>
-            </select>
-            <input required placeholder="Title" value={editing.title} onChange={(e) => setEditing({ ...editing, title: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" />
+            </select></FormField>
+            <FormField label="Judul halaman"><input required placeholder="Title" value={editing.title} onChange={(e) => setEditing({ ...editing, title: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" /></FormField>
             <RichTextEditor key={editing.id || 'new-page'} label="Konten halaman" value={editing.content || ''} onChange={(content) => setEditing(current => ({ ...current, content }))} testId="page-content-editor" />
-            <select value={editing.status} onChange={(e) => setEditing({ ...editing, status: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none">
+            <FormField label="Status publikasi" hint="Published menampilkan halaman kepada customer; Draft menyimpan konsep."><select value={editing.status} onChange={(e) => setEditing({ ...editing, status: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none">
               <option value="draft">Draft</option><option value="published">Published</option><option value="archived">Archived</option>
-            </select>
+            </select></FormField>
             <div className="flex gap-2"><button type="button" onClick={() => setEditing(null)} className="btn-secondary flex-1">Batal</button><button type="submit" className="btn-primary flex-1">Simpan</button></div>
           </form>
         </div>
@@ -456,7 +457,7 @@ export const AdminContactSetting = () => {
           {[["store_name", "Nama Toko"], ["address", "Alamat"], ["email", "Email"], ["phone", "Telepon"],
             ["whatsapp", "WhatsApp (628xxx)"], ["operational_hours", "Jam Operasional"],
             ["instagram", "Instagram URL"], ["facebook", "Facebook URL"], ["tiktok", "TikTok URL"]].map(([k, l]) => (
-            <input key={k} placeholder={l} value={form[k] || ""} onChange={(e) => setForm({ ...form, [k]: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid={`cs-${k}`} />
+            <FormField key={k} label={l} hint={k === 'whatsapp' ? 'Gunakan kode negara, misalnya 6281234567890.' : ['instagram', 'facebook', 'tiktok'].includes(k) ? 'Masukkan URL lengkap, misalnya https://...' : undefined}><input placeholder={l} value={form[k] || ""} onChange={(e) => setForm({ ...form, [k]: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid={`cs-${k}`} /></FormField>
           ))}
           <button onClick={save} className="btn-primary w-full" data-testid="cs-save">Simpan</button>
         </div>
@@ -531,12 +532,12 @@ export const AdminStaff = () => {
         <div className="fixed inset-0 bg-black/60 z-50 grid place-items-center p-4" onClick={() => setCreating(null)}>
           <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl p-6 max-w-md w-full space-y-3" data-testid="staff-form">
             <h3 className="font-heading font-extrabold text-xl">Staff Baru</h3>
-            <input required placeholder="Nama" value={creating.name} onChange={(e) => setCreating({ ...creating, name: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid="st-name" />
-            <input required type="email" placeholder="Email" value={creating.email} onChange={(e) => setCreating({ ...creating, email: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid="st-email" />
-            <input required type="password" placeholder="Password (min 8)" value={creating.password} onChange={(e) => setCreating({ ...creating, password: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid="st-pwd" />
-            <select value={creating.role} onChange={(e) => setCreating({ ...creating, role: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none">
+            <FormField label="Nama staf"><input required placeholder="Nama" value={creating.name} onChange={(e) => setCreating({ ...creating, name: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid="st-name" /></FormField>
+            <FormField label="Email staf"><input required type="email" placeholder="Email" value={creating.email} onChange={(e) => setCreating({ ...creating, email: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid="st-email" /></FormField>
+            <FormField label="Password awal staf" hint="Gunakan minimal 8 karakter."><input required type="password" placeholder="Password (min 8)" value={creating.password} onChange={(e) => setCreating({ ...creating, password: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid="st-pwd" /></FormField>
+            <FormField label="Peran akses" hint="Peran menentukan halaman dan tindakan yang dapat diakses staf."><select value={creating.role} onChange={(e) => setCreating({ ...creating, role: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none">
               <option value="staff">Staff</option><option value="admin">Admin (butuh super_admin)</option>
-            </select>
+            </select></FormField>
             <div className="flex gap-2"><button type="button" onClick={() => setCreating(null)} className="btn-secondary flex-1">Batal</button><button type="submit" className="btn-primary flex-1">Buat</button></div>
           </form>
         </div>
@@ -627,7 +628,7 @@ export const AdminImport = () => {
         <p className="text-sm text-meow-gray">Upload file .xlsx dengan multi-baris per warna untuk membuat produk + varian sekaligus.</p>
         <button onClick={downloadTemplate} className="btn-secondary text-sm" data-testid="dl-template-btn">📥 Download Template</button>
         <div className="flex items-center gap-3">
-          <input type="file" accept=".xlsx" onChange={(e) => { setFile(e.target.files?.[0]); setPreview(null); setResult(null); }} data-testid="import-file" />
+          <FormField label="Berkas impor Excel (.xlsx)" hint="Pilih berkas sesuai template, lalu periksa pratinjau sebelum mengimpor."><input type="file" accept=".xlsx" onChange={(e) => { setFile(e.target.files?.[0]); setPreview(null); setResult(null); }} data-testid="import-file" /></FormField>
           {file && <button onClick={doPreview} className="btn-secondary text-sm" data-testid="preview-btn">Preview</button>}
         </div>
         {preview && (
@@ -728,9 +729,9 @@ export const AdminLensIndexes = () => {
             <h2 className="font-bold text-lg">{creating.id ? 'Edit Lens Index' : 'Lens Index Baru'}</h2>
             {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
             <fieldset disabled={saving} className="space-y-3">
-            <input required placeholder="Nama (e.g. 1.60 Ultra Thin)" value={creating.name} onChange={(e) => setCreating({ ...creating, name: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" />
-            <input required placeholder="Index value (1.50, 1.56, 1.60...)" value={creating.index_value} onChange={(e) => setCreating({ ...creating, index_value: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" />
-            <input placeholder="Range (mis. -4.00 s/d +4.00)" value={creating.recommended_power_range || ""} onChange={(e) => setCreating({ ...creating, recommended_power_range: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" />
+            <FormField label="Nama Lens Index" hint="Contoh: 1.60 Ultra Thin."><input required placeholder="Nama (e.g. 1.60 Ultra Thin)" value={creating.name} onChange={(e) => setCreating({ ...creating, name: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" /></FormField>
+            <FormField label="Nilai indeks lensa" hint="Contoh: 1.50, 1.56, atau 1.60."><input required placeholder="Index value (1.50, 1.56, 1.60...)" value={creating.index_value} onChange={(e) => setCreating({ ...creating, index_value: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" /></FormField>
+            <FormField label="Rentang kekuatan lensa (opsional)" hint="Contoh: -4.00 s/d +4.00."><input placeholder="Range (mis. -4.00 s/d +4.00)" value={creating.recommended_power_range || ""} onChange={(e) => setCreating({ ...creating, recommended_power_range: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" /></FormField>
             <fieldset className="border rounded-xl p-3 space-y-2">
               <legend className="text-sm font-bold px-1">Jenis Lensa</legend>
               {lensTypes.filter(type => type.is_active || creating.lens_type_ids.includes(type.id)).map(type => <label key={type.id} className="flex items-center gap-2 text-sm">
@@ -740,10 +741,10 @@ export const AdminLensIndexes = () => {
               {!lensTypes.length && <p className="text-xs text-meow-gray">Tambahkan Jenis Lensa pada halaman kategori terlebih dahulu.</p>}
               <p className="text-xs text-meow-gray">Pilih minimal satu agar Lens Index tersedia untuk Paket yang sesuai. Tanpa Jenis Lensa, Lens Index hanya tersedia untuk Frame.</p>
             </fieldset>
-            <label className="block text-xs font-semibold">Harga Lensa (tambahan per Frame)
+            <label className="block text-xs font-semibold">Harga Lensa (Rp, tambahan per Frame)
               <input type="number" min="0" step="0.01" required value={creating.additional_price} onChange={(e) => setCreating({ ...creating, additional_price: Number(e.target.value) })} className="block w-full mt-1 px-3 py-2 rounded-xl bg-meow-bg outline-none" />
             </label>
-            <input placeholder="Deskripsi" value={creating.description || ""} onChange={(e) => setCreating({ ...creating, description: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" />
+            <FormField label="Deskripsi Lens Index (opsional)"><input placeholder="Deskripsi" value={creating.description || ""} onChange={(e) => setCreating({ ...creating, description: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" /></FormField>
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={creating.is_active} onChange={event => setCreating({ ...creating, is_active: event.target.checked })} />Aktif</label>
             <div className="flex gap-2"><button type="button" onClick={() => setCreating(null)} className="btn-secondary flex-1">Batal</button><button type="submit" className="btn-primary flex-1">{saving ? 'Menyimpan…' : 'Simpan'}</button></div>
             </fieldset>

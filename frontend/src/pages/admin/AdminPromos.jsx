@@ -1,3 +1,4 @@
+import FormField from "../../components/FormField";
 import React, { useEffect, useState } from "react";
 import { api, apiError, formatIDR } from "../../lib/api";
 import { toast } from "sonner";
@@ -76,16 +77,16 @@ export const AdminVouchers = () => {
           <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl p-6 max-w-md w-full max-h-[90dvh] overflow-y-auto space-y-3" data-testid="voucher-form">
             <h3 className="font-heading font-extrabold text-xl">{editingId ? 'Edit Voucher' : 'Voucher Baru'}</h3>
             <label className="block text-sm">Sasaran voucher<select aria-label="Sasaran voucher" value={form.audience} onChange={e => setForm({ ...form, audience: e.target.value })} className="block w-full mt-1 p-2 rounded-xl bg-meow-bg"><option value="general">Umum</option><option value="new_member">Member Baru (Email Verified, Transaksi Pertama, 1×)</option><option value="referral">Penerima Reward Referral</option></select></label>
-            <input placeholder="Kode (otomatis jika kosong)" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid="v-code" />
-            <input required placeholder="Nama" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid="v-name" />
-            <select value={form.discount_type} onChange={(e) => setForm({ ...form, discount_type: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid="v-type">
+            <FormField label="Kode voucher (opsional)" hint="Kode dibuat otomatis jika dikosongkan."><input placeholder="Kode (otomatis jika kosong)" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid="v-code" /></FormField>
+            <FormField label="Nama voucher"><input required placeholder="Nama" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid="v-name" /></FormField>
+            <FormField label="Jenis potongan"><select value={form.discount_type} onChange={(e) => setForm({ ...form, discount_type: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid="v-type">
               <option value="percent">Percent</option>
               <option value="nominal">Nominal</option>
               <option value="free_shipping">Free Shipping</option>
-            </select>
-            <input type="number" placeholder="Nilai" value={form.discount_value} onChange={(e) => setForm({ ...form, discount_value: Number(e.target.value) })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" />
-            <input type="number" placeholder="Min purchase" value={form.min_purchase} onChange={(e) => setForm({ ...form, min_purchase: Number(e.target.value) })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" />
-            <input type="number" placeholder="Quota" value={form.quota} onChange={(e) => setForm({ ...form, quota: Number(e.target.value) })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" />
+            </select></FormField>
+            <FormField label={form.discount_type === 'percent' ? 'Persentase potongan (%)' : 'Nilai potongan (Rp)'} hint={form.discount_type === 'free_shipping' ? 'Voucher ini memberikan potongan ongkir.' : form.discount_type === 'percent' ? 'Contoh: 10 untuk potongan 10%.' : 'Masukkan nominal rupiah tanpa pemisah ribuan.'}><input type="number" placeholder="Nilai" value={form.discount_value} onChange={(e) => setForm({ ...form, discount_value: Number(e.target.value) })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" /></FormField>
+            <FormField label="Minimal belanja (Rp)" hint="Isi 0 jika tidak ada minimal belanja."><input type="number" placeholder="Min purchase" value={form.min_purchase} onChange={(e) => setForm({ ...form, min_purchase: Number(e.target.value) })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" /></FormField>
+            <FormField label="Kuota pemakaian voucher" hint="Jumlah maksimal pemakaian voucher oleh seluruh customer."><input type="number" placeholder="Quota" value={form.quota} onChange={(e) => setForm({ ...form, quota: Number(e.target.value) })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" /></FormField>
             <label className="block text-sm">Maksimal potongan (Rp)<input type="number" min="0" value={form.max_discount ?? ''} onChange={e => setForm({ ...form, max_discount: e.target.value === '' ? null : Number(e.target.value) })} className="mt-1 w-full p-2 border rounded-xl" /></label>
             {[['start_at','Mulai berlaku'],['end_at','Berakhir']].map(([key,label]) => <label key={key} className="block text-sm">{label}<input type="datetime-local" required value={localDateTime(form[key])} onChange={e => setForm({ ...form, [key]: e.target.value ? new Date(e.target.value).toISOString() : null })} className="mt-1 w-full p-2 border rounded-xl" /></label>)}
             <div className="flex gap-2 pt-2">
@@ -144,19 +145,19 @@ export const AdminRoulette = () => {
       </div>
       {show && (
         <div className="fixed inset-0 bg-black/60 z-50 grid place-items-center p-4" onClick={() => setShow(false)}>
-          <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl p-6 max-w-md w-full space-y-3" data-testid="reward-form">
+          <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl p-6 max-w-md w-full space-y-3 max-h-[90dvh] overflow-y-auto" data-testid="reward-form">
             <h3 className="font-heading font-extrabold text-xl">Reward Baru</h3>
-            <input required placeholder="Label" value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" />
-            <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none">
+            <FormField label="Nama hadiah"><input required placeholder="Label" value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" /></FormField>
+            <FormField label="Jenis hadiah"><select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none">
               <option value="points">Points</option>
               <option value="discount">Discount</option>
               <option value="free_shipping">Free Shipping</option>
               <option value="voucher">Voucher</option>
               <option value="nothing">Nothing</option>
-            </select>
-            <input type="number" placeholder="Value" value={form.value} onChange={(e) => setForm({ ...form, value: Number(e.target.value) })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" />
-            <input type="number" step="0.01" placeholder="Probability 0-1" value={form.probability} onChange={(e) => setForm({ ...form, probability: Number(e.target.value) })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" />
-            <input placeholder="Color hex" value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" />
+            </select></FormField>
+            <FormField label={form.type === 'points' ? 'Jumlah poin hadiah' : form.type === 'discount' ? 'Potongan harga (Rp)' : 'Nilai hadiah'} hint="Isi jumlah poin untuk hadiah Poin, atau nominal rupiah untuk hadiah Diskon."><input type="number" placeholder="Nilai hadiah" value={form.value} onChange={(e) => setForm({ ...form, value: Number(e.target.value) })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" /></FormField>
+            <FormField label="Bobot peluang hadiah" hint="Gunakan angka nol atau positif. Semakin besar bobotnya, semakin besar peluang hadiah terpilih dibanding hadiah lain."><input type="number" step="0.01" placeholder="Contoh: 0.25 atau 1" value={form.probability} onChange={(e) => setForm({ ...form, probability: Number(e.target.value) })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" /></FormField>
+            <FormField label="Warna hadiah (HEX)" hint="Contoh: #FF6363."><input placeholder="Color hex" value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" /></FormField>
             <div className="flex gap-2"><button type="button" onClick={() => setShow(false)} className="btn-secondary flex-1">Batal</button><button type="submit" className="btn-primary flex-1">Simpan</button></div>
           </form>
         </div>

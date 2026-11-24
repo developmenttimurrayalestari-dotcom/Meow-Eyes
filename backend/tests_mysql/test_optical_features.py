@@ -315,6 +315,49 @@ def test_each_standalone_cart_line_keeps_its_own_photo_and_notes_in_order_snapsh
     asyncio.run(run())
 
 
+def test_profile_prescription_copied_to_one_cart_line_keeps_independent_order_snapshot():
+    from meowsurement_schemas import CustomerProfileInput
+    from mysql.meowsurement import update_profile, get_profile
+
+    async def run():
+        async with feature_client(bundle=False) as (client, auth, d, _):
+            saved = await update_profile(d['user'], CustomerProfileInput(expected_version=0, prescription={
+                'date':'2026-01-01', 'od':{'sph':0,'cyl':0},
+                'os':{'sph':-1.25,'cyl':-.5,'axis':90,'add':1},
+                'pd_total':62, 'notes':'Resep dari profil',
+            }))
+            source = saved['profile']['prescription']
+            payload = {f'{eye}_{key}':source[eye][key] for eye in ('od','os') for key in ('sph','cyl','axis','add')}
+            payload.update({key:source[key] for key in ('notes','pd_total','pd_right','pd_left')})
+            response = await client.patch(f'/api/cart/{d["cart"]}/prescription',json=payload)
+            assert response.status_code == 200, response.text
+            assert response.json()['prescription']['od_sph'] == 0
+            second = await client.post('/api/cart', json={'product_id':d['frame'],'variant_id':d['vf'],
+                'quantity':1,'prescription':{'notes':'Resep baris lain'}})
+            assert second.status_code == 200
+            assert second.json()['id'] != d['cart']
+            # A later profile replacement must not edit the already copied cart values.
+            await update_profile(d['user'], CustomerProfileInput(expected_version=1, prescription={
+                'od':{'sph':-7,'cyl':0},'os':{'sph':-7,'cyl':0},'notes':'Profil terbaru',
+            }))
+            cart = {row['id']:row for row in (await client.get('/api/cart')).json()['items']}
+            assert cart[d['cart']]['prescription']['od_sph'] == 0
+            assert cart[second.json()['id']]['prescription']['notes'] == 'Resep baris lain'
+            order = (await create_checkout(d['alice'],d['req'].model_copy(update={
+                'selected_item_ids':[d['cart'],second.json()['id']],
+            })))['order']
+            assert len(order['items']) == 2
+            rx = next(item['prescription'] for item in order['items'] if item['prescription']['notes']=='Resep dari profil')
+            assert rx['od_sph'] == 0 and rx['os_axis'] == 90 and rx['pd'] == 62
+            assert (await get_profile(d['user']))['profile']['prescription']['od']['sph'] == -7
+            async with read_session() as s:
+                links = (await s.scalars(select(m.OrderItemPrescription).where(m.OrderItemPrescription.order_id==order['id']))).all()
+                assert len(links) == 2 and all(link.prescription_id != source['id'] for link in links)
+                for link in links:
+                    assert (await s.get(m.Prescription,link.prescription_id)).is_order_snapshot
+    asyncio.run(run())
+
+
 def test_add_standalone_prescription_does_not_merge_into_plain_cart_line():
     async def run():
         async with feature_client(bundle=False) as (client, auth, d, _):

@@ -1,3 +1,4 @@
+import FormField from "../../components/FormField";
 import React, { useCallback, useEffect, useState } from 'react';
 import { api, apiError } from '../../lib/api';
 import { toast } from 'sonner';
@@ -57,7 +58,7 @@ export default function AdminInventory() {
   return <div data-testid="admin-inventory" className="space-y-4">
     <div className="flex flex-wrap justify-between items-center gap-3"><h1 className="font-heading text-3xl font-black">Inventory</h1><button type="button" onClick={load} disabled={loading||saving} className="btn-secondary text-sm">Muat Ulang</button></div>
     <p className="text-sm text-meow-gray">Gunakan Receipt Stock untuk stok awal atau penambahan barang, dan Issue Stock untuk pengeluaran barang.</p>
-    <input aria-label="Cari inventory" placeholder="Cari nama produk / SKU / varian" value={q} onChange={e=>setQ(e.target.value)} className="w-full max-w-md rounded-xl border bg-white px-4 py-2"/>
+    <FormField label="Cari inventory" hint="Cari berdasarkan nama produk, SKU, atau varian." className="w-full max-w-md"><input aria-label="Cari inventory" placeholder="Cari nama produk / SKU / varian" value={q} onChange={e=>setQ(e.target.value)} className="w-full max-w-md rounded-xl border bg-white px-4 py-2"/></FormField>
     {error&&<p role="alert" className="rounded-xl bg-red-50 text-red-700 p-4">{error}</p>}
     <section><h2 className="font-bold mb-3">Stok Produk ({filter(items).length})</h2>{table(filter(items))}</section>
     <section><h2 className="font-bold mb-2">Stok Produk yang Dihapus ({filter(deleted).length})</h2><p className="text-xs text-meow-gray mb-3">Data stok disimpan untuk riwayat. Baris abu-abu tidak dapat diubah.</p>{table(filter(deleted),true)}</section>

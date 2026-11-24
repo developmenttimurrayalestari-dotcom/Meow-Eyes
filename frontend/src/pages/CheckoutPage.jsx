@@ -10,6 +10,7 @@ import PrescriptionForm from "../components/PrescriptionForm";
 const newRequestId = () => window.crypto?.randomUUID?.() || `checkout-${Array.from(window.crypto.getRandomValues(new Uint32Array(4))).map((value) => value.toString(16)).join("")}`;
 
 export default function CheckoutPage() {
+
   const navigate = useNavigate();
   const location = useLocation();
   const { user, refreshMe, refreshCartCount } = useAuth();
@@ -20,7 +21,7 @@ export default function CheckoutPage() {
       const ids = [...new Set((fromRoute || stored).filter((value) => typeof value === "string"))].sort();
       if (ids.length) sessionStorage.setItem(`meow_checkout_items_${user?.user_id}`, JSON.stringify(ids));
       return ids;
-    } catch { return location.state?.selected_item_ids || []; }
+    } catch {return location.state?.selected_item_ids || [];}
   });
   const [cartItems, setCartItems] = useState([]);
   const [cartVersion, setCartVersion] = useState(0);
@@ -64,32 +65,32 @@ export default function CheckoutPage() {
   const selectedKey = selectedItemIds.join(",");
 
   const loadInitial = useCallback(async () => {
-    setInitialLoading(true); setInitialError("");
+    setInitialLoading(true);setInitialError("");
     try {
       const [addressResponse, cartResponse, statusResponse] = await Promise.all([
-        api.get("/addresses"), api.get("/cart"), api.get("/integrations/status"),
-      ]);
+      api.get("/addresses"), api.get("/cart"), api.get("/integrations/status")]
+      );
       const loadedAddresses = addressResponse.data.addresses || [];
       setAddresses(loadedAddresses);
       setAddressId((current) => loadedAddresses.some((item) => item.id === current) ? current : (loadedAddresses.find((item) => item.is_default) || loadedAddresses[0])?.id || "");
       setCartItems((cartResponse.data.items || []).filter((item) => selectedItemIds.includes(item.id)));
       setIntegrations(statusResponse.data);
-    } catch (err) { setInitialError(apiError(err, "Data checkout belum dapat dimuat.")); }
-    finally { setInitialLoading(false); }
+    } catch (err) {setInitialError(apiError(err, "Data checkout belum dapat dimuat."));} finally
+    {setInitialLoading(false);}
   }, [selectedItemIds]);
-  useEffect(() => { loadInitial(); }, [loadInitial]);
+  useEffect(() => {loadInitial();}, [loadInitial]);
   useEffect(() => {
     api.get("/roulette/my-rewards").then(({ data }) => setAvailableRewards((data.spins || []).filter((spin) => !spin.used && new Date(spin.expires_at).getTime() > Date.now() && ["discount", "free_shipping"].includes(spin.reward_type)))).catch(() => {});
     const timer = window.setInterval(() => setNow(Date.now()), 15000);
     return () => clearInterval(timer);
   }, []);
 
-  const flashSaleExclusive = cartItems.some(item => item.flash_sale_active);
+  const flashSaleExclusive = cartItems.some((item) => item.flash_sale_active);
   const shippingRequestKey = JSON.stringify({ address_id: addressId, selected_item_ids: selectedItemIds, payment_mode: paymentMode,
     ...(paymentMode === 'cod' ? { voucher_code: flashSaleExclusive ? null : voucher || null, use_points: flashSaleExclusive ? 0 : usePoints || 0, roulette_spin_id: flashSaleExclusive ? null : rouletteSpinId } : {}) });
   useEffect(() => {
     const controller = new AbortController();
-    setShipping(null); setShippingOptions([]); setShippingError(""); setPreview(null);
+    setShipping(null);setShippingOptions([]);setShippingError("");setPreview(null);
     setShippingCartVersion(-1);
     setShippingLoading(false);
     if (!addressId || !selectedKey || initialLoading || initialError || showAddForm) return () => controller.abort();
@@ -100,8 +101,8 @@ export default function CheckoutPage() {
       setShipping(data.options?.[0] ? { ...data.options[0], address_id: addressId, request_key: shippingRequestKey } : null);
       setShippingCartVersion(cartVersion);
       if (!data.options?.length) setShippingError("Belum ada layanan pengiriman untuk alamat ini. Periksa kode pos atau hubungi toko.");
-    }).catch((err) => { if (!controller.signal.aborted) setShippingError(apiError(err, "Ongkir belum dapat dihitung. Periksa alamat dan coba lagi.")); })
-      .finally(() => { if (!controller.signal.aborted) setShippingLoading(false); });
+    }).catch((err) => {if (!controller.signal.aborted) setShippingError(apiError(err, "Ongkir belum dapat dihitung. Periksa alamat dan coba lagi."));}).
+    finally(() => {if (!controller.signal.aborted) setShippingLoading(false);});
     return () => controller.abort();
   }, [addressId, selectedKey, selectedItemIds, cartVersion, shippingReload, initialLoading, initialError, showAddForm, shippingRequestKey]);
 
@@ -109,7 +110,7 @@ export default function CheckoutPage() {
     payment_mode: paymentMode,
     address_id: addressId, courier_code: shipping?.courier_code, service_code: shipping?.service_code,
     shipping_quote_id: shipping?.quote_id || null, voucher_code: flashSaleExclusive ? null : voucher || null,
-    use_points: flashSaleExclusive ? 0 : usePoints || 0, roulette_spin_id: flashSaleExclusive ? null : rouletteSpinId, selected_item_ids: selectedItemIds,
+    use_points: flashSaleExclusive ? 0 : usePoints || 0, roulette_spin_id: flashSaleExclusive ? null : rouletteSpinId, selected_item_ids: selectedItemIds
   }), [addressId, shipping, voucher, usePoints, rouletteSpinId, selectedItemIds, flashSaleExclusive, paymentMode]);
   const payloadKey = JSON.stringify(payload);
   const requestFingerprint = JSON.stringify({ payload, cartVersion });
@@ -117,29 +118,29 @@ export default function CheckoutPage() {
   const currentShipping = Boolean(!showAddForm && shipping && shipping.address_id === addressId && shipping.request_key === shippingRequestKey && !shippingExpired && shippingCartVersion === cartVersion);
   useEffect(() => {
     const controller = new AbortController();
-    setPreview(null); setPreviewKey(""); setPreviewError("");
-    setPreviewCartVersion(-1); setPreviewLoading(false);
+    setPreview(null);setPreviewKey("");setPreviewError("");
+    setPreviewCartVersion(-1);setPreviewLoading(false);
     if (!currentShipping) return () => controller.abort();
     setPreviewLoading(true);
     api.post("/checkout/preview", JSON.parse(payloadKey), { signal: controller.signal }).then(({ data }) => {
       if (controller.signal.aborted) return;
-      setPreview(data); setPreviewKey(payloadKey);
+      setPreview(data);setPreviewKey(payloadKey);
       setPreviewCartVersion(cartVersion);
-    }).catch((err) => { if (!controller.signal.aborted) setPreviewError(apiError(err, "Ringkasan belum dapat dihitung.")); })
-      .finally(() => { if (!controller.signal.aborted) setPreviewLoading(false); });
+    }).catch((err) => {if (!controller.signal.aborted) setPreviewError(apiError(err, "Ringkasan belum dapat dihitung."));}).
+    finally(() => {if (!controller.signal.aborted) setPreviewLoading(false);});
     return () => controller.abort();
   }, [payloadKey, currentShipping, cartVersion]);
 
   const handleDirty = useCallback((id, dirty) => setDirtyPrescriptions((current) => current[id] === dirty ? current : { ...current, [id]: dirty }), []);
   const handlePrescriptionSaved = useCallback((id, prescription, cartItem) => {
-    setCartItems((current) => current.map((item) => item.id === id ? (cartItem || { ...item, prescription }) : item));
+    setCartItems((current) => current.map((item) => item.id === id ? cartItem || { ...item, prescription } : item));
     setCartVersion((version) => version + 1);
   }, []);
   const hasUnsavedPrescription = Object.values(dirtyPrescriptions).some(Boolean);
   const validPreview = preview && previewKey === payloadKey && previewCartVersion === cartVersion && currentShipping && !previewLoading;
   const lensSubtotal = Number(preview?.lens_subtotal ?? cartItems.reduce((sum, item) => sum + Number(item.lens_price || 0) * item.quantity, 0));
   const addonSubtotal = Number(preview?.addon_subtotal ?? cartItems.reduce((sum, item) => sum + Number(item.addon_price || 0) * item.quantity, 0));
-  const productSubtotal = Number(preview?.product_subtotal ?? (Number(preview?.subtotal || 0) - lensSubtotal - addonSubtotal));
+  const productSubtotal = Number(preview?.product_subtotal ?? Number(preview?.subtotal || 0) - lensSubtotal - addonSubtotal);
   const paymentReady = paymentMode === 'cod' ? integrations?.cod?.ready : integrations?.payment?.ready;
   const setPinAt = (index, value) => {
     if (!/^\d?$/.test(value)) return;
@@ -148,124 +149,125 @@ export default function CheckoutPage() {
   };
   const submit = async () => {
     if (submitting || !validPreview || hasUnsavedPrescription) return;
-    if (pin.some((digit) => digit === "")) { setSubmitError("Masukkan PIN 6 digit."); pinRef.current[0]?.focus(); return; }
-    setSubmitting(true); setSubmitError("");
+    if (pin.some((digit) => digit === "")) {setSubmitError("Masukkan PIN 6 digit.");pinRef.current[0]?.focus();return;}
+    setSubmitting(true);setSubmitError("");
     try {
       if (!requestRef.current || requestRef.current.fingerprint !== requestFingerprint) {
         const storageKey = `meow_checkout_request_${user.user_id}`;
         let existing = null;
-        try { existing = JSON.parse(sessionStorage.getItem(storageKey) || "null"); } catch { /* optional session storage */ }
+        try {existing = JSON.parse(sessionStorage.getItem(storageKey) || "null");} catch {/* optional session storage */}
         requestRef.current = existing?.fingerprint === requestFingerprint ? existing : { fingerprint: requestFingerprint, key: newRequestId() };
-        try { sessionStorage.setItem(storageKey, JSON.stringify(requestRef.current)); } catch { /* still retained in this page */ }
+        try {sessionStorage.setItem(storageKey, JSON.stringify(requestRef.current));} catch {/* still retained in this page */}
       }
       const { data } = await api.post("/checkout/confirm", { ...payload, pin: pin.join("") }, { headers: { "Idempotency-Key": requestRef.current.key } });
-      try { sessionStorage.removeItem(`meow_checkout_items_${user.user_id}`); sessionStorage.removeItem(`meow_checkout_request_${user.user_id}`); } catch { /* optional session storage */ }
-      refreshMe(); refreshCartCount();
+      try {sessionStorage.removeItem(`meow_checkout_items_${user.user_id}`);sessionStorage.removeItem(`meow_checkout_request_${user.user_id}`);} catch {/* optional session storage */}
+      refreshMe();refreshCartCount();
       if (data.order.payment_mode === 'cod') {
-        toast.success('Pesanan COD dibuat. Bayar kepada kurir saat barang diterima.');
+        toast.success("Pesanan COD dibuat. Bayar kepada kurir saat barang diterima.");
         if (data.payment_error) toast.warning(data.payment_error);
-        navigate(`/orders/${data.order.id}`); return;
+        navigate(`/orders/${data.order.id}`);return;
       }
       toast.success("Pesanan dibuat. Lanjutkan pembayaran.");
       navigate(`/payment/${data.order.order_number}`, { state: { order: data.order, payment: data.payment, payment_error: data.payment_error } });
-    } catch (err) { setSubmitError(apiError(err, "Pesanan belum terkonfirmasi. Coba lagi dengan pilihan yang sama, atau periksa daftar pesanan Anda.")); }
-    finally { setSubmitting(false); }
+    } catch (err) {setSubmitError(apiError(err, "Pesanan belum terkonfirmasi. Coba lagi dengan pilihan yang sama, atau periksa daftar pesanan Anda."));} finally
+    {setSubmitting(false);}
   };
   if (!user) return null;
-  if (!selectedItemIds.length) return <div className="max-w-3xl mx-auto py-12 text-center" data-testid="checkout-empty">Pilih produk untuk checkout. <Link to="/cart" className="text-meow-salmon underline">Kembali ke keranjang</Link></div>;
-  if (initialLoading) return <p className="text-center py-16" role="status">Memuat checkout…</p>;
-  if (initialError) return <div role="alert" className="max-w-xl mx-auto p-8 text-center"><p>{initialError}</p><button type="button" onClick={loadInitial} className="btn-secondary mt-4">Coba lagi</button></div>;
-  if (cartItems.length !== selectedItemIds.length) return <div className="max-w-xl mx-auto p-8 text-center"><p>Isi keranjang telah berubah. Pilih kembali produk yang akan dibeli.</p><Link className="btn-primary inline-block mt-4" to="/cart">Periksa Keranjang</Link><Link className="block mt-3 underline" to="/orders">Lihat pesanan yang sudah dibuat</Link></div>;
+  if (!selectedItemIds.length) return <div className="max-w-3xl mx-auto py-12 text-center" data-testid="checkout-empty">{"Pilih produk untuk checkout. "}<Link to="/cart" className="text-meow-salmon underline">{"Kembali ke keranjang"}</Link></div>;
+  if (initialLoading) return <p className="text-center py-16" role="status">{"Memuat checkout…"}</p>;
+  if (initialError) return <div role="alert" className="max-w-xl mx-auto p-8 text-center"><p>{initialError}</p><button type="button" onClick={loadInitial} className="btn-secondary mt-4">{"Coba lagi"}</button></div>;
+  if (cartItems.length !== selectedItemIds.length) return <div className="max-w-xl mx-auto p-8 text-center"><p>{"Isi keranjang telah berubah. Pilih kembali produk yang akan dibeli."}</p><Link className="btn-primary inline-block mt-4" to="/cart">{"Periksa Keranjang"}</Link><Link className="block mt-3 underline" to="/orders">{"Lihat pesanan yang sudah dibuat"}</Link></div>;
 
   return <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-8" data-testid="checkout-page">
-    <h1 className="font-heading text-3xl md:text-4xl font-black mb-6">Checkout</h1>
+    <h1 className="font-heading text-3xl md:text-4xl font-black mb-6">{"Checkout"}</h1>
     <div className="grid lg:grid-cols-3 gap-6">
       <div className="lg:col-span-2 space-y-5 min-w-0">
         <section className="bg-white rounded-3xl p-5 md:p-6" data-testid="address-section">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-            <h2 className="font-heading font-extrabold text-xl flex items-center gap-2"><MapPin className="h-5 w-5 text-meow-salmon" />Alamat Pengiriman</h2>
-            <button type="button" disabled={submitting} onClick={() => { setEditingAddress(null); setShowAddForm(!showAddForm); setShipping(null); setPreview(null); if (showAddForm) setShippingReload(value => value + 1); }} className="text-sm font-bold text-meow-salmon flex items-center gap-1">{showAddForm ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}{showAddForm ? "Tutup" : "Tambah"}</button>
+            <h2 className="font-heading font-extrabold text-xl flex items-center gap-2"><MapPin className="h-5 w-5 text-meow-salmon" />{"Alamat Pengiriman"}</h2>
+            <button type="button" disabled={submitting} onClick={() => {setEditingAddress(null);setShowAddForm(!showAddForm);setShipping(null);setPreview(null);if (showAddForm) setShippingReload((value) => value + 1);}} className="text-sm font-bold text-meow-salmon flex items-center gap-1">{showAddForm ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}{showAddForm ? "Tutup" : "Tambah"}</button>
           </div>
-          {showAddForm ? <AddressForm key={editingAddress?.id || 'new'} initialAddress={editingAddress} defaultAddress={!addresses.length} onCancel={() => { setShowAddForm(false); setEditingAddress(null); setShippingReload(value => value + 1); }} onSaved={(address) => { setAddresses((items) => [...items.filter(item => item.id !== address.id).map((item) => address.is_default ? { ...item, is_default: false } : item), address]); setAddressId(address.id); setShowAddForm(false); setEditingAddress(null); setShipping(null); setPreview(null); setShippingReload(value => value + 1); }} />
-            : !addresses.length ? <p className="text-sm text-meow-gray">Tambahkan alamat pengiriman untuk menghitung ongkir.</p>
-              : <div className="space-y-2">{addresses.map((address) => <div key={address.id} className={`flex gap-2 p-3 rounded-2xl border-2 cursor-pointer ${addressId === address.id ? "border-meow-salmon bg-meow-salmon/5" : "border-meow-midnight/5"}`}>
+          {showAddForm ? <AddressForm key={editingAddress?.id || 'new'} initialAddress={editingAddress} defaultAddress={!addresses.length} onCancel={() => {setShowAddForm(false);setEditingAddress(null);setShippingReload((value) => value + 1);}} onSaved={(address) => {setAddresses((items) => [...items.filter((item) => item.id !== address.id).map((item) => address.is_default ? { ...item, is_default: false } : item), address]);setAddressId(address.id);setShowAddForm(false);setEditingAddress(null);setShipping(null);setPreview(null);setShippingReload((value) => value + 1);}} /> :
+          !addresses.length ? <p className="text-sm text-meow-gray">{"Tambahkan alamat pengiriman untuk menghitung ongkir."}</p> :
+          <div className="space-y-2">{addresses.map((address) => <div key={address.id} className={`flex gap-2 p-3 rounded-2xl border-2 cursor-pointer ${addressId === address.id ? "border-meow-salmon bg-meow-salmon/5" : "border-meow-midnight/5"}`}>
                 <label className="flex items-start gap-2 flex-1 min-w-0"><input type="radio" name="checkout-address" disabled={submitting} checked={addressId === address.id} onChange={() => setAddressId(address.id)} className="mt-1" />
-                <span className="text-sm"><span className="font-bold">{address.label} — {address.recipient}</span> · {address.phone}<br /><span className="text-meow-gray">{[address.street, address.subdistrict, address.district, address.city, address.province, address.postal_code].filter(Boolean).join(", ")}</span></span></label><button type="button" disabled={submitting} data-testid={`checkout-edit-address-${address.id}`} onClick={() => { setEditingAddress(address); setShowAddForm(true); setShipping(null); setPreview(null); }} className="text-xs font-bold text-meow-salmon self-start">Ubah</button>
+                <span className="text-sm"><span className="font-bold">{address.label} — <span className="conveythis-no-translate notranslate" translate="no" data-conveythis-private="">{address.recipient}</span></span> · <span className="conveythis-no-translate notranslate" translate="no" data-conveythis-private="">{address.phone}</span><br /><span className="text-meow-gray"><span className="conveythis-no-translate notranslate" translate="no" data-conveythis-private="">{[address.street, address.subdistrict, address.district, address.city, address.province, address.postal_code].filter(Boolean).join(", ")}</span></span></span></label><button type="button" disabled={submitting} data-testid={`checkout-edit-address-${address.id}`} onClick={() => {setEditingAddress(address);setShowAddForm(true);setShipping(null);setPreview(null);}} className="text-xs font-bold text-meow-salmon self-start">{"Ubah"}</button>
               </div>)}</div>}
         </section>
 
         <section className="bg-white rounded-3xl p-5 md:p-6">
-          <h2 className="font-heading font-extrabold text-xl mb-4">Produk Pilihan</h2>
+          <h2 className="font-heading font-extrabold text-xl mb-4">{"Produk Pilihan"}</h2>
           <div className="divide-y divide-meow-midnight/10">{cartItems.map((item) => <div key={item.id} className="flex items-center gap-3 py-3">
             <img src={imageSrc(item.product.main_image)} alt="" className="w-14 h-14 rounded-xl object-cover" />
             <div className="flex-1 min-w-0 text-sm">
-              <p className="font-bold">{item.product.name}</p>
-              {item.addons?.map(a => <p key={a.product_id} className="text-xs text-meow-gray">+ {a.name} · {formatIDR(a.unit_price)} / produk</p>)}
+              <p className="font-bold">{item.product?.["name"]}</p>
+              {item.addons?.map((a) => <p key={a.product_id} className="text-xs text-meow-gray">+ {a?.["name"]} · <span className="conveythis-no-translate notranslate" translate="no" data-conveythis-private="">{formatIDR(a.unit_price)}</span>{" / produk"}</p>)}
               {(item.lens_index || item.lens_product) && <div className="text-xs text-meow-gray space-y-1 my-1" data-testid={`checkout-item-pricing-${item.id}`}>
-                <p>{item.product.product_type === 'frame' ? 'Frame' : 'Produk'}{item.flash_sale_active ? ' (Flash Sale)' : ''}: {formatIDR(item.frame_price)} / produk</p>
-                <p>Lensa{item.lens_product ? ` ${item.lens_product.name}` : ''}{item.lens_index ? ` · ${item.lens_index.name}` : ''}: {formatIDR(item.lens_price)}{item.product.product_type === 'package' ? ' (termasuk harga paket)' : ' / produk'}</p>
+                <p>{item.product.product_type === 'frame' ? "Frame" : "Produk"}{item.flash_sale_active ? " (Flash Sale)" : ""}: <span className="conveythis-no-translate notranslate" translate="no" data-conveythis-private="">{formatIDR(item.frame_price)}</span>{" / produk"}</p>
+                <p>{"Lensa"}{item.lens_product ? ` ${item.lens_product?.["name"]}` : ""}{item.lens_index ? ` · ${item.lens_index?.["name"]}` : ""}: <span className="conveythis-no-translate notranslate" translate="no" data-conveythis-private="">{formatIDR(item.lens_price)}</span>{item.product.product_type === 'package' ? " (termasuk harga paket)" : " / produk"}</p>
               </div>}
-              <p>{item.quantity} × {formatIDR(item.unit_price)}</p>
+              <p>{item.quantity} × <span className="conveythis-no-translate notranslate" translate="no" data-conveythis-private="">{formatIDR(item.unit_price)}</span></p>
             </div>
-            <span className="font-bold text-sm">{formatIDR(item.subtotal)}</span>
+            <span className="font-bold text-sm"><span className="conveythis-no-translate notranslate" translate="no" data-conveythis-private="">{formatIDR(item.subtotal)}</span></span>
           </div>)}</div>
         </section>
         {cartItems.length > 0 && <section className="bg-white rounded-3xl p-5 md:p-6 space-y-4" data-testid="checkout-prescriptions">
-          <div><h2 className="font-heading font-extrabold text-xl flex items-center gap-2"><Glasses className="h-5 w-5 text-meow-salmon" />Lensa & Resep per Item (Opsional)</h2><p className="text-sm text-meow-gray mt-1">Untuk produk Frame, Anda boleh membeli frame saja tanpa lensa, catatan, atau foto resep. Isi bagian ini hanya jika diperlukan. Klik Simpan Resep jika ada perubahan; setiap baris produk disimpan terpisah.</p></div>
-          {cartItems.map((item) => <PrescriptionForm key={item.id} item={item} onDirtyChange={handleDirty} onSaved={handlePrescriptionSaved} disabled={submitting} showMeasurements={false} selectLens />)}
+          <div><h2 className="font-heading font-extrabold text-xl flex items-center gap-2"><Glasses className="h-5 w-5 text-meow-salmon" />{"Lensa & Resep per Item (Opsional)"}</h2><p className="text-sm text-meow-gray mt-1">{"Untuk produk Frame, Anda boleh membeli frame saja tanpa lensa, catatan, atau foto resep. Anda juga dapat memakai resep yang sudah disimpan di Profil. Isi bagian ini hanya jika diperlukan. Klik Simpan Resep jika ada perubahan; setiap baris produk disimpan terpisah."}</p></div>
+          {cartItems.map((item) => <PrescriptionForm key={item.id} item={item} onDirtyChange={handleDirty} onSaved={handlePrescriptionSaved} disabled={submitting} showMeasurements={false} selectLens allowProfile />)}
         </section>}
-        <section className="bg-white rounded-3xl p-5 md:p-6" data-testid="payment-method-section"><h2 className="font-heading font-extrabold text-xl mb-3">Metode Pembayaran</h2><div className="grid sm:grid-cols-2 gap-3">{[['online', 'Bayar Online', 'Transfer, kartu, dan PayLater melalui DOKU'], ...(integrations?.cod?.ready ? [['cod', 'COD · Bayar di Tempat', 'Bayar kepada kurir ketika paket diterima']] : [])].map(([value, label, hint]) => <label key={value} className={`flex items-start gap-2 rounded-2xl border-2 p-3 text-sm ${paymentMode === value ? 'border-meow-salmon bg-rose-50' : ''}`}><input type="radio" name="payment-mode" value={value} checked={paymentMode === value} disabled={submitting} onChange={() => setPaymentMode(value)} /><span><strong>{label}</strong><small className="block mt-1 text-meow-gray">{hint}</small></span></label>)}</div></section>
+        <section className="bg-white rounded-3xl p-5 md:p-6" data-testid="payment-method-section"><h2 className="font-heading font-extrabold text-xl mb-3">{"Metode Pembayaran"}</h2><div className="grid sm:grid-cols-2 gap-3">{[['online', 'Bayar Online', 'Transfer, kartu, dan PayLater melalui DOKU'], ...(integrations?.cod?.ready ? [['cod', 'COD · Bayar di Tempat', 'Bayar kepada kurir ketika paket diterima']] : [])].map(([value, label, hint]) => <label key={value} className={`flex items-start gap-2 rounded-2xl border-2 p-3 text-sm ${paymentMode === value ? 'border-meow-salmon bg-rose-50' : ''}`}><input type="radio" name="payment-mode" value={value} checked={paymentMode === value} disabled={submitting} onChange={() => setPaymentMode(value)} /><span><strong>{label}</strong><small className="block mt-1 text-meow-gray">{hint}</small></span></label>)}</div></section>
         {addressId && <section className="bg-white rounded-3xl p-5 md:p-6" data-testid="shipping-section">
-          <div className="flex items-center justify-between gap-2 mb-3"><h2 className="font-heading font-extrabold text-xl flex items-center gap-2"><Truck className="h-5 w-5 text-meow-mint" />Pengiriman</h2><button type="button" onClick={() => setShippingReload((value) => value + 1)} disabled={shippingLoading || submitting} className="text-xs font-bold flex items-center gap-1"><RefreshCw className={`h-3.5 w-3.5 ${shippingLoading ? "animate-spin" : ""}`} />Cek ulang</button></div>
-          {shippingLoading ? <p role="status" className="text-sm text-meow-gray">Menghitung ongkir…</p> : shippingError ? <p role="alert" className="text-sm text-red-600">{shippingError}</p> : <div className="space-y-2 max-h-80 overflow-y-auto">{shippingOptions.map((option, index) => {
-            const key = option.quote_id || `${option.courier_code}-${option.service_code}-${index}`;
-            const checked = shipping?.quote_id ? shipping.quote_id === option.quote_id : shipping?.courier_code === option.courier_code && shipping?.service_code === option.service_code;
-            return <label key={key} className={`flex items-start gap-2 p-3 rounded-2xl border-2 cursor-pointer ${checked ? "border-meow-salmon bg-meow-salmon/5" : "border-meow-midnight/5"}`}>
+          <div className="flex items-center justify-between gap-2 mb-3"><h2 className="font-heading font-extrabold text-xl flex items-center gap-2"><Truck className="h-5 w-5 text-meow-mint" />{"Pengiriman"}</h2><button type="button" onClick={() => setShippingReload((value) => value + 1)} disabled={shippingLoading || submitting} className="text-xs font-bold flex items-center gap-1"><RefreshCw className={`h-3.5 w-3.5 ${shippingLoading ? "animate-spin" : ""}`} />{"Cek ulang"}</button></div>
+          {shippingLoading ? <p role="status" className="text-sm text-meow-gray">{"Menghitung ongkir…"}</p> : shippingError ? <p role="alert" className="text-sm text-red-600">{shippingError}</p> : <div className="space-y-2 max-h-80 overflow-y-auto">{shippingOptions.map((option, index) => {
+              const key = option.quote_id || `${option.courier_code}-${option.service_code}-${index}`;
+              const checked = shipping?.quote_id ? shipping.quote_id === option.quote_id : shipping?.courier_code === option.courier_code && shipping?.service_code === option.service_code;
+              return <label key={key} className={`flex items-start gap-2 p-3 rounded-2xl border-2 cursor-pointer ${checked ? "border-meow-salmon bg-meow-salmon/5" : "border-meow-midnight/5"}`}>
               <input type="radio" name="checkout-shipping" disabled={submitting} checked={checked} onChange={() => setShipping({ ...option, address_id: addressId, request_key: shippingRequestKey })} className="mt-1" />
-              <span className="text-sm flex-1"><span className="font-bold">{option.courier_name || option.courier_code} · {option.service_label || option.service_code}</span>{option.etd && <span className="block text-xs text-meow-gray">Estimasi {option.etd}</span>}{Number(option.insurance_cost) > 0 && <span className="block text-xs text-meow-gray">Termasuk asuransi {formatIDR(option.insurance_cost)}</span>}</span>
-              <span className="text-sm font-bold text-meow-salmon">{formatIDR(option.cost)}</span>
+              <span className="text-sm flex-1"><span className="font-bold">{option.courier_name || option.courier_code} · {option.service_label || option.service_code}</span>{option.etd && <span className="block text-xs text-meow-gray">{"Estimasi "}{option.etd}</span>}{Number(option.insurance_cost) > 0 && <span className="block text-xs text-meow-gray">{"Termasuk asuransi "}<span className="conveythis-no-translate notranslate" translate="no" data-conveythis-private="">{formatIDR(option.insurance_cost)}</span></span>}</span>
+              <span className="text-sm font-bold text-meow-salmon"><span className="conveythis-no-translate notranslate" translate="no" data-conveythis-private="">{formatIDR(option.cost)}</span></span>
             </label>;
-          })}</div>}
-          {shippingExpired && <p role="alert" className="mt-3 text-sm text-amber-700">Penawaran ongkir telah berakhir. Klik Cek ulang untuk memperbarui.</p>}
-          {integrations.shipping?.mock && <p className="text-xs text-amber-700 mt-3">Mode demo: tarif dan pengiriman disimulasikan.</p>}
+            })}</div>}
+          {shippingExpired && <p role="alert" className="mt-3 text-sm text-amber-700">{"Penawaran ongkir telah berakhir. Klik Cek ulang untuk memperbarui."}</p>}
+          {integrations.shipping?.mock && <p className="text-xs text-amber-700 mt-3">{"Mode demo: tarif dan pengiriman disimulasikan."}</p>}
         </section>}
 
         <section className="bg-white rounded-3xl p-5 md:p-6 space-y-4" data-testid="promo-section">
-          <h2 className="font-heading font-extrabold text-xl flex items-center gap-2"><Ticket className="h-5 w-5 text-meow-amber" />Promo & Reward</h2>
-          {flashSaleExclusive && <p role="status" className="rounded-xl bg-amber-50 p-3 text-xs text-amber-900">Flash Sale diprioritaskan. Voucher, poin, dan reward roulette tidak dapat digabung pada checkout ini.</p>}<label className="block text-xs font-bold">Kode voucher<div className="flex gap-2 mt-1"><input value={voucherDraft} disabled={submitting || flashSaleExclusive} onChange={(event) => setVoucherDraft(event.target.value.toUpperCase())} placeholder="Masukkan kode voucher" className="min-w-0 flex-1 px-3 py-2 rounded-xl bg-meow-bg border border-meow-midnight/10" data-testid="voucher-input" /><button type="button" disabled={submitting || flashSaleExclusive} onClick={() => setVoucher(voucherDraft.trim())} className="btn-secondary text-xs py-2 px-4">Terapkan</button></div></label>
-          {voucher && <p className="text-xs">Voucher: {voucher} <button type="button" onClick={() => { setVoucher(""); setVoucherDraft(""); }} className="ml-2 underline">Hapus</button></p>}
-          <label className="block text-xs font-bold"><span className="flex items-center gap-1"><Coins className="h-3 w-3" />Pakai Poin · Saldo {pointWallet?.balance ?? user.points_balance ?? 0} · rate mengikuti setiap perolehan</span><input type="number" min="0" max={pointWallet?.balance ?? user.points_balance ?? 0} step="1" disabled={submitting || flashSaleExclusive} value={flashSaleExclusive ? 0 : usePoints} onChange={(event) => setUsePoints(Math.min(pointWallet?.balance ?? user.points_balance ?? 0, Math.max(0, Math.floor(Number(event.target.value) || 0))))} className="w-full mt-1 px-3 py-2 rounded-xl bg-meow-bg border border-meow-midnight/10" data-testid="points-input" /></label>
-          {!!cashbackEvents.length && <p className="text-xs rounded-xl bg-teal-50 p-3">Event {cashbackEvents[0].name}: cashback {cashbackEvents[0].percent}% dalam bentuk poin setelah pesanan selesai. Poin berlaku {cashbackEvents[0].expiry_days} hari dan memakai rate yang dikunci pada pesanan.</p>}
-          {!!availableRewards.length && <label className="block text-xs font-bold">Reward Roulette<select value={flashSaleExclusive ? "" : rouletteSpinId || ""} disabled={submitting || flashSaleExclusive} onChange={(event) => setRouletteSpinId(event.target.value || null)} className="w-full mt-1 px-3 py-2 rounded-xl bg-meow-bg"><option value="">Tidak digunakan</option>{availableRewards.map((reward) => <option key={reward.id} value={reward.id}>{reward.reward_label}</option>)}</select></label>}
+          <h2 className="font-heading font-extrabold text-xl flex items-center gap-2"><Ticket className="h-5 w-5 text-meow-amber" />{"Promo & Reward"}</h2>
+          {flashSaleExclusive && <p role="status" className="rounded-xl bg-amber-50 p-3 text-xs text-amber-900">{"Flash Sale diprioritaskan. Voucher, poin, dan reward roulette tidak dapat digabung pada checkout ini."}</p>}<label className="block text-xs font-bold">{"Kode voucher"}<div className="flex gap-2 mt-1"><input value={voucherDraft} disabled={submitting || flashSaleExclusive} onChange={(event) => setVoucherDraft(event.target.value.toUpperCase())} placeholder={"Masukkan kode voucher"} className="min-w-0 flex-1 px-3 py-2 rounded-xl bg-meow-bg border border-meow-midnight/10" data-testid="voucher-input" /><button type="button" disabled={submitting || flashSaleExclusive} onClick={() => setVoucher(voucherDraft.trim())} className="btn-secondary text-xs py-2 px-4">{"Terapkan"}</button></div></label>
+          {voucher && <p className="text-xs">{"Voucher: "}{voucher} <button type="button" onClick={() => {setVoucher("");setVoucherDraft("");}} className="ml-2 underline">{"Hapus"}</button></p>}
+          <label className="block text-xs font-bold"><span className="flex items-center gap-1"><Coins className="h-3 w-3" />{"Pakai Poin · Saldo "}{pointWallet?.balance ?? user.points_balance ?? 0}{" · rate mengikuti setiap perolehan"}</span><input type="number" min="0" max={pointWallet?.balance ?? user.points_balance ?? 0} step="1" disabled={submitting || flashSaleExclusive} value={flashSaleExclusive ? 0 : usePoints} onChange={(event) => setUsePoints(Math.min(pointWallet?.balance ?? user.points_balance ?? 0, Math.max(0, Math.floor(Number(event.target.value) || 0))))} className="w-full mt-1 px-3 py-2 rounded-xl bg-meow-bg border border-meow-midnight/10" data-testid="points-input" /></label>
+          {!!cashbackEvents.length && <p className="text-xs rounded-xl bg-teal-50 p-3">{"Event "}{cashbackEvents[0]?.["name"]}{": cashback "}{cashbackEvents[0].percent}{"% dalam bentuk poin setelah pesanan selesai. Poin berlaku "}{cashbackEvents[0].expiry_days}{" hari dan memakai rate yang dikunci pada pesanan."}</p>}
+          {!!availableRewards.length && <label className="block text-xs font-bold">{"Reward Roulette"}<select value={flashSaleExclusive ? "" : rouletteSpinId || ""} disabled={submitting || flashSaleExclusive} onChange={(event) => setRouletteSpinId(event.target.value || null)} className="w-full mt-1 px-3 py-2 rounded-xl bg-meow-bg"><option value="">{"Tidak digunakan"}</option>{availableRewards.map((reward) => <option key={reward.id} value={reward.id}>{reward.reward_label}</option>)}</select></label>}
         </section>
         <section className="bg-white rounded-3xl p-5 md:p-6" data-testid="pin-section">
-          <h2 className="font-heading font-extrabold text-xl flex items-center gap-2"><Shield className="h-5 w-5 text-meow-mint" />Verifikasi PIN</h2>
-          {!user.has_pin ? <p className="mt-3 text-sm">Atur PIN untuk melanjutkan checkout. <Link to="/setup-pin" className="text-meow-salmon underline">Setup PIN →</Link></p> : <><p className="mt-2 text-sm text-meow-gray">Masukkan PIN 6 digit untuk membuat pesanan.</p><div className="flex gap-2 mt-3" data-testid="checkout-pin-row">{pin.map((digit, index) => <input key={index} ref={(el) => { pinRef.current[index] = el; }} type="password" autoComplete="off" inputMode="numeric" maxLength={1} aria-label={`Digit PIN ${index + 1}`} value={digit} disabled={submitting} onChange={(event) => setPinAt(index, event.target.value)} onPaste={(event) => { const value = event.clipboardData.getData("text").trim(); if (/^\d{6}$/.test(value)) { event.preventDefault(); setPin(value.split("")); pinRef.current[5]?.focus(); } }} onKeyDown={(event) => { if (event.key === "Backspace" && !pin[index] && index > 0) pinRef.current[index - 1]?.focus(); }} className="w-10 sm:w-12 h-12 sm:h-14 text-center text-xl font-bold rounded-2xl border-2 border-meow-midnight/10 bg-meow-bg focus:border-meow-salmon outline-none" data-testid={`checkout-pin-${index}`} />)}</div></>}
+          <h2 className="font-heading font-extrabold text-xl flex items-center gap-2"><Shield className="h-5 w-5 text-meow-mint" />{"Verifikasi PIN"}</h2>
+          {!user.has_pin ? <p className="mt-3 text-sm">{"Atur PIN untuk melanjutkan checkout. "}<Link to="/setup-pin" className="text-meow-salmon underline">{"Setup PIN →"}</Link></p> : <><p className="mt-2 text-sm text-meow-gray">{"Masukkan PIN 6 digit untuk membuat pesanan."}</p><fieldset className="flex gap-2 mt-3" data-testid="checkout-pin-row"><legend className="text-xs font-semibold mb-2">{"PIN transaksi (6 digit)"}</legend>{pin.map((digit, index) => <input key={index} ref={(el) => {pinRef.current[index] = el;}} type="password" autoComplete="off" inputMode="numeric" maxLength={1} aria-label={`Digit PIN ${index + 1}`} value={digit} disabled={submitting} onChange={(event) => setPinAt(index, event.target.value)} onPaste={(event) => {const value = event.clipboardData.getData("text").trim();if (/^\d{6}$/.test(value)) {event.preventDefault();setPin(value.split(""));pinRef.current[5]?.focus();}}} onKeyDown={(event) => {if (event.key === "Backspace" && !pin[index] && index > 0) pinRef.current[index - 1]?.focus();}} className="w-10 sm:w-12 h-12 sm:h-14 text-center text-xl font-bold rounded-2xl border-2 border-meow-midnight/10 bg-meow-bg focus:border-meow-salmon outline-none" data-testid={`checkout-pin-${index}`} />)}</fieldset></>}
         </section>
       </div>
       <aside><div className="bg-white rounded-3xl p-6 sticky top-28" data-testid="checkout-summary">
-        <h2 className="font-heading font-extrabold text-xl mb-4">Ringkasan Pesanan</h2>
+        <h2 className="font-heading font-extrabold text-xl mb-4">{"Ringkasan Pesanan"}</h2>
         <div className="space-y-2 text-sm" aria-busy={previewLoading}>
-          <Row label="Harga produk" testId="checkout-product-subtotal" value={validPreview ? formatIDR(productSubtotal) : "—"} />
-          <Row label="Tambahan lensa" testId="checkout-lens-subtotal" value={validPreview ? formatIDR(lensSubtotal) : "—"} />
-          {addonSubtotal > 0 && <Row label="Add On" testId="checkout-addon-subtotal" value={validPreview ? formatIDR(addonSubtotal) : '—'} />}
-          <Row label="Subtotal" value={validPreview ? formatIDR(preview.subtotal) : "—"} />
-          <Row label="Voucher" value={validPreview ? `−${formatIDR(preview.voucher_discount)}` : "—"} />
-          <Row label="Poin" value={validPreview ? `−${formatIDR(preview.points_discount)}` : "—"} />
-          <Row label="Reward Roulette" value={validPreview ? `−${formatIDR(preview.roulette_discount)}` : "—"} />
+          <Row label={"Harga produk"} testId="checkout-product-subtotal" value={validPreview ? formatIDR(productSubtotal) : "—"} />
+          <Row label={"Tambahan lensa"} testId="checkout-lens-subtotal" value={validPreview ? formatIDR(lensSubtotal) : "—"} />
+          {addonSubtotal > 0 && <Row label={"Add On"} testId="checkout-addon-subtotal" value={validPreview ? formatIDR(addonSubtotal) : '—'} />}
+          <Row label={"Subtotal"} value={validPreview ? formatIDR(preview.subtotal) : "—"} />
+          <Row label={"Voucher"} value={validPreview ? `−${formatIDR(preview.voucher_discount)}` : "—"} />
+          <Row label={"Poin"} value={validPreview ? `−${formatIDR(preview.points_discount)}` : "—"} />
+          <Row label={"Reward Roulette"} value={validPreview ? `−${formatIDR(preview.roulette_discount)}` : "—"} />
           <Row label={`Ongkir${preview?.free_shipping ? " (GRATIS)" : ""}`} value={validPreview ? formatIDR(preview.shipping?.cost ?? preview.shipping_cost) : "—"} />
-          <div className="border-t pt-3 mt-3 flex justify-between"><span className="font-bold">Total</span><span className="font-heading font-black text-xl text-meow-salmon" data-testid="checkout-total">{previewLoading ? "Menghitung…" : validPreview ? formatIDR(preview.total) : "—"}</span></div>
+          <div className="border-t pt-3 mt-3 flex justify-between"><span className="font-bold">{"Total"}</span><span className="font-heading font-black text-xl text-meow-salmon" data-testid="checkout-total"><span className="conveythis-no-translate notranslate" translate="no" data-conveythis-private="">{previewLoading ? "Menghitung…" : validPreview ? formatIDR(preview.total) : "—"}</span></span></div>
         </div>
         {previewError && <p role="alert" className="text-sm text-red-600 mt-3">{previewError}</p>}
-        {hasUnsavedPrescription && <p role="alert" className="text-sm text-amber-700 mt-3">Simpan perubahan resep sebelum membuat pesanan.</p>}
-        {!paymentReady && <p role="alert" className="text-sm text-amber-700 mt-3">Pembayaran sementara belum tersedia. Silakan coba lagi atau hubungi toko.</p>}
+        {hasUnsavedPrescription && <p role="alert" className="text-sm text-amber-700 mt-3">{"Simpan perubahan resep sebelum membuat pesanan."}</p>}
+        {!paymentReady && <p role="alert" className="text-sm text-amber-700 mt-3">{"Pembayaran sementara belum tersedia. Silakan coba lagi atau hubungi toko."}</p>}
         {submitError && <p role="alert" className="text-sm text-red-600 mt-3">{submitError}</p>}
-        <button type="button" onClick={submit} disabled={submitting || !validPreview || !user.has_pin || hasUnsavedPrescription || !paymentReady} className="w-full btn-primary mt-5 disabled:opacity-50" data-testid="submit-order-btn">{submitting ? "Membuat Pesanan…" : paymentMode === 'cod' ? 'Buat Pesanan COD' : "Buat Pesanan & Bayar"}</button>
-        <p className="text-xs text-meow-gray mt-3 text-center">{paymentMode === 'cod' ? 'Siapkan pembayaran saat kurir mengantarkan pesanan.' : 'Selesaikan pembayaran sebelum batas waktu pada halaman pembayaran.'}</p>
-        {integrations.payment?.mock && <p className="text-xs text-amber-700 mt-2 text-center">Mode demo: pembayaran disimulasikan.</p>}
+        <button type="button" onClick={submit} disabled={submitting || !validPreview || !user.has_pin || hasUnsavedPrescription || !paymentReady} className="w-full btn-primary mt-5 disabled:opacity-50" data-testid="submit-order-btn">{submitting ? "Membuat Pesanan…" : paymentMode === 'cod' ? "Buat Pesanan COD" : "Buat Pesanan & Bayar"}</button>
+        <p className="text-xs text-meow-gray mt-3 text-center">{paymentMode === 'cod' ? "Siapkan pembayaran saat kurir mengantarkan pesanan." : "Selesaikan pembayaran sebelum batas waktu pada halaman pembayaran."}</p>
+        {integrations.payment?.mock && <p className="text-xs text-amber-700 mt-2 text-center">{"Mode demo: pembayaran disimulasikan."}</p>}
       </div></aside>
     </div>
   </div>;
 }
 
-const Row = ({ label, value, testId }) => <div className="flex justify-between gap-3"><span className="text-meow-gray">{label}</span><span className="font-bold" data-testid={testId}>{value}</span></div>;
+const Row = ({ label, value, testId }) => {
+  return <div className="flex justify-between gap-3"><span className="text-meow-gray">{label}</span><span className="font-bold" data-testid={testId}>{value}</span></div>;};

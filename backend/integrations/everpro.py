@@ -16,14 +16,24 @@ import httpx
 
 from integrations.common import ProviderError, strict_json
 from integrations.config import EverproSettings
+from integrations.everpro_reference import EverproReferenceStore, refresh_shared_token
+
+
+def token_rejected(status, body):
+    if status == 401: return True
+    message = str(body.get('message', '')).lower()
+    return status == 403 and any(value in message for value in ('invalid token', 'token expired', 'token is expired', 'expired token'))
 
 
 class EverproClient:
-    def __init__(self, settings: EverproSettings, *, transport: httpx.AsyncBaseTransport | None = None):
+    def __init__(self, settings: EverproSettings, *, transport: httpx.AsyncBaseTransport | None = None, reference_store=None):
         self.settings, self.transport = settings, transport
         self._token, self._expires = "", 0.0
         self._token_lock = asyncio.Lock()
         self._locations_cache = OrderedDict()
+        self.reference_store = reference_store or (EverproReferenceStore(settings) if settings.data_source == 'database' else None)
+        self.token_source = None
+        self._rejected_token = None
 
     async def _send(self, method: str, target: str, *, payload: dict | None = None,
                     params: dict | None = None, token: str | None = None) -> tuple[int, dict]:
@@ -40,12 +50,37 @@ class EverproClient:
         try:
             data = strict_json(response.content)
         except (ValueError, UnicodeError):
+            if response.status_code == 401: return 401, {}
             raise ProviderError("everpro", "invalid_response", uncertain=method == "POST" and target in ("/shipment/v1/orders", "/shipment/v3/orders")) from None
         return response.status_code, data
 
-    async def _auth(self, *, force: bool = False) -> str:
+    async def _auth(self, *, force: bool = False, rejected_token=None) -> str:
         async with self._token_lock:
+            if force and rejected_token and self._token and self._token != rejected_token and time.monotonic() < self._expires:
+                return self._token  # Another concurrent request already replaced the rejected token.
             if not force and self._token and time.monotonic() < self._expires:
+                return self._token
+            if self.settings.data_source == 'database':
+                if rejected_token:
+                    self._rejected_token = rejected_token
+                    if self._token == rejected_token: self._expires = 0
+                candidate = None
+                try:
+                    candidate = await self.reference_store.token()
+                except ProviderError as exc:
+                    if exc.code != 'reference_database_unavailable': raise
+                rejected = rejected_token or (self._token if force else None)
+                if candidate and candidate.remaining() > 5 and candidate.value not in (rejected, self._rejected_token):
+                    self._token = candidate.value
+                    self._expires = time.monotonic() + min(30, max(1, candidate.remaining() - 5))
+                    self.token_source = 'database'
+                    return self._token
+                candidate = await refresh_shared_token(self.settings, transport=self.transport)
+                if candidate.value in (rejected, self._rejected_token) or candidate.remaining() <= 5:
+                    raise ProviderError('everpro', 'shared_token_refresh_rejected', 503)
+                self._token = candidate.value
+                self._expires = time.monotonic() + min(30, max(1, candidate.remaining() - 5))
+                self.token_source = 'refresh_api'
                 return self._token
             status, body = await self._send("POST", self.settings.auth_path, payload={
                 "client_key": self.settings.client_key, "client_secret": self.settings.client_secret,
@@ -58,20 +93,25 @@ class EverproClient:
             except (ValueError, TypeError):
                 raise ProviderError("everpro", "invalid_auth_response") from None
             self._token, self._expires = data["token"], time.monotonic() + max(1, expires - 30)
+            self.token_source = 'everpro_auth'
             return self._token
 
     async def request(self, method: str, target: str, *, payload: dict | None = None, params: dict | None = None) -> dict:
         token = await self._auth()
         status, body = await self._send(method, target, payload=payload, params=params, token=token)
-        if status == 401:
-            token = await self._auth(force=True)
+        if token_rejected(status, body):
+            token = await self._auth(force=True, rejected_token=token)
             status, body = await self._send(method, target, payload=payload, params=params, token=token)
+        if token_rejected(status, body):
+            raise ProviderError('everpro', 'authentication_failed', 503)
         if status not in {200, 201, 202} or body.get("status") in {"error", "failed"}:
             code = "not_found" if status == 404 else "duplicate_order" if status == 409 else "provider_rejected"
             raise ProviderError("everpro", code, status if status in {404, 409} else 502, uncertain=status >= 500)
         return body
 
     async def locations(self, postal_code: str) -> dict:
+        if self.settings.data_source == 'database':
+            return await self.reference_store.locations(postal_code)
         return await self._location_request('POST', '/location/v1/postalcode', payload={'postal_code': postal_code})
 
     async def _location_request(self, method, path, *, payload=None, params=None):
@@ -95,6 +135,8 @@ class EverproClient:
         return result
 
     async def regions(self, level: str, parent_id: str | None = None) -> list[dict]:
+        if self.settings.data_source == 'database':
+            return await self.reference_store.regions(level, parent_id)
         fields = {'provinces': ('provinces', 'province', None), 'cities': ('cities', 'city', 'province_id'),
                   'districts': ('districts', 'district', 'city_id'), 'subdistricts': ('sub-districts', 'sub_district', 'district_id')}
         path, prefix, parent = fields[level]

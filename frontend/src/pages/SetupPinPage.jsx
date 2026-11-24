@@ -7,6 +7,7 @@ import { navigateAfterAuthentication, requestedAuthReturn } from "../lib/authRet
 import { toast } from "sonner";
 
 const SetupPinPage = () => {
+
   const { user, refreshMe } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -59,7 +60,7 @@ const SetupPinPage = () => {
       navigateAfterAuthentication(requestedAuthReturn(location) || "/", navigate);
     } catch (err) {
       toast.error(err?.response?.data?.detail || "Gagal menyimpan PIN");
-    } finally { setBusy(false); }
+    } finally {setBusy(false);}
   };
 
   const current = stage === "enter" ? pin : confirm;
@@ -76,46 +77,47 @@ const SetupPinPage = () => {
           {stage === "enter" ? "Atur PIN Keamanan" : "Konfirmasi PIN"}
         </h1>
         <p className="text-sm text-meow-gray mt-2">
-          {stage === "enter"
-            ? "PIN 6 digit digunakan sebelum checkout. Pilih yang mudah diingat namun rahasia."
-            : "Masukkan ulang PIN-mu untuk konfirmasi."}
+          {stage === "enter" ? "PIN 6 digit digunakan sebelum checkout. Pilih yang mudah diingat namun rahasia." : "Masukkan ulang PIN-mu untuk konfirmasi."
+
+          }
         </p>
 
-        <div className="flex justify-center gap-2 mt-8" data-testid="pin-input-row">
-          {current.map((v, i) => (
-            <input
-              key={i}
-              ref={(el) => (inputs.current[i] = el)}
-              type="password" inputMode="numeric" maxLength={1}
-              value={v}
-              onChange={(e) => handle(e.target.value, i, stage)}
-              onKeyDown={(e) => {
-                if (e.key === "Backspace" && !current[i] && i > 0) inputs.current[i - 1]?.focus();
-              }}
-              className="w-12 h-14 text-center text-2xl font-bold rounded-2xl border-2 border-meow-midnight/10 bg-meow-bg focus:bg-white focus:border-meow-salmon outline-none"
-              data-testid={`pin-input-${i}`}
-            />
-          ))}
-        </div>
+        <fieldset className="flex justify-center gap-2 mt-8" data-testid="pin-input-row">
+          <legend className="text-xs font-semibold mb-2">{stage === "enter" ? "PIN baru (6 digit)" : "Ulangi PIN baru (6 digit)"}</legend>
+          {current.map((v, i) =>
+          <input
+            key={i}
+            ref={(el) => inputs.current[i] = el}
+            type="password" inputMode="numeric" maxLength={1}
+            value={v}
+            onChange={(e) => handle(e.target.value, i, stage)}
+            onKeyDown={(e) => {
+              if (e.key === "Backspace" && !current[i] && i > 0) inputs.current[i - 1]?.focus();
+            }}
+            className="w-12 h-14 text-center text-2xl font-bold rounded-2xl border-2 border-meow-midnight/10 bg-meow-bg focus:bg-white focus:border-meow-salmon outline-none"
+            aria-label={`Digit ${stage === "enter" ? "PIN baru" : "konfirmasi PIN"} ${i + 1}`} data-testid={`pin-input-${i}`} />
+
+          )}
+        </fieldset>
 
         <div className="mt-8">
-          {stage === "enter" ? (
-            <button onClick={handleNext} className="w-full btn-primary" data-testid="pin-next-btn">Lanjut</button>
-          ) : (
-            <div className="flex gap-2">
-              <button onClick={() => { setStage("enter"); setConfirm(["", "", "", "", "", ""]); }} className="btn-secondary flex-1" data-testid="pin-back-btn">Ulang</button>
-              <button disabled={busy} onClick={handleSave} className="btn-primary flex-1" data-testid="pin-save-btn">Simpan PIN</button>
+          {stage === "enter" ?
+          <button onClick={handleNext} className="w-full btn-primary" data-testid="pin-next-btn">{"Lanjut"}</button> :
+
+          <div className="flex gap-2">
+              <button onClick={() => {setStage("enter");setConfirm(["", "", "", "", "", ""]);}} className="btn-secondary flex-1" data-testid="pin-back-btn">{"Ulang"}</button>
+              <button disabled={busy} onClick={handleSave} className="btn-primary flex-1" data-testid="pin-save-btn">{"Simpan PIN"}</button>
             </div>
-          )}
+          }
         </div>
-        {user?.has_pin && (
-          <p className="text-xs text-meow-gray mt-6">
-            <button onClick={() => navigate("/")} className="underline" data-testid="pin-skip-btn">Lewati untuk sekarang</button>
+        {user?.has_pin &&
+        <p className="text-xs text-meow-gray mt-6">
+            <button onClick={() => navigate("/")} className="underline" data-testid="pin-skip-btn">{"Lewati untuk sekarang"}</button>
           </p>
-        )}
+        }
       </div>
-    </div>
-  );
+    </div>);
+
 };
 
 export default SetupPinPage;

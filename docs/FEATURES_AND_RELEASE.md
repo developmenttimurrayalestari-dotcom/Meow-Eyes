@@ -318,6 +318,28 @@ paket, sehingga tambahan selalu Rp0. Frame menampilkan seluruh Lens Index aktif
 dan menambahkan harganya per unit produk. Konfigurasi lensa tambahan dari detail
 produk tetap dihitung seperti sebelumnya. Pilihan bersifat opsional.
 
+Pada setiap baris checkout tersedia tombol **Gunakan resep profil** sebagai
+pilihan selain upload foto. Tombol mengambil resep yang sudah disimpan pada
+halaman Profil melalui `/customer/profile`, lalu menyalin SPH, CYL, AXIS, ADD,
+PD dan catatan ke item tersebut. Angka 0 tetap dipertahankan sebagai angka,
+bukan dianggap kolom kosong. Ukuran ditampilkan sebagai ringkasan baca-saja;
+form ukuran manual tetap disembunyikan di checkout. Foto sebelumnya dilepas
+saat memakai profil agar tidak tercampur dengan resep lain, dan customer dapat
+melampirkan foto pendukung kembali jika diperlukan.
+
+Klik **Simpan Resep** untuk menerapkannya. Pilihan per baris tetap terpisah;
+jumlah dua atau lebih pada satu baris memakai resep yang sama. Jika profil
+belum mempunyai resep atau gagal dimuat, draft item tetap ada dan customer
+dapat memakai foto/catatan. Tautan **Buka Profil** membuka tab baru agar draft
+checkout tidak hilang. Tombol **Gunakan foto/catatan saja (hapus ukuran)**
+melepas ukuran yang sudah disalin. Pengisian resep tetap opsional untuk Frame.
+
+Data yang disalin menjadi resep item dan snapshot pesanan melalui endpoint
+yang sudah ada. Perubahan profil sesudahnya tidak mengubah resep item/pesanan
+yang telah disimpan. Selama mengambil profil atau terdapat perubahan resep
+yang belum disimpan, pembuatan pesanan ditahan. Fitur ini tidak memerlukan
+migrasi database atau endpoint backend baru.
+
 Pada Frame, opsi **Beli frame saja (tanpa lensa)** membolehkan checkout tanpa
 Lens Index, catatan, foto, atau Simpan Resep. Jika sebelumnya terdapat tambahan
 lensa, pilih opsi tersebut lalu Simpan Resep untuk melepas lensa beserta biaya
@@ -805,3 +827,108 @@ Password baru minimal 8 karakter, maksimal 72 byte UTF-8, dan wajib dikonfirmasi
 `GET /api/auth/me` menyertakan `has_password` dan tetap dapat digunakan selama proses pengisian. API privat menolak akun sosial tanpa password/PIN; akses untuk memeriksa akun, membuat password, mengatur PIN sesudah password dibuat, dan keluar tetap tersedia. Akun email/password mengikuti alur yang sudah ada. Tidak diperlukan migrasi database baru untuk perubahan ini. Terapkan kode frontend/backend dan restart prosesnya melalui alur deployment biasa; proses server tidak dijalankan otomatis.
 
 Validasi lokal: 500 tes backend dan 260 tes frontend lulus. Pengujian mencakup Google/Facebook dengan maupun tanpa PIN lama, penolakan akses API sebelum akun lengkap, password/konfirmasi yang tidak sesuai, pencegahan penimpaan password, login email dengan password baru, serta pengalihan ke tujuan awal sesudah pembuatan password. Satu pengujian MySQL nyata dilewati dan dua tes symlink Windows tidak dijalankan.
+
+### Label dan panduan pengisian form
+
+Form admin dan customer memakai label yang tetap terlihat setelah nilai diisi.
+Pembaruan mencakup produk/varian, konten artikel dan CMS, banner, FAQ, staf,
+Lens Index, voucher/hadiah, newsletter, kontak, pencarian/filter, resep, dan
+Meowsurement. Kolom harga mencantumkan rupiah, berat mencantumkan gram, dan
+tanggal banner menjelaskan penggunaan waktu lokal perangkat. Format khusus
+seperti HEX, indeks lensa, SKU otomatis, dan daftar yang dipisahkan titik koma
+memiliki petunjuk. Varian produk ditampilkan dalam kelompok bernomor; form
+banner dan hadiah dapat digulir agar tombol simpan tetap terjangkau.
+
+Gunakan `frontend/src/components/FormField.jsx` untuk satu input/select/textarea
+baru. Berikan `label` yang menjelaskan data, `hint` bila perlu, dan satu kontrol
+sebagai anak langsung. Komponen menghubungkan label dengan ID unik dan mengaitkan
+petunjuk melalui `aria-describedby`. Label yang sudah ada memakai `htmlFor`/`id`
+atau membungkus kontrolnya. Setiap digit PIN mempunyai nama aksesibel dan satu
+legend terlihat untuk kelompok PIN. Upload tersembunyi tetap diwakili tombol
+upload yang terlihat dan label yang terkait.
+
+Jalankan pemeriksaan sumber form dari folder `frontend`:
+
+```bash
+npm run audit:forms
+npm test -- --watchAll=false --runInBand
+```
+
+Audit memeriksa kontrol native di source aplikasi, termasuk cabang form/modal
+yang belum dibuka. Placeholder dan `aria-label` saja tidak dianggap sebagai
+pengganti label terlihat. Primitive generik di `components/ui` diperiksa pada
+tempat pemakaiannya. Perubahan ini tidak memerlukan migrasi database.
+
+Validasi: audit 369 kontrol pada 144 berkas source tanpa label yang hilang,
+266 tes frontend lulus (44 suite), dan build produksi beserta app-shell offline
+berhasil. Build masih menampilkan warning dependensi MediaPipe yang sudah ada
+(ekspresi dependency dinamis dan source map vendor tidak tersedia).
+
+
+### Translate halaman customer dengan ConveyThis
+
+Fitur multilanguage internal sebelumnya sudah dilepas: tidak ada lagi menu
+Bahasa & Terjemahan di admin, endpoint localization, kamus UI, cache penerjemah
+internal, maupun pemanggilan Google Cloud Translation. Halaman sumber tetap
+Bahasa Indonesia. Penerjemahan customer memakai widget JavaScript ConveyThis.
+
+Tombol **Bahasa Indonesia** dan **English** tersedia pada header customer,
+halaman login/registrasi, header Meowsurement, serta panel bahasa Virtual
+Try-On mobile. Tombol English menunggu konfigurasi/widget yang valid dan baru
+menjadi aktif setelah ConveyThis mengonfirmasi pergantian bahasa. Saat layanan
+belum tersedia, halaman dan form tetap dapat digunakan dalam bahasa sumber.
+
+#### Aktivasi
+
+1. Buat akun ConveyThis dan tambahkan domain website. Pilih integrasi
+   **Other (JavaScript)**, bahasa sumber **Indonesian (`id`)**, dan bahasa tujuan
+   **English (`en`)**. Gunakan struktur URL **Default** untuk penerjemahan pada
+   halaman yang sama. Domain yang didaftarkan harus sesuai domain akses.
+2. Salin **public API key** dari bagian Install. Pada kode embed key berada
+   sesudah `api_key=`. Isi di **frontend/.env**, bukan backend:
+
+   ```dotenv
+   REACT_APP_CONVEYTHIS_API_KEY=public_key_dari_conveythis
+   ```
+
+   Key ini adalah identitas widget publik, berbeda dari secret backend atau
+   Client ID login Google. Jangan menempel seluruh tag script ke variabel env.
+3. Di dashboard ConveyThis, gunakan teks bahasa penuh/native agar pilihan
+   Indonesia dan English dikenali. Jika ingin menempatkan widget/branding
+   bawaan di lokasi yang disediakan aplikasi, pilih **Position type: Custom**
+   dan ID **meow-conveythis-widget** (tanpa tanda `#`). Branding vendor tetap
+   mengikuti pengaturan serta paket ConveyThis.
+4. Dari folder frontend, jalankan `npm run build`, lalu deploy hasil build.
+   Untuk development `npm start`, hentikan dan jalankan kembali setelah mengubah
+   env. Variabel `REACT_APP_*` dibaca saat build/start, bukan saat halaman dibuka.
+5. Uji English lalu Bahasa Indonesia pada katalog, detail produk, checkout,
+   login, dan Virtual Try-On. Tombol aktif mengikuti event pergantian bahasa
+   dari widget, bukan sekadar keberhasilan mengunduh script. Pengujian langsung
+   membutuhkan key dan domain yang diterima ConveyThis.
+
+Rujukan vendor: [pemasangan JavaScript](https://www.conveythis.com/help/javascript-integration),
+[posisi widget](https://www.conveythis.com/help/change-position),
+dan [konfigurasi localhost](https://developers.conveythis.com/getting-started/localhost).
+Untuk batas kata, bahasa, domain, dan page views, ikuti paket yang ditampilkan
+pada dashboard ConveyThis; aplikasi tidak menyertakan kuota layanan tersendiri.
+
+#### Perilaku dan deployment
+
+SDK dimuat sekali pada halaman customer. Nilai input/select/textarea serta
+blok data customer, resep, harga, dan kode produk yang ditandai
+`conveythis-no-translate` dipertahankan sebagai nilai asli. Tambahkan
+`data-conveythis-private` pada blok data pribadi baru. Konten publik yang
+memenuhi aturan penerjemahan diproses oleh layanan eksternal ConveyThis.
+Gunakan exclusion tambahan di dashboard vendor jika menambah area privat.
+
+SDK tidak dimuat ketika membuka admin. Perpindahan antara customer dan admin
+menggunakan dokumen baru agar observer widget customer tidak berjalan pada DOM
+admin. Penggantian bahasa tidak memanggil ulang API cart/checkout dan tidak
+mengubah harga atau data transaksi di backend.
+
+Release penggantian ini memerlukan deploy frontend serta restart backend untuk
+melepas route localization yang lama. Setelah itu, perubahan public key
+ConveyThis cukup diikuti build/deploy frontend. Tidak ada migrasi schema baru.
+Key kosong membuat tombol English belum aktif; tidak ada fallback ke Google
+Cloud Translation. Data setting/cache lama dengan prefix `i18n.*`, jika pernah
+tersimpan, tidak digunakan aplikasi ini.

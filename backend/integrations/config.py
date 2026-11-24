@@ -10,6 +10,7 @@ import ipaddress
 import os
 import re
 from urllib.parse import urlsplit
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import HTTPException
 
@@ -147,6 +148,10 @@ class EverproSettings:
     origin_longitude: float | None = None
     api_version: int = 1
     auth_version: int | None = None
+    data_source: str = 'api'
+    reference_database: str = 'db_mobtrl'
+    token_refresh_url: str = 'http://180.250.96.154/trl-webs/index.php/Api_everpro//getToken'
+    token_timezone: str = 'Asia/Jakarta'
 
     @property
     def auth_path(self):
@@ -155,8 +160,11 @@ class EverproSettings:
 
     @classmethod
     def from_env(cls) -> "EverproSettings":
-        required = ("EVERPRO_CLIENT_KEY", "EVERPRO_CLIENT_SECRET", "EVERPRO_ORIGIN_POSTAL_CODE",
-                    "EVERPRO_SHIPPER_NAME", "EVERPRO_SHIPPER_PHONE", "EVERPRO_SHIPPER_ADDRESS")
+        source = os.environ.get('EVERPRO_DATA_SOURCE', 'api').strip().lower()
+        if source not in ('api', 'database'):
+            raise HTTPException(503, 'EVERPRO_DATA_SOURCE harus api atau database')
+        required = ("EVERPRO_ORIGIN_POSTAL_CODE", "EVERPRO_SHIPPER_NAME", "EVERPRO_SHIPPER_PHONE", "EVERPRO_SHIPPER_ADDRESS")
+        if source == 'api': required += ('EVERPRO_CLIENT_KEY', 'EVERPRO_CLIENT_SECRET')
         if any(not os.environ.get(name) for name in required):
             raise HTTPException(503, "Pengiriman Everpro belum dikonfigurasi")
         env = os.environ.get("EVERPRO_ENVIRONMENT", "sandbox").strip().lower()
@@ -166,6 +174,22 @@ class EverproSettings:
         if api_version not in (1, 3):
             raise HTTPException(503, 'EVERPRO_API_VERSION harus 1 (legacy) atau 3')
         auth_version = _int_env('EVERPRO_AUTH_VERSION', 2 if api_version == 3 else 1, 1, 2)
+        reference_database = os.environ.get('EVERPRO_REFERENCE_DATABASE', 'db_mobtrl').strip()
+        if not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]{0,63}', reference_database):
+            raise HTTPException(503, 'EVERPRO_REFERENCE_DATABASE tidak valid')
+        refresh_url = os.environ.get('EVERPRO_TOKEN_REFRESH_URL', 'http://180.250.96.154/trl-webs/index.php/Api_everpro//getToken').strip()
+        try:
+            parsed_refresh = urlsplit(refresh_url)
+            parsed_refresh.port
+            if (parsed_refresh.scheme not in ('http', 'https') or not parsed_refresh.hostname
+                    or parsed_refresh.username or parsed_refresh.password or parsed_refresh.query or parsed_refresh.fragment):
+                raise ValueError()
+        except ValueError:
+            raise HTTPException(503, 'EVERPRO_TOKEN_REFRESH_URL tidak valid') from None
+        token_timezone = os.environ.get('EVERPRO_TOKEN_TIMEZONE', 'Asia/Jakarta').strip()
+        try: ZoneInfo(token_timezone)
+        except (ZoneInfoNotFoundError, ValueError):
+            raise HTTPException(503, 'EVERPRO_TOKEN_TIMEZONE tidak valid') from None
         # The public specification lists the sandbox host. Production host is
         # supplied during onboarding; do not invent or silently switch it.
         base = os.environ.get("EVERPRO_BASE_URL", "")
@@ -198,7 +222,7 @@ class EverproSettings:
         except ValueError:
             raise HTTPException(503, 'Koordinat pengirim Everpro tidak valid') from None
         return cls(
-            client_key=os.environ["EVERPRO_CLIENT_KEY"], client_secret=os.environ["EVERPRO_CLIENT_SECRET"],
+            client_key=os.environ.get("EVERPRO_CLIENT_KEY", ''), client_secret=os.environ.get("EVERPRO_CLIENT_SECRET", ''),
             base_url=base, environment=env, webhook_key=os.environ.get("EVERPRO_WEBHOOK_KEY", ""),
             origin_postal_code=postal, origin_subdistrict=os.environ.get("EVERPRO_ORIGIN_SUBDISTRICT", ""),
             shipper_name=name, shipper_phone=phone, shipper_address=address,
@@ -211,6 +235,7 @@ class EverproSettings:
             quote_ttl_seconds=_int_env("EVERPRO_QUOTE_TTL_SECONDS", 600, 60, 1800),
             origin_latitude=lat, origin_longitude=lng,
             api_version=api_version, auth_version=auth_version,
+            data_source=source, reference_database=reference_database, token_refresh_url=refresh_url, token_timezone=token_timezone,
         )
 
 

@@ -17,9 +17,10 @@ from dotenv import dotenv_values
 from fastapi import HTTPException
 
 from integrations.config import EverproSettings
+from integrations.common import ProviderError
 from mysql.config import DEFAULT_ENV_FILE
 
-KEYS = ('EVERPRO_ENVIRONMENT', 'EVERPRO_BASE_URL', 'EVERPRO_CLIENT_KEY', 'EVERPRO_CLIENT_SECRET', 'EVERPRO_API_VERSION', 'EVERPRO_AUTH_VERSION')
+KEYS = ('EVERPRO_ENVIRONMENT', 'EVERPRO_BASE_URL', 'EVERPRO_CLIENT_KEY', 'EVERPRO_CLIENT_SECRET', 'EVERPRO_API_VERSION', 'EVERPRO_AUTH_VERSION', 'EVERPRO_DATA_SOURCE', 'EVERPRO_REFERENCE_DATABASE')
 
 
 def credential_fingerprint(settings):
@@ -42,7 +43,15 @@ def environment_report(file_values, process_values):
     return report
 
 
-async def check_auth(settings, *, transport=None):
+async def check_auth(settings, *, transport=None, reference_store=None):
+    if getattr(settings, 'data_source', 'api') == 'database':
+        from integrations.everpro import EverproClient
+        client = EverproClient(settings, transport=transport, reference_store=reference_store)
+        try:
+            await client.request('GET', '/shipment/v1/logistics')
+            return {'ok':True, 'http_status':200, 'reason':'shared_token_valid', 'token_source':client.token_source}
+        except ProviderError as error:
+            return {'ok':False, 'reason':error.code}
     try:
         async with httpx.AsyncClient(transport=transport, timeout=httpx.Timeout(20, connect=5), follow_redirects=False) as client:
             response = await client.post(settings.base_url + getattr(settings, 'auth_path', '/auth/v1/token'), headers={'Accept': 'application/json'},
@@ -103,9 +112,10 @@ def main():
         print(json.dumps(report, indent=2))
         return 1
     report.update(environment=settings.environment, base_url=settings.base_url, api_version=settings.api_version,
-                  auth_path=settings.auth_path, ok=True)
+                  data_source=settings.data_source, auth_path=settings.auth_path if settings.data_source == 'api' else None, ok=True)
+    if settings.data_source == 'database': report['reference_database'] = settings.reference_database
     if args.fingerprint:
-        report['credential_fingerprint'] = credential_fingerprint(settings)
+        report['credential_fingerprint'] = credential_fingerprint(settings) if settings.data_source == 'api' else 'not_used_database_mode'
     if args.check_auth:
         report['authentication'] = asyncio.run(check_auth(settings))
         report['ok'] = report['authentication']['ok']

@@ -1,8 +1,10 @@
+import { ConveyThisBoundary } from './components/ConveyThisTranslation';
 import React from "react";
 import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
 import { AuthProvider } from "./contexts/AuthContext";
+
 
 import MainLayout from "./components/Layout/MainLayout";
 import AdminLayout from "./components/Layout/AdminLayout";
@@ -52,8 +54,8 @@ import FlashSalePage from "./pages/FlashSalePage";
 import FloatingWhatsApp from "./components/FloatingWhatsApp";
 import {
   AdminArticles, AdminKnowledge, AdminReviewsMod, AdminBannersV2,
-  AdminFAQs, AdminPages, AdminContactSetting, AdminStaff, AdminImport, AdminLensIndexes,
-} from "./pages/admin/AdminContent";
+  AdminFAQs, AdminPages, AdminContactSetting, AdminStaff, AdminImport, AdminLensIndexes } from
+"./pages/admin/AdminContent";
 import ShopNowPage from "./pages/ShopNowPage";
 import ArticleListPage from "./pages/ArticleListPage";
 import ArticleDetailPage from "./pages/ArticleDetailPage";
@@ -63,6 +65,7 @@ import ContactPage from "./pages/ContactPage";
 const Shell = ({ children }) => <MainLayout>{children}</MainLayout>;
 
 function AppRouter() {
+
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
@@ -77,6 +80,7 @@ function AppRouter() {
         <Route path="/admin/whatsapp" element={<AdminWhatsApp />} />
         <Route path="/admin/try-on" element={<AdminTryOn />} />
         <Route path="/admin/integrations" element={<AdminIntegrations />} />
+
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/admin/products" element={<AdminProducts />} />
         <Route path="/admin/meowsurement" element={<AdminMeowsurement />} />
@@ -144,22 +148,22 @@ function AppRouter() {
       <Route path="/points" element={<ProtectedRoute><Shell><PointsPage /></Shell></ProtectedRoute>} />
 
       <Route path="*" element={<Shell><HomePage /></Shell>} />
-    </Routes>
-  );
+    </Routes>);
+
 }
 
 function App() {
   return (
     <div className="App">
       <BrowserRouter>
-        <AuthProvider>
+        <ConveyThisBoundary><AuthProvider>
           <Toaster position="top-center" richColors closeButton />
           <AppRouter />
           <FloatingWhatsApp />
-        </AuthProvider>
+        </AuthProvider></ConveyThisBoundary>
       </BrowserRouter>
-    </div>
-  );
+    </div>);
+
 }
 
 export default App;

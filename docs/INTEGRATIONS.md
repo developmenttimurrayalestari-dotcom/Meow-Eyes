@@ -97,6 +97,10 @@ Isi konfigurasi berikut dari proses onboarding Everpro:
 | Variabel | Penggunaan |
 | --- | --- |
 | `EVERPRO_CLIENT_KEY`, `EVERPRO_CLIENT_SECRET` | Pertukaran token Bearer server |
+| `EVERPRO_DATA_SOURCE` | `database` untuk wilayah dan token TRL; `api` mempertahankan integrasi langsung lama |
+| `EVERPRO_REFERENCE_DATABASE` | Database eksternal yang dibaca memakai koneksi `MYSQL_*` aplikasi, default `db_mobtrl` |
+| `EVERPRO_TOKEN_REFRESH_URL` | GET fallback token TRL, default URL `Api_everpro//getToken` yang diberikan operator |
+| `EVERPRO_TOKEN_TIMEZONE` | Zona waktu `datetime_updatekey` yang tidak menyimpan timezone, default `Asia/Jakarta` |
 | `EVERPRO_ENVIRONMENT` | `sandbox` atau `production` |
 | `EVERPRO_BASE_URL` | Sandbox terdokumentasi: `https://client-api-sandbox.everpro.id`; host production harus sesuai onboarding |
 | `EVERPRO_API_VERSION` | `3` untuk tarif/pengiriman v3; `1` mempertahankan kontrak legacy (default jika belum diisi) |
@@ -113,6 +117,48 @@ Isi konfigurasi berikut dari proses onboarding Everpro:
 | `EVERPRO_QUOTE_TTL_SECONDS` | Masa berlaku quote lokal, default 600 detik |
 
 Tidak ada host production yang ditebak oleh aplikasi. `EVERPRO_ENVIRONMENT=production` membutuhkan `EVERPRO_BASE_URL` yang diberikan Everpro dan menolak host yang mengandung sandbox.
+
+### Wilayah dan bearer dari database TRL — 24 November 2026
+
+Untuk memakai sumber yang diminta, isi `backend/.env.mysql`:
+
+```dotenv
+EVERPRO_DATA_SOURCE=database
+EVERPRO_REFERENCE_DATABASE=db_mobtrl
+EVERPRO_TOKEN_REFRESH_URL=http://180.250.96.154/trl-webs/index.php/Api_everpro//getToken
+EVERPRO_TOKEN_TIMEZONE=Asia/Jakarta
+EVERPRO_API_VERSION=3
+```
+
+Tetap isi host/environment Everpro serta konfigurasi pengirim/paket. Mode ini tidak menggunakan client key/client secret untuk membuat token; keduanya boleh dikosongkan. `EVERPRO_AUTH_VERSION` tidak dipakai untuk request autentikasi dalam mode database. Jika `EVERPRO_DATA_SOURCE` belum diisi, kode mempertahankan mode `api` agar deployment lama tidak beralih sumber tanpa konfigurasi.
+
+Database `db_mobtrl` berada pada server MySQL yang sama dengan koneksi `MYSQL_*` aplikasi. Akun MySQL aplikasi memerlukan **SELECT** pada kedua tabel berikut; tidak perlu hak UPDATE untuk integrasi ini:
+
+| Tabel | Kolom yang dipakai |
+| --- | --- |
+| `apieverpro_master` | `id`, `province`, `city`, `district`, `sub_district`, `post_code` |
+| `apieverpro_key` | `id_key`, `security_key`, `type_key`, `expired`, `datetime_updatekey` |
+
+Provinsi/kota/kecamatan dikelompokkan berdasarkan nama dan lingkup induknya, dengan ID representatif `MIN(id)` sebagai value select. ID kelurahan adalah `apieverpro_master.id`; `id_district_tiki` tidak dipakai untuk pengiriman Everpro. Lookup kode pos mengembalikan ID kelurahan numerik dan nama lengkap dari master yang sama. Nama wilayah yang sama di provinsi/kota berbeda tidak digabung. Alamat lama yang memakai nama berbeda perlu dipilih ulang dari form alamat. Data wilayah tidak memerlukan bearer dan tidak meminta lookup ke API Everpro. Kegagalan SELECT wilayah ditampilkan sebagai layanan wilayah tidak tersedia; aplikasi tidak menggantinya dengan data lain secara diam-diam.
+
+Semua request tarif, layanan kurir, booking, detail, AWB, label, pickup dan tracking memakai bearer dari baris `type_key=Bearer` terbaru. Prefix `Bearer ` dinormalisasi agar tidak dobel. Masa berlaku memperhitungkan `datetime_updatekey + expired` (detik, zona waktu di atas) dan `exp` JWT bila tersedia; metadata ini hanya menjadi petunjuk pembaruan, sedangkan Everpro tetap memvalidasi token. Cache bearer singkat maksimal 30 detik, lalu dibaca kembali dari database.
+
+Jika token tidak ada, kedaluwarsa, tidak valid, atau database token tidak dapat dibaca, backend memanggil GET pada URL fallback. Jika Everpro membalas 401 atau 403 dengan pesan token kedaluwarsa, backend membaca ulang token database dahulu untuk mengambil rotasi yang mungkin sudah terjadi; jika belum ada token pengganti, backend memanggil fallback tersebut. Respons yang diharapkan sesuai controller TRL adalah `{"status":true,"token":"Bearer ..."}`. Backend tidak menulis tabel token sendiri: service TRL memiliki proses refresh/persistensinya. Bila service masih mengembalikan token sama yang sudah ditolak atau respons tidak valid, aplikasi menghentikan proses dengan error aman. Tidak ada loop refresh tanpa batas atau fallback ke `/auth/v1/token` maupun `/auth/v2/token` secara langsung.
+
+Request yang ditolak karena token dicoba ulang paling banyak satu kali, memakai payload dan referensi booking yang sama. Penolakan izin kurir biasa tidak dianggap token kedaluwarsa. Request paralel dalam satu worker berbagi proses refresh. Mekanisme rekonsiliasi booking setelah timeout tetap berlaku.
+
+Tidak ada tabel `db_mobtrl` yang dibuat, diubah, di-seed, atau dimigrasikan. Pemeriksaan read-only pada sumber yang tersedia menemukan 85.555 baris lokasi, 34 grup provinsi, 515 grup kota dan 7.175 grup kecamatan; seluruh kode pos berformat lima digit. Akun MySQL aplikasi berhasil membaca master dan tabel token. Angka ini menggambarkan dataset sumber saat diperiksa, bukan penambahan wilayah oleh aplikasi.
+
+Sesudah menerapkan kode dan konfigurasi, lakukan diagnostik lalu restart backend secara manual:
+
+```bash
+.venv_backend/bin/python -m integrations.check_everpro --pid "$(pm2 pid meow-backend)" --check-auth
+pm2 restart meow-backend --update-env
+```
+
+Diagnostik mode database membaca token melalui jalur yang sama lalu memvalidasinya dengan GET daftar layanan `/shipment/v1/logistics`; tidak membuat order. Hasil sukses adalah `shared_token_valid`, dengan `token_source` bernilai `database` atau `refresh_api`. `auth_path` bernilai null karena tidak ada panggilan autentikasi langsung. Flag `--fingerprint` menampilkan `not_used_database_mode`, bukan fingerprint bearer. Token, password dan body respons refresh tidak ditampilkan. Quote yang diperoleh dari sumber API lama perlu dihitung ulang setelah mengganti sumber; pesanan lama dengan context berbeda memerlukan rekonsiliasi operator.
+
+Validasi pembaruan: 548 tes backend lulus; satu pengujian MySQL khusus dilewati dan dua tes symlink Windows tidak dijalankan. Uji jaringan nyata memakai akun MySQL aplikasi berhasil membaca rantai provinsi hingga kelurahan Rawa Terate (ID 26615/kode pos 13920), memvalidasi bearer database (`shared_token_valid`, HTTP 200), dan memperoleh lima pilihan tarif v3 pada satu rute contoh. Tidak dibuat booking/order/resi nyata. Kondisi fallback/rotasi token diuji dengan respons HTTP tiruan, termasuk token kedaluwarsa, 401, pembaruan paralel, respons refresh gagal dan pencegahan retry tak terbatas. Konfigurasi lokal telah diaktifkan ke sumber database; konfigurasi server perlu disamakan sebelum restart manual.
 
 ### Integrasi v3 berdasarkan Swagger Everpro
 

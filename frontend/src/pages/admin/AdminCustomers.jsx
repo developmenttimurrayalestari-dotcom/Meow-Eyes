@@ -1,3 +1,4 @@
+import FormField from "../../components/FormField";
 import React, { useEffect, useState } from "react";
 import { api } from "../../lib/api";
 import { Mail } from "lucide-react";
@@ -30,13 +31,13 @@ export const AdminNewsletter = () => {
       <div className="grid lg:grid-cols-3 gap-4">
         <form onSubmit={send} className="bg-white rounded-3xl border border-zinc-200 p-5 space-y-3" data-testid="campaign-form">
           <p className="font-heading font-extrabold">Kirim Campaign</p>
-          <input required placeholder="Subjek" value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid="camp-subject" />
-          <textarea required placeholder="Isi email" rows={6} value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid="camp-body" />
-          <select value={form.segment} onChange={(e) => setForm({ ...form, segment: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none">
+          <FormField label="Subjek email"><input required placeholder="Subjek" value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid="camp-subject" /></FormField>
+          <FormField label="Isi email"><textarea required placeholder="Isi email" rows={6} value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" data-testid="camp-body" /></FormField>
+          <FormField label="Kelompok penerima"><select value={form.segment} onChange={(e) => setForm({ ...form, segment: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none">
             <option value="all">Semua subscriber</option>
             <option value="active">Customer aktif</option>
             <option value="dormant">Belum belanja</option>
-          </select>
+          </select></FormField>
           <button type="submit" className="w-full btn-primary text-sm" data-testid="camp-send">Kirim</button>
         </form>
         <div className="lg:col-span-2 bg-white rounded-3xl border border-zinc-200 p-5">

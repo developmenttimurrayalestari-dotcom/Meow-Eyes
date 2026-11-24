@@ -43,6 +43,8 @@ def env(monkeypatch):
         "DOKU_NOTIFICATION_PATH": "/api/webhooks/doku", "DOKU_PAYMENT_DUE_MINUTES": "60",
         "EVERPRO_CLIENT_KEY": "fixture-key", "EVERPRO_CLIENT_SECRET": "fixture-secret",
         "EVERPRO_ENVIRONMENT": "sandbox", "EVERPRO_BASE_URL": "https://client-api-sandbox.everpro.id",
+        "EVERPRO_DATA_SOURCE": "api",
+        "EVERPRO_API_VERSION": "1",
         "EVERPRO_ORIGIN_POSTAL_CODE": "40115", "EVERPRO_ORIGIN_SUBDISTRICT": "Citarum",
         "EVERPRO_SHIPPER_NAME": "Fixture Optical", "EVERPRO_SHIPPER_PHONE": "081234567890",
         "EVERPRO_SHIPPER_ADDRESS": "Jl. Fixture 12", "EVERPRO_SHIPMENT_TYPE": "DROP",

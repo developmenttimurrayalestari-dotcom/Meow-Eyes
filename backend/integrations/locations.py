@@ -13,6 +13,8 @@ def location_error(error):
     message = 'Data wilayah EVERPRO belum dapat dimuat. Silakan coba kembali.'
     if error.code in {'authentication_failed', 'invalid_auth_response'}:
         message = 'Koneksi EVERPRO belum dapat diautentikasi. Hubungi toko untuk memeriksa layanan pengiriman.'
+    if error.code == 'reference_database_unavailable':
+        message = 'Database wilayah EVERPRO belum dapat diakses. Hubungi toko untuk memeriksa koneksi database.'
     return HTTPException(503, message)
 
 
