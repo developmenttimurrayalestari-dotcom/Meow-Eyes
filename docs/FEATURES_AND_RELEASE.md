@@ -932,3 +932,17 @@ ConveyThis cukup diikuti build/deploy frontend. Tidak ada migrasi schema baru.
 Key kosong membuat tombol English belum aktif; tidak ada fallback ke Google
 Cloud Translation. Data setting/cache lama dengan prefix `i18n.*`, jika pernah
 tersimpan, tidak digunakan aplikasi ini.
+
+### Status varian produk pada katalog
+
+Form tambah/edit produk menampilkan jumlah varian total dan aktif. Setiap varian
+memiliki checkbox **Aktif di katalog**; varian nonaktif ditandai abu-abu dan tidak
+ditampilkan pada halaman customer. Centang checkbox lalu simpan untuk mengaktifkan
+kembali varian tersebut. Varian baru aktif secara default. Menyimpan perubahan
+produk lainnya mempertahankan status varian yang sudah dipilih.
+
+Aktivasi ulang memakai ID/SKU yang sama dan tidak mengubah stok atau reservasi.
+Varian aktif dengan stok habis tetap terlihat; pembelian mengikuti stok tersedia.
+Foto utama produk disertakan bersama galeri tambahan tanpa duplikasi, sehingga
+satu foto utama dan tiga foto tambahan tampil sebagai empat foto di detail produk.
+Perubahan ini tidak memerlukan migrasi database.

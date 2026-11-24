@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import AdminProducts from './AdminProducts';
 import { api } from '../../lib/api';
 
-jest.mock('../../lib/api', () => ({ api: {get:jest.fn(),post:jest.fn()}, apiError:(e,fallback)=>e.response?.data?.detail||fallback, formatIDR:value=>`Rp ${value}` }));
+jest.mock('../../lib/api', () => ({ api: {get:jest.fn(),post:jest.fn(),put:jest.fn()}, apiError:(e,fallback)=>e.response?.data?.detail||fallback, formatIDR:value=>`Rp ${value}` }));
 jest.mock('sonner', () => ({toast:{success:jest.fn(),error:jest.fn()}}));
 jest.mock('../../components/ImagePicker', () => () => null);
 jest.mock('../../components/RichTextEditor', () => ({ value, onChange, testId }) => <textarea data-testid={testId} value={value} onChange={event => onChange(event.target.value)} />);
@@ -28,9 +28,33 @@ beforeEach(()=>{
     products=action==='delete'?products.filter(product=>!product_ids.includes(product.id)):products.map(product=>product_ids.includes(product.id)?{...product,is_active:false}:product);
     return Promise.resolve({data:{ok:true}});
   });
+  api.put.mockResolvedValue({data:{ok:true}});
   host=document.createElement('div');document.body.appendChild(host);root=createRoot(host);
 });
 afterEach(async()=>{await act(async()=>root.unmount());host.remove();jest.restoreAllMocks();});
+
+test('inactive variants are identified and can be activated without changing their SKU or stock',async()=>{
+  products[0]={...products[0],description:'<p>Frame Olbia</p>',variants:['Leopard','Mostgreen','Taupe','Grey'].map((color,index)=>({id:`v${index}`,sku:`SKU-${index}`,color,size:'M',stock:10,reserved:0,is_active:index!==3}))};
+  await mount();await click(host.querySelector('[data-testid="edit-a"]'));
+  expect(host.querySelector('[data-testid="pf-variant-count"]').textContent).toBe('(4 total, 3 aktif)');
+  expect(host.querySelector('[data-testid="pf-variant-3"] legend').textContent).toContain('Nonaktif');
+  expect(host.querySelector('[data-testid="pf-variant-active-3"]').checked).toBe(false);
+  await click(host.querySelector('[data-testid="pf-variant-active-3"]'));
+  expect(host.querySelector('[data-testid="pf-variant-count"]').textContent).toBe('(4 total, 4 aktif)');
+  await act(async()=>host.querySelector('[data-testid="product-form"]').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
+  expect(api.put).toHaveBeenCalledWith('/admin/products/a',expect.objectContaining({variants:products[0].variants.map(v=>({...v,is_active:true}))}));
+});
+
+test('saving other product changes preserves inactive variants and new variants start active',async()=>{
+  products[0]={...products[0],description:'<p>Frame</p>',variants:[{id:'grey',sku:'GREY',color:'Grey',stock:10,is_active:false}]};
+  await mount();await click(host.querySelector('[data-testid="edit-a"]'));
+  await act(async()=>host.querySelector('[data-testid="product-form"]').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
+  expect(api.put).toHaveBeenCalledWith('/admin/products/a',expect.objectContaining({variants:[expect.objectContaining({id:'grey',sku:'GREY',is_active:false,stock:10})]}));
+  await click(host.querySelector('[data-testid="new-product-btn"]'));
+  expect(host.querySelector('[data-testid="pf-variant-active-0"]').checked).toBe(true);
+  await click(host.querySelector('[data-testid="pf-add-variant"]'));
+  expect(host.querySelector('[data-testid="pf-variant-active-1"]').checked).toBe(true);
+});
 
 test('row actions distinguish deactivation from deletion, including inactive products',async()=>{
   await mount();

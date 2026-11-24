@@ -204,7 +204,7 @@ const ProductForm = ({ product, onClose, onSaved, categories, brands }) => {
     primary_category_id: null, category_ids: [],
     brand_id: null, segments: ["Unisex"],
     main_image: "https://images.unsplash.com/photo-1772009288423-96090d2998c7?w=900",
-    gallery: [], variants: [{ color: "Hitam", color_hex: "#0B192C", size: "M", sku: `ME-NEW-${Date.now()}`, stock: 0 }],
+    gallery: [], variants: [{ color: "Hitam", color_hex: "#0B192C", size: "M", sku: `ME-NEW-${Date.now()}`, stock: 0, is_active: true }],
     badges: [], is_active: true, is_new_arrival: false, new_arrival_until: null,
   });
 
@@ -229,7 +229,7 @@ const ProductForm = ({ product, onClose, onSaved, categories, brands }) => {
     }
   };
 
-  const addVariant = () => setForm({ ...form, variants: [...form.variants, { color: "", color_hex: "#000000", size: "M", sku: `ME-${Date.now()}`, stock: 0 }] });
+  const addVariant = () => setForm({ ...form, variants: [...form.variants, { color: "", color_hex: "#000000", size: "M", sku: `ME-${Date.now()}`, stock: 0, is_active: true }] });
   const updVariant = (i, k, v) => {
     const next = [...form.variants]; next[i] = { ...next[i], [k]: v }; setForm({ ...form, variants: next });
   };
@@ -287,19 +287,23 @@ const ProductForm = ({ product, onClose, onSaved, categories, brands }) => {
 
         <div>
           <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-bold uppercase tracking-wider">Varian</p>
+            <p className="text-xs font-bold uppercase tracking-wider">Varian <span className="normal-case font-normal" data-testid="pf-variant-count">({form.variants.length} total, {form.variants.filter(v => v.is_active !== false).length} aktif)</span></p>
             <button type="button" onClick={addVariant} className="text-xs underline text-meow-salmon" data-testid="pf-add-variant">+ Tambah Varian</button>
           </div>
+          <p className="text-xs text-meow-gray mb-3">Hanya varian dengan pilihan Aktif di katalog yang muncul pada halaman customer. Varian nonaktif tetap disimpan untuk riwayat transaksi.</p>
           <div className="space-y-2">
             {form.variants.map((v, i) => (
-              <fieldset key={i} className="rounded-xl border p-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
-                <legend className="font-semibold px-1">Varian {i + 1}</legend>
+              <fieldset key={v.id || i} data-testid={`pf-variant-${i}`} className={`rounded-xl border p-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs ${v.is_active === false ? 'bg-zinc-100 border-zinc-300' : ''}`}>
+                <legend className="font-semibold px-1">Varian {i + 1} · {v.is_active === false ? 'Nonaktif' : 'Aktif'}</legend>
                 <FormField label="Warna varian"><input placeholder="Warna" value={v.color || ""} onChange={(e) => updVariant(i, "color", e.target.value)} className="px-2 py-1 rounded bg-meow-bg outline-none" /></FormField>
                 <FormField label="Kode warna HEX (opsional)" hint="Contoh: #000000."><input placeholder="#hex" value={v.color_hex || ""} onChange={(e) => updVariant(i, "color_hex", e.target.value)} className="px-2 py-1 rounded bg-meow-bg outline-none" /></FormField>
                 <FormField label="Ukuran varian (opsional)"><input placeholder="Size" value={v.size || ""} onChange={(e) => updVariant(i, "size", e.target.value)} className="px-2 py-1 rounded bg-meow-bg outline-none" /></FormField>
                 <FormField label="SKU varian"><input placeholder="SKU" value={v.sku} onChange={(e) => updVariant(i, "sku", e.target.value)} className="px-2 py-1 rounded bg-meow-bg outline-none" /></FormField>
                 <FormField label="Stok varian (unit)"><input type="number" placeholder="Stok" value={v.stock} onChange={(e) => updVariant(i, "stock", Number(e.target.value))} className="px-2 py-1 rounded bg-meow-bg outline-none" /></FormField>
-                <button type="button" onClick={() => delVariant(i)} className="text-red-500 text-xs">Hapus</button>
+                <div className="flex flex-col justify-between gap-3">
+                  <label className="flex items-start gap-2"><input type="checkbox" checked={v.is_active !== false} onChange={e => updVariant(i, 'is_active', e.target.checked)} data-testid={`pf-variant-active-${i}`} /><span>Aktif di katalog</span></label>
+                  <button type="button" onClick={() => delVariant(i)} className="text-red-500 text-xs text-left">Hapus</button>
+                </div>
               </fieldset>
             ))}
           </div>

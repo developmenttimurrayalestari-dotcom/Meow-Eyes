@@ -131,6 +131,34 @@ def test_catalog_filters_breadcrumbs_and_stable_pagination():
     asyncio.run(run())
 
 
+def test_variant_catalog_visibility_can_be_restored_without_recreating_skus_or_changing_stock():
+    async def run():
+        async with sql_client() as (client, factory, _):
+            async with factory.begin() as s:
+                (await s.get(m.ProductVariant, 'variant')).color = 'Leopard'
+                s.add_all([m.ProductVariant(id=color.lower(), product_id='product', sku=color.upper(), color=color,
+                    stock=0 if color == 'Mostgreen' else 10, reserved=0, sort_order=index,
+                    is_active=color != 'Grey') for index,color in enumerate(['Mostgreen','Taupe','Grey'],1)])
+            admin = (await client.get('/api/admin/products/product')).json()['product']
+            public = (await client.get('/api/products/frame')).json()['product']
+            assert len(admin['variants']) == 4 and len(public['variants']) == 3
+            assert next(v for v in admin['variants'] if v['color'] == 'Grey')['is_active'] is False
+            assert next(v for v in public['variants'] if v['color'] == 'Mostgreen')['stock'] == 0
+            original = {v['id']:(v['sku'],v['stock'],v['reserved']) for v in admin['variants']}
+            variants = [{key:v[key] for key in ('id','sku','stock','is_active')} for v in admin['variants']]
+            next(v for v in variants if v['id'] == 'grey')['is_active'] = True
+            updated = await client.put('/api/admin/products/product', json={'variants':variants})
+            assert updated.status_code == 200, updated.text
+            public = (await client.get('/api/products/frame')).json()['product']
+            assert len(public['variants']) == 4
+            assert {v['id']:(v['sku'],v['stock'],v['reserved']) for v in public['variants']} == original
+            next(v for v in variants if v['id'] == 'grey')['is_active'] = False
+            assert (await client.put('/api/admin/products/product', json={'variants':variants})).status_code == 200
+            assert (await client.put('/api/admin/products/product', json={'name':'Edited product'})).status_code == 200
+            assert len((await client.get('/api/products/frame')).json()['product']['variants']) == 3
+    asyncio.run(run())
+
+
 def test_product_updates_keep_variant_identity_and_reserved_stock():
     async def run():
         async with sql_client() as (client, factory, _):

@@ -80,7 +80,7 @@ const ProductDetailPage = () => {
     return <div className="min-h-screen flex items-center justify-center"><Cat className="h-10 w-10 text-meow-salmon animate-pulse" /></div>;
   }
   const p = data.product;
-  const gallery = p.gallery?.length ? p.gallery : [p.main_image];
+  const gallery = [...new Set([p.main_image, ...(p.gallery || [])].filter(Boolean))];
   const flashAvailable = Number(p.flash_sale_available ?? (data.flash_item ? Math.max(0, Number(data.flash_item.quota) - Number(data.flash_item.sold || 0) - Number(data.flash_item.reserved || 0)) : 0));
   const hasFlash = Boolean(data.flash_item && flashAvailable >= qty);
   const price = hasFlash ? data.flash_item.flash_price : selectedVariant?.price_override ?? p.discount_price ?? p.price;
@@ -202,7 +202,7 @@ const ProductDetailPage = () => {
           <div className="rounded-[32px] overflow-hidden bg-white aspect-square" data-testid="gallery-main">
             <img src={imageSrc(gallery[selectedImg])} alt={p?.["name"]} className="w-full h-full object-cover" />
           </div>
-          <div className="flex gap-2 mt-3" data-testid="gallery-thumbs">
+          <div className="flex flex-wrap gap-2 mt-3" data-testid="gallery-thumbs">
             {gallery.map((g, i) =>
             <button key={i} onClick={() => setSelectedImg(i)}
             className={`h-20 w-20 rounded-2xl overflow-hidden border-2 ${i === selectedImg ? "border-meow-salmon" : "border-transparent"}`}

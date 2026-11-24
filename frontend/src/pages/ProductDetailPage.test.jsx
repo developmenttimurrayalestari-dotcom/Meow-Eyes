@@ -37,6 +37,31 @@ beforeEach(() => {
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); });
 const mount = async () => act(async () => root.render(<MemoryRouter initialEntries={["/products/frame"]}><Routes><Route path="/products/:slug" element={<ProductDetailPage />} /></Routes></MemoryRouter>));
 
+test('four active variants remain selectable and the fourth variant is used when adding to cart',async()=>{
+  const variants=['Leopard','Mostgreen','Taupe','Grey'].map((color,index)=>({id:`v${index+1}`,sku:color.toUpperCase(),color,size:'M',stock:10,reserved:0,is_active:true}));
+  const fallback=api.get.getMockImplementation();
+  api.get.mockImplementation((url,config)=>url==='/products/frame'?Promise.resolve({data:{product:{...product,variants},breadcrumb:[],reviews:[],related:[]}}):fallback(url,config));
+  await mount();
+  expect(host.querySelectorAll('[data-testid="variant-list"] button')).toHaveLength(4);
+  await click(host.querySelector('[data-testid="variant-GREY"]'));
+  await click(host.querySelector('[data-testid="add-to-cart-btn"]'));
+  await click(host.querySelector('[data-testid="addon-skip"]'));
+  expect(api.post).toHaveBeenCalledWith('/cart',expect.objectContaining({product_id:'frame',variant_id:'v4',quantity:1}));
+});
+
+test.each([
+  [['/green.png','/taupe.png','/grey.png'],['/leopard.png','/green.png','/taupe.png','/grey.png']],
+  [['/leopard.png','/green.png','/leopard.png',''],['/leopard.png','/green.png']],
+  [[],['/leopard.png']],
+])('product gallery includes its main image and distinct additional photos (%j)',async(gallery,expected)=>{
+  const fallback=api.get.getMockImplementation();
+  api.get.mockImplementation((url,config)=>url==='/products/frame'?Promise.resolve({data:{product:{...product,main_image:'/leopard.png',gallery},breadcrumb:[],reviews:[],related:[]}}):fallback(url,config));
+  await mount();
+  expect([...host.querySelectorAll('[data-testid="gallery-thumbs"] img')].map(img=>img.getAttribute('src'))).toEqual(expected);
+  await click(host.querySelector(`[data-testid="thumb-${expected.length-1}"]`));
+  expect(host.querySelector('[data-testid="gallery-main"] img').getAttribute('src')).toBe(expected[expected.length-1]);
+});
+
 test.each(['frame','package','lens'])('product detail VTO eligibility for %s',async kind=>{
   const fallback=api.get.getMockImplementation();
   api.get.mockImplementation((url,config)=>url==='/products/frame'?Promise.resolve({data:{product:{...product,product_type:kind,variants:[]},breadcrumb:[],reviews:[],related:[]}}):fallback(url,config));
