@@ -974,3 +974,13 @@ penawaran pesanannya, sehingga perubahan toko tidak mengubah pengiriman lama.
 Deploy backend dan build/deploy frontend untuk memasang fitur ini; restart
 backend sekali untuk memuat kode baru. Setelah itu pengeditan alamat melalui
 superadmin tidak memerlukan perubahan env atau restart.
+
+
+### Berat barang dan urutan checkout
+
+Bagian Pengiriman berada tepat setelah Lensa & Resep per Item dan sebelum
+Metode Pembayaran. Total berat barang ditampilkan dalam gram dari backend,
+termasuk kuantitas, lensa, dan Add On pada item yang dipilih. Berat untuk
+permintaan ongkir ditampilkan terpisah bila berbeda karena batas minimum.
+Angka berat lama disembunyikan selama perhitungan ulang agar sesuai tarif baru.
+Perubahan ini tidak memerlukan migrasi database.

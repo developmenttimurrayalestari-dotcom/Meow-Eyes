@@ -39,6 +39,32 @@ async function mountCheckout(selected = ["cart-owned"]) {
   await flush(); await flush();
 }
 
+test.each([[1250,1250],[80,100]])('shipping shows authoritative item weight %i grams and follows prescription before payment',async(itemsWeight,ratedWeight)=>{
+  const previous=api.post.getMockImplementation();
+  api.post.mockImplementation((url,body)=>url==='/checkout/shipping-options'?Promise.resolve({data:{options:[quote],items_weight_gram:itemsWeight,weight_gram:ratedWeight}}):previous(url,body));
+  await mountCheckout();
+  expect(host.querySelector('[data-testid="shipping-items-weight"]').textContent).toBe(`${itemsWeight.toLocaleString('id-ID')} gram`);
+  const sections=[...host.querySelectorAll('section')];
+  const prescription=sections.indexOf(host.querySelector('[data-testid="checkout-prescriptions"]'));
+  const shipping=sections.indexOf(host.querySelector('[data-testid="shipping-section"]'));
+  const payment=sections.indexOf(host.querySelector('[data-testid="payment-method-section"]'));
+  expect(shipping).toBe(prescription+1);expect(payment).toBe(shipping+1);
+  expect(host.querySelector('[data-testid="shipping-weight"]').textContent.includes('Berat perhitungan ongkir:')).toBe(itemsWeight!==ratedWeight);
+});
+
+test('reloading shipping clears the previous weight until the new quote arrives',async()=>{
+  let pending;
+  const previous=api.post.getMockImplementation();
+  api.post.mockImplementation((url,body)=>url==='/checkout/shipping-options'?Promise.resolve({data:{options:[quote],items_weight_gram:500,weight_gram:500}}):previous(url,body));
+  await mountCheckout();
+  expect(host.querySelector('[data-testid="shipping-items-weight"]').textContent).toBe('500 gram');
+  api.post.mockImplementation((url,body)=>url==='/checkout/shipping-options'?new Promise(resolve=>{pending=resolve;}):previous(url,body));
+  await click([...host.querySelectorAll('button')].find(button=>button.textContent==='Cek ulang'));
+  expect(host.querySelector('[data-testid="shipping-weight"]')).toBeNull();
+  await act(async()=>pending({data:{options:[quote],items_weight_gram:750,weight_gram:750}}));
+  expect(host.querySelector('[data-testid="shipping-items-weight"]').textContent).toBe('750 gram');
+});
+
 test("each selected cart line has its own photo and notes, including a quantity of two without added lenses", async () => {
   const originalGet = api.get.getMockImplementation();
   const originalPost = api.post.getMockImplementation();

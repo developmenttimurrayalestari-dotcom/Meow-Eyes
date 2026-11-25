@@ -193,13 +193,14 @@ async def shipping_options(user_id: str, address_id: str, selected_ids: list[str
         if address is None:
             raise HTTPException(404, "Alamat tidak ditemukan")
         items, weight = await priced_cart(s, user_id, selected_ids)
+        items_weight_gram = weight
         weight = max(weight, 100)
         if not items:
             raise HTTPException(400, "Tidak ada item yang dipilih")
         if provider == "mock":
             from services_mock import everpro_cost
             return {"options": [{**o, "provider": "everpro-mock", "quote_id": None} for o in everpro_cost(address.province, weight)],
-                    "weight_gram": weight, "provider": "everpro-mock"}
+                    "weight_gram": weight, "items_weight_gram": items_weight_gram, "provider": "everpro-mock"}
         client = get_everpro_client()
         settings = await effective_shipping_settings(s, client.settings)
         _shipping_address_valid(address)
@@ -258,7 +259,7 @@ async def shipping_options(user_id: str, address_id: str, selected_ids: list[str
                            "cost": float(row.cost + row.insurance_cost), "insurance_cost": float(row.insurance_cost),
                            "etd": option["etd"], "expires_at": expires.isoformat(), "provider": "everpro"})
         await s.flush()
-    return {"options": result, "weight_gram": weight, "provider": "everpro"}
+    return {"options": result, "weight_gram": weight, "items_weight_gram": items_weight_gram, "provider": "everpro"}
 
 
 async def validated_shipping_quote(s, user: m.User, req, address: m.Address, items, *, lock: bool = False) -> dict:

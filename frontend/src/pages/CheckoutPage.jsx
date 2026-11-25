@@ -30,6 +30,7 @@ export default function CheckoutPage() {
   const [editingAddress, setEditingAddress] = useState(null);
   const [addressId, setAddressId] = useState("");
   const [shippingOptions, setShippingOptions] = useState([]);
+  const [shippingWeight, setShippingWeight] = useState(null);
   const [shipping, setShipping] = useState(null);
   const [shippingCartVersion, setShippingCartVersion] = useState(-1);
   const [shippingLoading, setShippingLoading] = useState(false);
@@ -90,7 +91,7 @@ export default function CheckoutPage() {
     ...(paymentMode === 'cod' ? { voucher_code: flashSaleExclusive ? null : voucher || null, use_points: flashSaleExclusive ? 0 : usePoints || 0, roulette_spin_id: flashSaleExclusive ? null : rouletteSpinId } : {}) });
   useEffect(() => {
     const controller = new AbortController();
-    setShipping(null);setShippingOptions([]);setShippingError("");setPreview(null);
+    setShipping(null);setShippingOptions([]);setShippingWeight(null);setShippingError("");setPreview(null);
     setShippingCartVersion(-1);
     setShippingLoading(false);
     if (!addressId || !selectedKey || initialLoading || initialError || showAddForm) return () => controller.abort();
@@ -98,6 +99,7 @@ export default function CheckoutPage() {
     api.post("/checkout/shipping-options", JSON.parse(shippingRequestKey), { signal: controller.signal }).then(({ data }) => {
       if (controller.signal.aborted) return;
       setShippingOptions(data.options || []);
+      setShippingWeight({ items: data.items_weight_gram ?? null, rated: data.weight_gram ?? null });
       setShipping(data.options?.[0] ? { ...data.options[0], address_id: addressId, request_key: shippingRequestKey } : null);
       setShippingCartVersion(cartVersion);
       if (!data.options?.length) setShippingError("Belum ada layanan pengiriman untuk alamat ini. Periksa kode pos atau hubungi toko.");
@@ -215,9 +217,14 @@ export default function CheckoutPage() {
           <div><h2 className="font-heading font-extrabold text-xl flex items-center gap-2"><Glasses className="h-5 w-5 text-meow-salmon" />{"Lensa & Resep per Item (Opsional)"}</h2><p className="text-sm text-meow-gray mt-1">{"Untuk produk Frame, Anda boleh membeli frame saja tanpa lensa, catatan, atau foto resep. Anda juga dapat memakai resep yang sudah disimpan di Profil. Isi bagian ini hanya jika diperlukan. Klik Simpan Resep jika ada perubahan; setiap baris produk disimpan terpisah."}</p></div>
           {cartItems.map((item) => <PrescriptionForm key={item.id} item={item} onDirtyChange={handleDirty} onSaved={handlePrescriptionSaved} disabled={submitting} showMeasurements={false} selectLens allowProfile />)}
         </section>}
-        <section className="bg-white rounded-3xl p-5 md:p-6" data-testid="payment-method-section"><h2 className="font-heading font-extrabold text-xl mb-3">{"Metode Pembayaran"}</h2><div className="grid sm:grid-cols-2 gap-3">{[['online', 'Bayar Online', 'Transfer, kartu, dan PayLater melalui DOKU'], ...(integrations?.cod?.ready ? [['cod', 'COD · Bayar di Tempat', 'Bayar kepada kurir ketika paket diterima']] : [])].map(([value, label, hint]) => <label key={value} className={`flex items-start gap-2 rounded-2xl border-2 p-3 text-sm ${paymentMode === value ? 'border-meow-salmon bg-rose-50' : ''}`}><input type="radio" name="payment-mode" value={value} checked={paymentMode === value} disabled={submitting} onChange={() => setPaymentMode(value)} /><span><strong>{label}</strong><small className="block mt-1 text-meow-gray">{hint}</small></span></label>)}</div></section>
+
         {addressId && <section className="bg-white rounded-3xl p-5 md:p-6" data-testid="shipping-section">
           <div className="flex items-center justify-between gap-2 mb-3"><h2 className="font-heading font-extrabold text-xl flex items-center gap-2"><Truck className="h-5 w-5 text-meow-mint" />{"Pengiriman"}</h2><button type="button" onClick={() => setShippingReload((value) => value + 1)} disabled={shippingLoading || submitting} className="text-xs font-bold flex items-center gap-1"><RefreshCw className={`h-3.5 w-3.5 ${shippingLoading ? "animate-spin" : ""}`} />{"Cek ulang"}</button></div>
+          {(shippingWeight?.items != null || shippingWeight?.rated != null) && <div className="mb-4 rounded-xl bg-meow-bg p-3 text-sm" data-testid="shipping-weight">
+            {shippingWeight.items != null && <p className="font-semibold">Total berat barang: <span className="conveythis-no-translate" translate="no" data-testid="shipping-items-weight">{Number(shippingWeight.items).toLocaleString('id-ID')} gram</span></p>}
+            {shippingWeight.rated != null && shippingWeight.rated !== shippingWeight.items && <p className="mt-1 text-xs text-meow-gray">Berat perhitungan ongkir: <span className="conveythis-no-translate" translate="no">{Number(shippingWeight.rated).toLocaleString('id-ID')} gram</span>.</p>}
+            <p className="mt-1 text-xs text-meow-gray">Berat mencakup jumlah produk, lensa, dan Add On yang dipilih. Tarif akhir mengikuti ketentuan kurir.</p>
+          </div>}
           {shippingLoading ? <p role="status" className="text-sm text-meow-gray">{"Menghitung ongkir…"}</p> : shippingError ? <p role="alert" className="text-sm text-red-600">{shippingError}</p> : <div className="space-y-2 max-h-80 overflow-y-auto">{shippingOptions.map((option, index) => {
               const key = option.quote_id || `${option.courier_code}-${option.service_code}-${index}`;
               const checked = shipping?.quote_id ? shipping.quote_id === option.quote_id : shipping?.courier_code === option.courier_code && shipping?.service_code === option.service_code;
@@ -230,6 +237,8 @@ export default function CheckoutPage() {
           {shippingExpired && <p role="alert" className="mt-3 text-sm text-amber-700">{"Penawaran ongkir telah berakhir. Klik Cek ulang untuk memperbarui."}</p>}
           {integrations.shipping?.mock && <p className="text-xs text-amber-700 mt-3">{"Mode demo: tarif dan pengiriman disimulasikan."}</p>}
         </section>}
+
+        <section className="bg-white rounded-3xl p-5 md:p-6" data-testid="payment-method-section"><h2 className="font-heading font-extrabold text-xl mb-3">{"Metode Pembayaran"}</h2><div className="grid sm:grid-cols-2 gap-3">{[['online', 'Bayar Online', 'Transfer, kartu, dan PayLater melalui DOKU'], ...(integrations?.cod?.ready ? [['cod', 'COD · Bayar di Tempat', 'Bayar kepada kurir ketika paket diterima']] : [])].map(([value, label, hint]) => <label key={value} className={`flex items-start gap-2 rounded-2xl border-2 p-3 text-sm ${paymentMode === value ? 'border-meow-salmon bg-rose-50' : ''}`}><input type="radio" name="payment-mode" value={value} checked={paymentMode === value} disabled={submitting} onChange={() => setPaymentMode(value)} /><span><strong>{label}</strong><small className="block mt-1 text-meow-gray">{hint}</small></span></label>)}</div></section>
 
         <section className="bg-white rounded-3xl p-5 md:p-6 space-y-4" data-testid="promo-section">
           <h2 className="font-heading font-extrabold text-xl flex items-center gap-2"><Ticket className="h-5 w-5 text-meow-amber" />{"Promo & Reward"}</h2>

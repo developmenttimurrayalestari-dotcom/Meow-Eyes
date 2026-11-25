@@ -633,3 +633,24 @@ def test_http_webhook_authentication_and_owned_payment_reads(adapters):
                 response = await client.post("/api/webhooks/everpro/tracking", json=event, headers={"x-everpro-key": "fixture-callback-secret"})
                 assert response.status_code == 200
     asyncio.run(run())
+
+
+@pytest.mark.parametrize('bundle,quantity,frame_weight,expected', [(True,2,100,340),(False,1,60,80)])
+def test_shipping_weight_includes_selected_quantities_lenses_and_addons(adapters,bundle,quantity,frame_weight,expected):
+    async def run():
+        async with isolated_database():
+            fixture=await seed_commerce_fixture(bundle=bundle,quantity=quantity)
+            async with session_scope() as s:
+                address=await s.get(m.Address,fixture['address']);address.district,address.subdistrict='Gambir','Cideng'
+                (await s.get(m.Product,fixture['frame'])).weight_gram=frame_weight
+                s.add(m.Product(id='extra',name='Case',slug='extra',sku='EXTRA',price=10,weight_gram=20,sale_role='add_on',description='',main_image=''))
+                await s.flush()
+                s.add(m.ProductVariant(id='extra-var',product_id='extra',sku='EXTRA-VAR',stock=10))
+                await s.flush()
+                s.add(m.CartAddon(cart_item_id=fixture['cart'],product_id='extra',variant_id='extra-var'))
+                s.add(m.CartItem(id='not-selected',user_id=fixture['alice'],product_id=fixture['frame'],variant_id=fixture['vf'],quantity=1))
+            result=await service.shipping_options(fixture['alice'],fixture['address'],[fixture['cart']])
+            assert result['items_weight_gram']==expected
+            assert result['weight_gram']==max(100,expected)
+            assert adapters[1].rate_requests[-1]['weight']==max(100,expected)/1000
+    asyncio.run(run())
