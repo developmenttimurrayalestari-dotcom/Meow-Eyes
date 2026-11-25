@@ -30,7 +30,7 @@ async def origin_location(client, settings):
                and str(row.get('postal_code')) == settings.origin_postal_code
                and normalize(row.get('sub_district_name')) == normalize(settings.origin_subdistrict)]
     if not matches or not settings.origin_subdistrict:
-        raise HTTPException(422, 'Kelurahan dan kode pos pengirim belum sesuai data EVERPRO. Periksa EVERPRO_ORIGIN_SUBDISTRICT/POSTAL_CODE.')
+        raise HTTPException(422, 'Kelurahan dan kode pos pengirim belum sesuai data EVERPRO. Periksa alamat asal pengiriman pada Admin > Integrasi.')
     ids = {location_id(row.get('sub_district_id')) for row in matches}
     if len(ids) != 1:
         raise HTTPException(422, 'Wilayah pengirim EVERPRO ambigu; hubungi toko untuk memperbaiki konfigurasi.')

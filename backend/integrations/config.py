@@ -159,11 +159,11 @@ class EverproSettings:
         return f'/auth/v{version}/token'
 
     @classmethod
-    def from_env(cls) -> "EverproSettings":
+    def from_env(cls, *, require_origin: bool = True) -> "EverproSettings":
         source = os.environ.get('EVERPRO_DATA_SOURCE', 'api').strip().lower()
         if source not in ('api', 'database'):
             raise HTTPException(503, 'EVERPRO_DATA_SOURCE harus api atau database')
-        required = ("EVERPRO_ORIGIN_POSTAL_CODE", "EVERPRO_SHIPPER_NAME", "EVERPRO_SHIPPER_PHONE", "EVERPRO_SHIPPER_ADDRESS")
+        required = ("EVERPRO_ORIGIN_POSTAL_CODE", "EVERPRO_SHIPPER_NAME", "EVERPRO_SHIPPER_PHONE", "EVERPRO_SHIPPER_ADDRESS") if require_origin else ()
         if source == 'api': required += ('EVERPRO_CLIENT_KEY', 'EVERPRO_CLIENT_SECRET')
         if any(not os.environ.get(name) for name in required):
             raise HTTPException(503, "Pengiriman Everpro belum dikonfigurasi")
@@ -201,22 +201,22 @@ class EverproSettings:
             raise HTTPException(503, "EVERPRO_BASE_URL harus menggunakan host resmi Everpro")
         if env == "production" and "sandbox" in host:
             raise HTTPException(503, "Host sandbox tidak dapat digunakan sebagai Everpro production")
-        postal = os.environ["EVERPRO_ORIGIN_POSTAL_CODE"].strip()
-        if not re.fullmatch(r"\d{5}", postal):
+        postal = os.environ.get("EVERPRO_ORIGIN_POSTAL_CODE", "").strip() if require_origin else ""
+        if require_origin and not re.fullmatch(r"\d{5}", postal):
             raise HTTPException(503, "Konfigurasi kode pos pengirim tidak valid")
         kind = os.environ.get("EVERPRO_SHIPMENT_TYPE", "DROP").upper()
         if kind not in {"DROP", "PICKUP"}:
             raise HTTPException(503, "Konfigurasi EVERPRO_SHIPMENT_TYPE tidak valid")
-        phone = os.environ["EVERPRO_SHIPPER_PHONE"].strip()
-        if not re.fullmatch(r"(?:\+?62|08)\d{8,12}", phone) or len(phone) > 15:
+        phone = os.environ.get("EVERPRO_SHIPPER_PHONE", "").strip() if require_origin else ""
+        if require_origin and (not re.fullmatch(r"(?:\+?62|08)\d{8,12}", phone) or len(phone) > 15):
             raise HTTPException(503, "Konfigurasi telepon pengirim tidak valid")
-        name = os.environ["EVERPRO_SHIPPER_NAME"].strip()
-        address = os.environ["EVERPRO_SHIPPER_ADDRESS"].strip()
-        if len(name) < 3 or not 3 <= len(address) <= 250:
+        name = os.environ.get("EVERPRO_SHIPPER_NAME", "").strip() if require_origin else ""
+        address = os.environ.get("EVERPRO_SHIPPER_ADDRESS", "").strip() if require_origin else ""
+        if require_origin and (len(name) < 3 or not 3 <= len(address) <= 250):
             raise HTTPException(503, "Konfigurasi nama/alamat pengirim tidak valid")
         try:
-            lat = float(os.environ['EVERPRO_ORIGIN_LATITUDE']) if os.getenv('EVERPRO_ORIGIN_LATITUDE') else None
-            lng = float(os.environ['EVERPRO_ORIGIN_LONGITUDE']) if os.getenv('EVERPRO_ORIGIN_LONGITUDE') else None
+            lat = float(os.environ['EVERPRO_ORIGIN_LATITUDE']) if require_origin and os.getenv('EVERPRO_ORIGIN_LATITUDE') else None
+            lng = float(os.environ['EVERPRO_ORIGIN_LONGITUDE']) if require_origin and os.getenv('EVERPRO_ORIGIN_LONGITUDE') else None
             if (lat is None) != (lng is None) or (lat is not None and not (-90 <= lat <= 90 and -180 <= lng <= 180)):
                 raise ValueError()
         except ValueError:

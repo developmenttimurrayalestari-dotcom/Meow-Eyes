@@ -9,8 +9,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 
-from auth import current_admin, current_user, require_permission
-from database import read_session
+from auth import current_admin, current_user, current_super_admin, require_permission
+from database import read_session, session_scope
+from mysql.shipping_origin import KEY as ORIGIN_KEY, OriginInput, origin_data, effective_shipping_settings
+from integrations.config import EverproSettings
 from models import User
 from mysql import models as m
 from mysql.api import json_value
@@ -27,6 +29,49 @@ from integrations.locations import region_options
 
 
 router = APIRouter(tags=["integrations"])
+
+
+async def configured_status(*, admin=False):
+    result = integration_status(admin=admin)
+    if result['shipping']['provider'] == 'everpro':
+        try:
+            async with read_session() as s:
+                settings = await effective_shipping_settings(s, EverproSettings.from_env(require_origin=False))
+            item = result['shipping']
+            item.update(ready=True)
+            item.pop('configuration_error', None)
+            if admin:
+                item.update(missing=[], environment=settings.environment, shipment_type=settings.shipment_type)
+        except HTTPException as exc:
+            result['shipping']['ready'] = False
+            if admin: result['shipping']['configuration_error'] = str(exc.detail)
+    return result
+
+
+@router.get('/admin/shipping-origin')
+async def get_shipping_origin(admin: User = Depends(current_super_admin)):
+    async with read_session() as s:
+        return await origin_data(s)
+
+
+@router.put('/admin/shipping-origin')
+async def save_shipping_origin(body: OriginInput, admin: User = Depends(current_super_admin)):
+    from integrations.locations import selected_location
+    canonical = await selected_location(body)
+    from sqlalchemy.exc import IntegrityError
+    try:
+        async with session_scope() as s:
+            row = await s.get(m.Setting, ORIGIN_KEY, with_for_update=True)
+            if body.version != (row.value.get('version', 0) if row else 0):
+                raise HTTPException(409, 'Alamat asal sudah diubah. Muat ulang sebelum menyimpan.')
+            value = {**body.model_dump(), **canonical, 'version':body.version + 1}
+            if row is None:
+                row = m.Setting(key=ORIGIN_KEY, is_public=False); s.add(row)
+            row.value, row.updated_by, row.is_public = value, admin.user_id, False
+            await s.flush()
+        return {'origin':value, 'source':'admin'}
+    except IntegrityError:
+        raise HTTPException(409, 'Alamat asal sudah diubah. Muat ulang sebelum menyimpan.') from None
 
 
 async def _owned_order(order_id: str, user: User) -> None:
@@ -55,7 +100,7 @@ async def _body(request: Request) -> tuple[bytes, dict]:
 
 @router.get("/integrations/status")
 async def public_status():
-    result = integration_status()
+    result = await configured_status()
     from mysql.customer_growth import config
     async with read_session() as s:
         cfg = await config(s)
@@ -120,7 +165,7 @@ async def shipping_subdistricts(district_id: str = Query(min_length=1, max_lengt
 
 @router.get("/admin/integrations")
 async def admin_status(admin: User = Depends(current_admin)):
-    result = integration_status(admin=True)
+    result = await configured_status(admin=True)
     async with read_session() as s:
         failed = await s.scalar(select(func.count()).select_from(m.IntegrationWebhookEvent).where(
             m.IntegrationWebhookEvent.status == "failed"))

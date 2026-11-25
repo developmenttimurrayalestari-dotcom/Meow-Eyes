@@ -195,7 +195,7 @@ _client: EverproClient | None = None
 
 def get_everpro_client() -> EverproClient:
     global _client
-    settings = EverproSettings.from_env()
+    settings = EverproSettings.from_env(require_origin=False)
     if _client is None or _client.settings != settings:
         _client = EverproClient(settings)
     return _client

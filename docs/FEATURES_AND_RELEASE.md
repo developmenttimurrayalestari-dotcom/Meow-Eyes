@@ -946,3 +946,31 @@ Varian aktif dengan stok habis tetap terlihat; pembelian mengikuti stok tersedia
 Foto utama produk disertakan bersama galeri tambahan tanpa duplikasi, sehingga
 satu foto utama dan tiga foto tambahan tampil sebagai empat foto di detail produk.
 Perubahan ini tidak memerlukan migrasi database.
+
+
+### Alamat asal pengiriman melalui superadmin
+
+Buka **Admin > Integrasi > Alamat Asal Pengiriman** (`/admin/integrations`).
+Hanya akun `super_admin` yang dapat membaca atau menyimpan pengaturan ini;
+endpoint juga menolak admin biasa, staf, dan customer.
+
+Isi nama toko/pengirim, telepon, email opsional, pilih provinsi hingga
+kelurahan/desa dari master Everpro, dan isi alamat lengkap. Kode pos mengikuti
+kelurahan yang dipilih dan divalidasi ulang oleh backend. Latitude dan longitude
+opsional harus diisi berpasangan untuk layanan Instant/Sameday.
+
+Sebelum penyimpanan pertama, data pengirim dari env menjadi fallback agar toko
+lama tetap beroperasi. Setelah **Simpan alamat asal**, database menjadi sumber
+alamat pengirim; `EVERPRO_ORIGIN_*` dan `EVERPRO_SHIPPER_*` di env tidak lagi
+menentukan alamat. Kredensial API/token, mode layanan DROP/PICKUP, dan ukuran
+paket tetap merupakan konfigurasi integrasi server.
+
+Alamat disimpan sebagai setting privat `shipping.origin`, tanpa tabel/migrasi
+baru. Perubahan berlaku untuk permintaan ongkir baru tanpa restart. Penawaran
+ongkir dari alamat asal berbeda ditolak saat checkout dan harus dihitung ulang.
+Pesanan yang sudah dibuat serta retry booking memakai snapshot alamat asal pada
+penawaran pesanannya, sehingga perubahan toko tidak mengubah pengiriman lama.
+
+Deploy backend dan build/deploy frontend untuk memasang fitur ini; restart
+backend sekali untuk memuat kode baru. Setelah itu pengeditan alamat melalui
+superadmin tidak memerlukan perubahan env atau restart.

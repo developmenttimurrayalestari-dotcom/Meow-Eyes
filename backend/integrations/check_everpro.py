@@ -106,7 +106,7 @@ def main():
     os.environ.clear()
     os.environ.update(effective)
     try:
-        settings = EverproSettings.from_env()
+        settings = EverproSettings.from_env(require_origin=False)
     except HTTPException:
         report.update(ok=False, reason='invalid_everpro_configuration')
         print(json.dumps(report, indent=2))

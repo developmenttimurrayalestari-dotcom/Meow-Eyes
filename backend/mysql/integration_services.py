@@ -32,6 +32,7 @@ from integrations.doku import get_doku_client, safe_checkout_url
 from integrations.everpro import get_everpro_client
 from integrations.locations import canonical_shipping_location
 from integrations import everpro_v3
+from mysql.shipping_origin import effective_shipping_settings
 
 
 def _digest(value: Any) -> str:
@@ -200,7 +201,7 @@ async def shipping_options(user_id: str, address_id: str, selected_ids: list[str
             return {"options": [{**o, "provider": "everpro-mock", "quote_id": None} for o in everpro_cost(address.province, weight)],
                     "weight_gram": weight, "provider": "everpro-mock"}
         client = get_everpro_client()
-        settings = client.settings
+        settings = await effective_shipping_settings(s, client.settings)
         _shipping_address_valid(address)
         destination = await canonical_shipping_location(address, client, require_id=settings.api_version == 3)
         fingerprint, snapshot = shipping_fingerprint(items, address, settings, payment_mode)
@@ -241,7 +242,7 @@ async def shipping_options(user_id: str, address_id: str, selected_ids: list[str
         if current_address is None or current_address.user_id != user_id:
             raise HTTPException(409, "Alamat berubah; hitung kembali ongkir")
         current_items, _ = await priced_cart(s, user_id, selected_ids)
-        if shipping_fingerprint(current_items, current_address, settings, payment_mode)[0] != fingerprint:
+        if shipping_fingerprint(current_items, current_address, await effective_shipping_settings(s, client.settings), payment_mode)[0] != fingerprint:
             raise HTTPException(409, "Keranjang/alamat berubah; hitung kembali ongkir")
         for option in options:
             row = m.ShippingQuote(
@@ -270,7 +271,7 @@ async def validated_shipping_quote(s, user: m.User, req, address: m.Address, ite
         raise HTTPException(422, "Pilihan ongkir tidak valid")
     if row.expires_at <= utcnow():
         raise HTTPException(409, "Penawaran ongkir kedaluwarsa; hitung kembali ongkir")
-    settings = EverproSettings.from_env()
+    settings = await effective_shipping_settings(s, EverproSettings.from_env(require_origin=False))
     if row.cart_fingerprint != shipping_fingerprint(items, address, settings, getattr(req, 'payment_mode', 'online'))[0]:
         raise HTTPException(409, "Keranjang/alamat berubah; hitung kembali ongkir")
     if row.courier_code != req.courier_code or row.service_code != req.service_code:

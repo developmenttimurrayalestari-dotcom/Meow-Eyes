@@ -3,8 +3,11 @@ import { CheckCircle2, AlertCircle, Plug, RefreshCw, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { api, API_BASE } from "../../lib/api";
 import { adminError } from "./adminUtils";
+import { useAuth } from '../../contexts/AuthContext';
+import ShippingOriginForm from './ShippingOriginForm';
 
 export default function AdminIntegrations() {
+  const { user } = useAuth();
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -22,6 +25,7 @@ export default function AdminIntegrations() {
   return <div className="max-w-5xl space-y-6" data-testid="admin-integrations">
     <header className="flex flex-wrap justify-between gap-4"><div><h1 className="font-heading text-3xl font-black flex items-center gap-3"><Plug /> Integrasi</h1><p className="mt-2 text-sm text-meow-gray">Kesiapan pembayaran DOKU dan pengiriman Everpro.</p></div><button onClick={load} disabled={loading} className="btn-secondary inline-flex items-center gap-2"><RefreshCw size={16} className={loading ? "animate-spin" : ""} /> Periksa kembali</button></header>
     {error && <p role="alert" className="rounded-2xl bg-red-50 text-red-700 p-4">{error}</p>}
+    {user?.role === 'super_admin' && <ShippingOriginForm onSaved={load} />}
     {!status && loading && <p role="status">Memuat status integrasi…</p>}
     {status && <>
       <div className="grid md:grid-cols-2 gap-5">{[["payment", "Pembayaran"], ["shipping", "Pengiriman"]].map(([key, label]) => {

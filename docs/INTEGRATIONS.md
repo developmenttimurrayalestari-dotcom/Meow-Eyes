@@ -353,3 +353,6 @@ Stok/promo dicadangkan sampai Delivered. Callback/poll Everpro yang terautentika
 Voucher/poin diskon nominal didukung pada COD dan mengubah penawaran tarif. Promo gratis ongkir belum ditawarkan untuk COD: backend menolaknya secara eksplisit agar jumlah tagihan memenuhi kontrak `package_price + shipment_price + insurance_price`. Customer dapat memilih pembayaran online untuk promo tersebut. Tidak ada pengujian transaksi atau booking sungguhan dalam pengembangan ini.
 
 Peta memakai tile OpenStreetMap, atribusi terlihat dan cache browser standar. Koordinat tetap dapat diketik jika peta/GPS tidak tersedia. Host tile dapat diganti pada komponen `AddressPinpoint`; untuk trafik besar siapkan penyedia tile sesuai [kebijakan OpenStreetMap](https://operations.osmfoundation.org/policies/tiles/).
+
+
+Alamat asal pengiriman kini dikelola superadmin melalui **Admin > Integrasi > Alamat Asal Pengiriman**. Variabel `EVERPRO_ORIGIN_*` dan `EVERPRO_SHIPPER_*` pada tabel konfigurasi di atas hanya fallback sebelum penyimpanan pertama. Sesudah disimpan, alamat database dipakai untuk ongkir baru; booking pesanan lama tetap memakai snapshot asal pesanan.
