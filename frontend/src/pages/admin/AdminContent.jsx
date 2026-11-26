@@ -270,7 +270,8 @@ export const AdminBannersV2 = () => {
       <div className="grid md:grid-cols-2 gap-4">
         {items.map((b) => (
           <div key={b.id} className="bg-white rounded-3xl border border-zinc-200 p-4" data-testid={`banner-${b.id}`}>
-            <img src={resolveImageUrl(b.image_desktop)} alt="" className="aspect-video object-cover rounded-2xl w-full" />
+            <img src={resolveImageUrl(b.image_desktop)} alt="" loading="lazy" decoding="async" className="block h-auto object-contain rounded-2xl w-full" />
+            {b.image_mobile && <div className="mt-3"><p className="text-xs font-semibold mb-1">Versi mobile</p><img src={resolveImageUrl(b.image_mobile)} alt={`Banner mobile ${b.title}`} loading="lazy" decoding="async" className="block w-full max-w-48 mx-auto h-auto object-contain rounded-xl" /></div>}
             <p className="font-bold mt-2">{b.title}</p>
             <p className="text-xs text-meow-gray">Urutan {b.sort_order} · {b.position === 'popup' ? 'Popup Promo' : b.position} · {b.link_type === 'none' ? 'Tanpa tautan' : b.link_url || "Tanpa tautan"} · {b.is_active ? "Aktif" : "Off"}</p>
             <div className="flex gap-2 mt-2">
@@ -286,17 +287,22 @@ export const AdminBannersV2 = () => {
             <h3 className="font-heading font-extrabold text-xl">Banner</h3>
             <FormField label="Judul banner"><input required placeholder="Judul" value={editing.title} onChange={(e) => setEditing({ ...editing, title: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-meow-bg outline-none" /></FormField>
             <ImagePicker
-              label="Image Desktop (wajib)"
+              label="Banner desktop (wajib)"
               value={editing.image_desktop || ""}
               onChange={(url) => setEditing({ ...editing, image_desktop: url })}
               testId="banner-image-desktop-picker"
             />
             <ImagePicker
-              label="Image Mobile (opsional)"
+              label="Banner versi mobile (opsional)"
               value={editing.image_mobile || ""}
               onChange={(url) => setEditing({ ...editing, image_mobile: url })}
               testId="banner-image-mobile-picker"
             />
+            <p className="text-xs text-meow-gray">Unggah atau pilih gambar mobile dari galeri. Pada layar sampai 767 px, gambar mobile digunakan otomatis. Jika kosong, gambar desktop digunakan. Pilih All Device untuk satu banner dengan kedua versi. Gambar slider beranda tampil selebar area banner, dengan tinggi mengikuti rasio asli tanpa crop.</p>
+            {(editing.image_desktop || editing.image_mobile) && <div className="grid grid-cols-2 gap-3 rounded-xl border p-3" data-testid="banner-artwork-preview">
+              <div><p className="text-xs font-semibold mb-2">Pratinjau desktop</p>{editing.image_desktop && <img src={resolveImageUrl(editing.image_desktop)} alt="Pratinjau banner desktop utuh" className="block w-full h-auto object-contain rounded-lg" />}</div>
+              <div><p className="text-xs font-semibold mb-2">Pratinjau mobile</p><img src={resolveImageUrl(editing.image_mobile || editing.image_desktop)} alt="Pratinjau banner mobile utuh" className="block w-full h-auto object-contain rounded-lg" />{!editing.image_mobile && <p className="text-xs text-meow-gray mt-1">Menggunakan gambar desktop.</p>}</div>
+            </div>}
             <div className="grid grid-cols-2 gap-2">
               <FormField label="Lokasi banner"><select value={editing.position} onChange={(e) => setEditing({ ...editing, position: e.target.value })} className="px-3 py-2 rounded-xl bg-meow-bg outline-none">
                 <option value="hero">Hero</option><option value="promo">Promo</option>

@@ -48,7 +48,7 @@ const FlashCountdown = ({ endIso }) => {
 // Default slide (the original marketing copy) rendered as the first slide.
 const DefaultHeroSlide = () => {
   return (
-    <div className="absolute inset-0 rounded-[36px] bg-gradient-to-br from-meow-amber/40 via-meow-bg to-meow-salmon/30 p-8 md:p-12 flex flex-col justify-center">
+    <div className="relative min-h-[380px] md:min-h-[480px] lg:min-h-[520px] rounded-[36px] bg-gradient-to-br from-meow-amber/40 via-meow-bg to-meow-salmon/30 p-8 md:p-12 flex flex-col justify-center">
     <div className="absolute -top-10 -right-10 w-72 h-72 rounded-full bg-meow-salmon/30 blur-3xl pointer-events-none" />
     <p className="text-xs uppercase tracking-[0.3em] text-meow-salmon font-bold">{"Marketplace Kacamata #1 Indonesia"}</p>
     <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-black mt-3 tracking-tighter leading-[1.05]">{"Lihat dunia "}
@@ -70,7 +70,7 @@ const DefaultHeroSlide = () => {
   </div>);};
 
 
-// One banner slide — full-bleed image with a title/CTA overlay.
+// Keep the uploaded artwork in normal flow, at its natural aspect ratio.
 const HeroCta = () => {
   return (
     <span className="btn-primary inline-flex items-center gap-2">
@@ -83,24 +83,23 @@ const bannerDestination = (value) => {
   if (value.startsWith("/") && !value.startsWith("//") && !value.includes("\\")) return { path: value, external: false };
   try {const url = new URL(value);return ["https:", "http:"].includes(url.protocol) && !url.username && !url.password ? { path: url.href, external: true } : null;} catch {return null;}
 };
-const BannerSlide = ({ banner }) => {
+const BannerSlide = ({ banner, active }) => {
 
   const img = banner.image_desktop || banner.image_mobile || banner.image;
-  const destination = bannerDestination(banner.link_url || banner.destination_url);
+  const destination = banner.link_type === 'none' ? null : bannerDestination(banner.link_url || banner.destination_url);
   const Wrapper = destination ? destination.external ? "a" : Link : "div";
   const props = destination ? destination.external ? { href: destination.path, target: "_blank", rel: "noopener noreferrer" } : { to: destination.path } : {};
-  return <Wrapper {...props} className="absolute inset-0 rounded-[36px] overflow-hidden group" data-testid={`hero-banner-${banner.id}`} aria-label={destination ? banner?.["alt_text"] || banner?.["title"] : undefined}>
-    {img && <picture>{banner.image_mobile && <source media="(max-width: 767px)" srcSet={imageSrc(banner.image_mobile)} />}<img src={imageSrc(img)} alt={banner?.["alt_text"] || banner?.["title"] || "Banner toko"} className="absolute inset-0 w-full h-full object-cover" loading="lazy" /></picture>}
-    <div className="absolute inset-0 bg-gradient-to-tr from-meow-midnight/70 via-meow-midnight/30 to-transparent" />
-    <div className="relative h-full flex flex-col justify-end p-8 md:p-12 text-white">
-      <p className="text-xs uppercase tracking-[0.3em] text-meow-amber font-bold">{"Promo Spesial"}</p>
-      <h2 className="font-heading text-3xl sm:text-4xl lg:text-5xl font-black mt-3 tracking-tighter leading-[1.05] max-w-2xl">{banner?.["title"]}</h2>
-      {destination && <div className="mt-6" data-testid={`hero-banner-cta-${banner.id}`}><HeroCta /></div>}
+  return <Wrapper {...props} className="block w-full bg-white group" data-testid={`hero-banner-${banner.id}`} aria-label={destination ? banner?.["alt_text"] || banner?.["title"] : undefined}>
+    {img && <picture className="block w-full">{banner.image_mobile && <source media="(max-width: 767px)" srcSet={imageSrc(banner.image_mobile)} />}<img src={imageSrc(img)} alt={banner?.["alt_text"] || banner?.["title"] || "Banner toko"} className="block w-full h-auto object-contain" loading={active ? 'eager' : 'lazy'} /></picture>}
+    <div className="flex flex-wrap items-center justify-between gap-3 p-4 md:p-6">
+      <div className="min-w-0 flex-1"><p className="text-xs uppercase tracking-[0.2em] text-meow-salmon font-bold">{"Promo Spesial"}</p>
+      <h2 className="font-heading text-lg md:text-2xl font-black mt-1 text-meow-midnight break-words">{banner?.["title"]}</h2></div>
+      {destination && <div data-testid={`hero-banner-cta-${banner.id}`}><HeroCta /></div>}
     </div>
   </Wrapper>;
 };
 
-const HeroSlider = ({ banners }) => {
+export const HeroSlider = ({ banners }) => {
 
   const slides = banners.length ? banners.map((banner) => ({ type: "banner", id: banner.id, banner })) : [{ type: "default", id: "default" }];
   const [idx, setIdx] = useState(0);
@@ -121,7 +120,7 @@ const HeroSlider = ({ banners }) => {
 
   return (
     <div
-      className="relative rounded-[36px] overflow-hidden w-full h-[380px] md:h-[480px] lg:h-[520px]"
+      className="relative w-full"
       onMouseEnter={() => {pausedRef.current = true;}}
       onMouseLeave={() => {pausedRef.current = false;}}
       onFocusCapture={() => {pausedRef.current = true;}}
@@ -129,23 +128,25 @@ const HeroSlider = ({ banners }) => {
       role="region" aria-label={"Banner promosi"} aria-roledescription="carousel"
       data-testid="hero-slider">
 
+      <div className="relative w-full overflow-hidden rounded-2xl md:rounded-[36px]">
       {slides.map((s, i) =>
       <div
         key={s.id}
-        className={`absolute inset-0 transition-opacity duration-700 ease-out ${i === idx ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"}`}
+        className={`w-full transition-opacity duration-700 ease-out ${i === idx ? "relative opacity-100 z-10" : "absolute inset-0 opacity-0 z-0 pointer-events-none"}`}
         aria-hidden={i !== idx} inert={i !== idx}>
 
-          {s.type === "default" ? <DefaultHeroSlide /> : <BannerSlide banner={s.banner} />}
+          {s.type === "default" ? <DefaultHeroSlide /> : <BannerSlide banner={s.banner} active={i === idx} />}
         </div>
       )}
+      </div>
 
       {totalSlides > 1 &&
-      <>
+      <div className="flex items-center justify-center gap-3 mt-3" data-testid="hero-controls">
           {/* Prev/Next controls */}
           <button
           type="button"
           onClick={() => goto(idx - 1)}
-          className="absolute left-3 top-1/2 -translate-y-1/2 z-20 h-9 w-9 rounded-full bg-white/80 hover:bg-white text-meow-midnight backdrop-blur-sm flex items-center justify-center shadow-md transition"
+          className="h-9 w-9 shrink-0 rounded-full bg-white hover:bg-meow-bg text-meow-midnight flex items-center justify-center shadow-md transition"
           aria-label={"Slide sebelumnya"}
           data-testid="hero-prev">
 
@@ -154,27 +155,27 @@ const HeroSlider = ({ banners }) => {
           <button
           type="button"
           onClick={() => goto(idx + 1)}
-          className="absolute right-3 top-1/2 -translate-y-1/2 z-20 h-9 w-9 rounded-full bg-white/80 hover:bg-white text-meow-midnight backdrop-blur-sm flex items-center justify-center shadow-md transition"
+          className="h-9 w-9 shrink-0 rounded-full bg-white hover:bg-meow-bg text-meow-midnight flex items-center justify-center shadow-md transition"
           aria-label={"Slide berikutnya"}
           data-testid="hero-next">
 
             <ChevronRight className="h-5 w-5" />
           </button>
-          <button type="button" onClick={() => setAutoPlay((value) => !value)} aria-label={autoPlay ? "Jeda pergantian banner" : "Putar banner otomatis"} className="absolute bottom-4 right-4 z-20 bg-white/90 rounded-full p-2">{autoPlay ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}</button>
+          <button type="button" onClick={() => setAutoPlay((value) => !value)} aria-label={autoPlay ? "Jeda pergantian banner" : "Putar banner otomatis"} className="bg-white rounded-full p-2 shadow-sm">{autoPlay ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}</button>
           {/* Dots */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+          <div className="flex flex-wrap gap-2 max-w-[50%]">
             {slides.map((_, i) =>
           <button
             key={i}
             type="button"
             onClick={() => goto(i)}
-            className={`h-2 rounded-full transition-all ${i === idx ? "w-8 bg-meow-salmon" : "w-2 bg-white/70 hover:bg-white"}`}
+            className={`h-2 rounded-full transition-all ${i === idx ? "w-8 bg-meow-salmon" : "w-2 bg-meow-midnight/20 hover:bg-meow-midnight/40"}`}
             aria-label={`Ke slide ${i + 1}`}
             data-testid={`hero-dot-${i}`} />
 
           )}
           </div>
-        </>
+        </div>
       }
     </div>);
 
@@ -192,10 +193,11 @@ const HomePage = () => {
   useEffect(() => {
     setError("");
     (async () => {
+      const device = window.matchMedia?.('(max-width: 767px)').matches ?? window.innerWidth <= 767;
       const [hp, fs, bn] = await Promise.all([
       api.get("/homepage"),
       api.get("/flash-sales/active").catch(() => ({ data: { flash_sales: [] } })),
-      api.get("/banners?position=hero").catch(() => ({ data: { banners: [] } }))]
+      api.get("/banners?position=hero", { params: { device: device ? 'mobile' : 'desktop' } }).catch(() => ({ data: { banners: [] } }))]
       );
       setData(hp.data);
       setFlashSales(fs.data.flash_sales || []);

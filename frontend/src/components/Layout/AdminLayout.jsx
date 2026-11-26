@@ -32,6 +32,7 @@ const NAV = [
 { to: "/admin/knowledge", icon: BookOpen, label: "Product Knowledge", testid: "admin-nav-knowledge", section: "content", perm: "article.view" },
 { to: "/admin/banners", icon: Image, label: "Banner", testid: "admin-nav-banners", section: "content", perm: "banner.view" },
 { to: '/admin/home-categories', icon: FolderTree, label: 'Kategori Pilihan Beranda', testid: 'admin-nav-home-categories', section: 'content', perm: 'setting.view' },
+{ to: '/admin/menus', icon: Menu, label: 'Manage Menu', testid: 'admin-nav-menus', section: 'content', perm: 'setting.view' },
 { to: "/admin/faqs", icon: MessageSquare, label: "FAQ", testid: "admin-nav-faqs", section: "content", perm: "setting.view" },
 { to: "/admin/pages", icon: FileText, label: "CMS Pages", testid: "admin-nav-pages", section: "content", perm: "setting.view" },
 { to: "/admin/whatsapp", icon: MessageSquare, label: "WhatsApp", testid: "admin-nav-whatsapp", section: "content", perm: "setting.update" },

@@ -1117,3 +1117,79 @@ setting privat. Judul, panjang teks, ikon, tema, urutan, dan URL divalidasi oleh
 backend. Deploy backend terlebih dahulu, restart backend untuk memuat endpoint
 baru, kemudian build/deploy frontend. Tidak perlu migrasi database atau
 dependency baru.
+
+### Manage Menu pelanggan dan URL Kategori Pilihan
+
+Buka **Admin → Konten CMS → Manage Menu** (`/admin/menus`). Pilih lokasi
+**Menu Utama**, **Footer Eksplorasi**, atau **Menu Bawah Mobile**, lalu klik
+Tambah Menu. Isi nama, URL tujuan, ikon, urutan, pilihan buka di tab baru, dan
+status aktif. Edit dan Hapus tersedia pada tiap baris; penghapusan meminta
+konfirmasi. Item dapat dipindahkan ke lokasi lain melalui form edit. Angka urutan
+terkecil tampil lebih dahulu pada lokasi yang sama. Maksimal 100 item seluruh
+lokasi; menu mobile yang panjang dapat digeser secara horizontal.
+
+Pemilih halaman cepat dapat mengisi URL halaman website atau halaman CMS yang
+sudah dipublikasikan. URL juga dapat diketik manual, misalnya `/shop-now`,
+`/pages/panduan-belanja`, atau URL lengkap HTTP/HTTPS. URL seperti `javascript:`
+dan `//domain` ditolak backend. Meowsurement menggunakan navigasi dokumen penuh
+agar aplikasi pengukurannya terbuka dengan benar. URL `/meowsurement/` berlaku
+juga ketika dipasang pada card Kategori Pilihan.
+
+Menu lama menjadi data awal yang bisa diedit. Menu aktif dimuat oleh layout
+pelanggan untuk tiga lokasi tersebut; menu nonaktif disembunyikan. Semua item
+dapat dihapus atau dinonaktifkan untuk menyembunyikan suatu lokasi, tanpa
+memunculkan ulang item default. Footer **Bantuan** tetap menampilkan tautan CMS
+terbit secara otomatis. Navigasi admin dan aturan aksesnya tetap dikelola oleh
+kode aplikasi. Badge jumlah keranjang dan tujuan Masuk pada item Profil mobile
+bawaan tetap tersedia.
+
+Frontend memuat satu koleksi melalui `GET /api/menus`, memperbaruinya saat tab
+kembali aktif, dan menjaga daftar terakhir jika pembaruan gagal. Bila pemuatan
+awal API gagal, navigasi awal menjadi fallback agar website tetap dapat
+dinavigasi. Fallback hanya berlaku untuk kegagalan API, bukan respons kosong
+yang sengaja dikonfigurasi admin.
+
+API admin: `GET/POST /api/admin/menus`, `PUT /api/admin/menus/{id}`, dan
+`DELETE /api/admin/menus/{id}?version=...`. Staff membutuhkan `setting.view`
+untuk membaca dan `setting.update` untuk mutasi. Data disimpan pada setting
+privat `storefront.menus`. Penyimpanan koleksi versi bersama juga dipakai oleh
+Kategori Pilihan agar formulir lama tidak menimpa perubahan admin lain. Konflik
+versi meminta admin menutup form dan memuat ulang.
+
+Pada **Kategori Pilihan Beranda**, kolom **URL tujuan card** mengatur tujuan
+klik card di beranda. URL dapat diedit pada tambah/edit dan diuji menggunakan
+tautan **Uji URL tujuan** di daftar card. Path internal dibuka di website;
+URL eksternal dibuka di tab baru. Gambar latar, ikon, dan pengaturan card lain
+tetap tersedia.
+
+Deploy backend dan restart untuk memuat endpoint baru, kemudian build/deploy
+frontend. Tidak diperlukan migrasi database atau dependency tambahan.
+
+### Banner slider desktop/mobile tanpa crop
+
+Pada **Admin → Banner** (`/admin/banners`), tambah atau edit banner dengan
+**Lokasi banner: Hero**. Unggah **Banner desktop (wajib)** dan **Banner versi
+mobile (opsional)** melalui picker gambar. Kedua kolom mendukung upload dari
+komputer, galeri, atau URL gambar. Pratinjau di bawah kolom menampilkan kedua
+versi secara utuh. Pilih **All Device** untuk menggunakan satu banner dengan
+dua gambar pada desktop/mobile, kemudian simpan.
+
+Di beranda, elemen `picture` memilih gambar mobile pada layar maksimal 767 px.
+Permintaan daftar banner juga menyertakan perangkat berdasarkan lebar layar
+saat beranda dimuat, sehingga pengaturan All Device/Desktop/Mobile pada admin
+diterapkan oleh API.
+Jika gambar mobile kosong, gambar desktop digunakan. Gambar tampil selebar area
+banner (`width: 100%`) dengan tinggi mengikuti rasio asli (`height: auto`), tanpa
+`object-fit: cover` atau pemaksaan tinggi slider. Banner landscape dan portrait
+dapat memiliki tinggi yang berbeda; gunakan rasio konsisten antar-slide pada
+masing-masing versi bila ingin pergantian tinggi lebih stabil.
+
+Judul dan tombol tujuan berada di bawah gambar. Tombol navigasi, indikator
+slide, dan kontrol autoplay juga berada di luar gambar agar tidak menutupi
+materi promo. Hanya slide aktif yang menentukan tinggi slider; slide lain
+disembunyikan dari pembaca layar dan fokus keyboard. Banner dengan jenis tautan
+None tidak diberi tautan/tombol tujuan. Tampilan awal tanpa banner tetap tersedia.
+
+Field database/API `image_mobile` sudah tersedia; tidak perlu migrasi database
+atau perubahan konfigurasi backend. Build/deploy frontend untuk memasang
+pembaruan tampilan dan form admin ini.

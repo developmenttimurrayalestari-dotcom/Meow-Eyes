@@ -1,15 +1,10 @@
 """Small, versioned homepage card collection, independent of catalog taxonomy."""
-from copy import deepcopy
 from typing import Literal
 from urllib.parse import urlsplit
-from uuid import uuid4
 
-from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from sqlalchemy.exc import IntegrityError
 
-from database import session_scope
-from mysql import models as m
+from mysql.content_collections import ContentCollection
 
 KEY = 'homepage.category_cards'
 LIMIT = 50
@@ -56,43 +51,12 @@ class CardInput(BaseModel):
         return safe_url(value) if value else value
 
 
-def collection(row):
-    value = deepcopy(row.value) if row else {'version': 0, 'items': deepcopy(DEFAULTS)}
-    value['items'].sort(key=lambda item: (item['sort_order'], item['id']))
-    return value
+STORE = ContentCollection(KEY, DEFAULTS, 'Kategori pilihan', LIMIT)
 
 
 async def cards(session, public=False):
-    value = collection(await session.get(m.Setting, KEY))
-    if public:
-        return [item for item in value['items'] if item['is_active']]
-    return value
+    return await STORE.read(session, public=public)
 
 
 async def mutate(user_id, version, *, card_id=None, body=None, remove=False):
-    try:
-        async with session_scope() as session:
-            row = await session.get(m.Setting, KEY, with_for_update=True)
-            value = collection(row)
-            if value['version'] != version:
-                raise HTTPException(409, 'Kategori pilihan sudah diubah. Tutup form dan muat ulang sebelum menyimpan.')
-            existing = next((item for item in value['items'] if item['id'] == card_id), None) if card_id else None
-            if card_id and existing is None:
-                raise HTTPException(404, 'Card kategori pilihan tidak ditemukan')
-            if remove:
-                value['items'] = [item for item in value['items'] if item['id'] != card_id]
-            else:
-                if not card_id and len(value['items']) >= LIMIT:
-                    raise HTTPException(422, 'Maksimal 50 card kategori pilihan. Hapus card yang tidak digunakan terlebih dahulu.')
-                item = {'id': card_id or uuid4().hex, **body.model_dump(exclude={'version'})}
-                value['items'] = [item if old['id'] == card_id else old for old in value['items']] if card_id else [*value['items'], item]
-            value['version'] += 1
-            value['items'].sort(key=lambda item: (item['sort_order'], item['id']))
-            if row is None:
-                row = m.Setting(key=KEY, is_public=False)
-                session.add(row)
-            row.value, row.updated_by, row.is_public = value, user_id, False
-            await session.flush()
-        return value
-    except IntegrityError:
-        raise HTTPException(409, 'Kategori pilihan sudah diubah. Muat ulang lalu coba lagi.') from None
+    return await STORE.mutate(user_id, version, item_id=card_id, body=body, remove=remove)

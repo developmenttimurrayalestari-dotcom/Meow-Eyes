@@ -18,6 +18,13 @@ from mysql.features import active_flash_conditions
 router = APIRouter(tags=["content"])
 
 
+@router.get('/menus')
+async def public_menus():
+    from mysql.navigation import STORE
+    async with read_session() as session:
+        return {'items': await STORE.read(session, public=True)}
+
+
 @router.get("/articles")
 async def list_articles(q: Optional[str] = None, category_slug: Optional[str] = None,
                        page: int = Query(1, ge=1), limit: int = Query(12, ge=1, le=100)):

@@ -23,6 +23,7 @@ from mysql.catalog import (apply_fields, article_dict, articles_dict, banner_dic
 from mysql.features import normalize_whatsapp_phone
 from mysql.lenses import indexes_payload, replace_index_types
 from mysql.home_categories import CardInput, cards as home_cards, mutate as mutate_home_card
+from mysql.navigation import MenuInput, STORE as MENU_STORE
 
 router = APIRouter(prefix="/admin", tags=["admin-content"])
 
@@ -54,6 +55,27 @@ def _subset(payload, allowed):
 async def home_categories_list(admin: User = Depends(require_permission('setting.view'))):
     async with read_session() as session:
         return await home_cards(session)
+
+
+@router.get('/menus')
+async def menus_list(admin: User = Depends(require_permission('setting.view'))):
+    async with read_session() as session:
+        return await MENU_STORE.read(session)
+
+
+@router.post('/menus')
+async def menu_create(body: MenuInput, admin: User = Depends(require_permission('setting.update'))):
+    return await MENU_STORE.mutate(admin.user_id, body.version, body=body)
+
+
+@router.put('/menus/{menu_id}')
+async def menu_update(menu_id: str, body: MenuInput, admin: User = Depends(require_permission('setting.update'))):
+    return await MENU_STORE.mutate(admin.user_id, body.version, item_id=menu_id, body=body)
+
+
+@router.delete('/menus/{menu_id}')
+async def menu_delete(menu_id: str, version: int = Query(ge=0), admin: User = Depends(require_permission('setting.update'))):
+    return await MENU_STORE.mutate(admin.user_id, version, item_id=menu_id, remove=True)
 
 
 @router.post('/home-categories')

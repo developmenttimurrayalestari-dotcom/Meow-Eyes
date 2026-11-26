@@ -1,6 +1,6 @@
 import FormField from "../FormField";
 import React, { useState } from "react";
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Search, ShoppingCart, Heart, User, Cat, Menu as MenuIcon,
   Home, Sparkles, Gamepad2, X, LogOut, Coins, Bell, Tag } from
@@ -15,11 +15,13 @@ import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
 import FooterPages from "./FooterPages";
 import { TranslationButtons } from '../ConveyThisTranslation';
 import PromoPopup from '../PromoPopup';
+import StorefrontMenus, { useStorefrontMenus } from '../StorefrontMenus';
 
 const MainLayout = ({ children }) => {
 
   const { user, logout, cartCount } = useAuth();
   const navigate = useNavigate();
+  const menus = useStorefrontMenus();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQ, setSearchQ] = useState("");
 
@@ -171,36 +173,8 @@ const MainLayout = ({ children }) => {
           </form>
         }
 
-        {/* Category nav */}
         <div className="border-t border-meow-midnight/5 overflow-x-auto no-scrollbar">
-          <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 flex items-center gap-5 h-11 text-sm whitespace-nowrap min-w-max">
-            <NavLink to="/" end className={({ isActive }) => `font-semibold ${isActive ? "text-meow-salmon" : "text-meow-midnight"}`} data-testid="nav-home">{"Beranda"}
-
-            </NavLink>
-            <NavLink to="/shop-now" className={({ isActive }) => `font-semibold ${isActive ? "text-meow-salmon" : "text-meow-midnight"}`} data-testid="nav-shop-now">{"Shop Now"}
-
-            </NavLink>
-            <NavLink to="/new-arrival" className={({ isActive }) => `font-semibold ${isActive ? "text-meow-salmon" : "text-meow-midnight"}`} data-testid="nav-new-arrival">{"New Arrival"}
-
-            </NavLink>
-            <a href="/meowsurement/" className="font-semibold text-meow-midnight" data-testid="nav-meowsurement">{"Meowsurement"}</a>
-            <NavLink to="/virtual-try-on" className="font-semibold text-meow-midnight hover:text-meow-salmon" data-testid="nav-virtual-try-on">{"Virtual Try-On"}</NavLink>
-            <NavLink to="/our-product" className={({ isActive }) => `font-semibold ${isActive ? "text-meow-salmon" : "text-meow-midnight"}`} data-testid="nav-our-product">{"Our Product"}
-
-            </NavLink>
-            <NavLink to="/articles" className={({ isActive }) => `font-semibold ${isActive ? "text-meow-salmon" : "text-meow-midnight"}`} data-testid="nav-articles">{"Article"}
-
-            </NavLink>
-            <NavLink to="/flash-sale" className="font-semibold text-meow-salmon" data-testid="nav-flashsale">{"⚡ Flash Sale"}
-
-            </NavLink>
-            <NavLink to="/games" className="font-semibold text-meow-midnight hover:text-meow-amber" data-testid="nav-games">{"🎮 Games"}
-
-            </NavLink>
-            <NavLink to="/contact" className={({ isActive }) => `font-semibold ml-auto ${isActive ? "text-meow-salmon" : "text-meow-midnight"}`} data-testid="nav-contact">{"Contact"}
-
-            </NavLink>
-          </div>
+          <StorefrontMenus items={menus} location="header" user={user} />
         </div>
       </header>
 
@@ -229,18 +203,7 @@ const MainLayout = ({ children }) => {
           </div>
           <div>
             <p className="font-bold mb-3 text-meow-amber">{"Eksplorasi"}</p>
-            <ul className="space-y-2 text-white/70">
-              <li><Link to="/shop-now">{"Shop Now"}</Link></li>
-              <li><Link to="/new-arrival">{"New Arrival"}</Link></li>
-              <li><a href="/meowsurement/">{"Meowsurement"}</a></li>
-              <li><Link to="/new-arrival?product_type=frame">{"Frame New Arrival"}</Link></li>
-              <li><Link to="/flash-sale">{"Flash Sale"}</Link></li>
-              <li><Link to="/our-product">{"Our Product"}</Link></li>
-              <li><Link to="/articles">{"Article"}</Link></li>
-              <li><Link to="/games">{"Mini Games"}</Link></li>
-              <li><Link to="/virtual-try-on">{"Virtual Try-On"}</Link></li>
-              <li><Link to="/roulette">{"Roulette Reward"}</Link></li>
-            </ul>
+            <ul className="space-y-2 text-white/70"><StorefrontMenus items={menus} location="footer" user={user} /></ul>
           </div>
         </div>
         <div className="max-w-7xl mx-auto px-4 mt-12 text-center text-xs text-white/50">{"© 2026 Meow Eyes — Crafted with 🐾 for cat-eyed humans."}
@@ -248,29 +211,9 @@ const MainLayout = ({ children }) => {
         </div>
       </footer>
 
-      {/* Bottom nav mobile */}
-      <nav className="md:hidden fixed bottom-4 left-4 right-4 bg-meow-midnight/90 backdrop-blur-xl rounded-full flex justify-between items-center px-6 py-3 shadow-2xl z-50 text-white" data-testid="bottom-nav">
-        <BottomItem to="/" icon={<Home className="h-5 w-5" />} label={"Home"} testid="bn-home" />
-        <BottomItem to="/shop-now" icon={<Sparkles className="h-5 w-5" />} label={"Shop"} testid="bn-shop" />
-        <BottomItem to="/games" icon={<Gamepad2 className="h-5 w-5" />} label={"Games"} testid="bn-games" />
-        <BottomItem to="/cart" icon={<ShoppingCart className="h-5 w-5" />} label={"Cart"} testid="bn-cart" badge={cartCount} />
-        <BottomItem to={user ? "/profile" : "/login"} icon={<User className="h-5 w-5" />} label={user ? "Profil" : "Masuk"} testid="bn-profile" />
-      </nav>
+      <StorefrontMenus items={menus} location="mobile" user={user} cartCount={cartCount} />
     </div>);
 
 };
-
-const BottomItem = ({ to, icon, label, testid, badge }) => {
-  return (
-    <NavLink to={to} className={({ isActive }) => `relative flex flex-col items-center text-[10px] gap-1 ${isActive ? "text-meow-amber" : "text-white/80"}`} data-testid={testid}>
-    {icon}
-    <span>{label}</span>
-    {badge > 0 &&
-      <span className="absolute -top-1 -right-2 bg-meow-salmon text-white text-[9px] font-bold rounded-full h-4 w-4 grid place-items-center">
-        {badge}
-      </span>
-      }
-  </NavLink>);};
-
 
 export default MainLayout;

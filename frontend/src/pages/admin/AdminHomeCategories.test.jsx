@@ -18,10 +18,11 @@ test('creates a managed card with uploaded background, destination, order and ac
   await act(async()=>host.querySelector('[data-testid="add-home-category"]').click());
   const f=form();
   await change(labelInput(f,'Judul card'),'Card Baru');
+  await change(f.querySelector('[data-testid="home-category-url"]'),'/flash-sale');
   await change(f.querySelector('[data-testid="upload-background"]'),'/api/uploads-files/new.webp');
   api.post.mockResolvedValue({data:{version:1,items:[item,{...item,id:'new',title:'Card Baru',background_image:'/api/uploads-files/new.webp'}]}});
   await act(async()=>f.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
-  expect(api.post).toHaveBeenCalledWith('/admin/home-categories',expect.objectContaining({version:0,title:'Card Baru',sort_order:1,background_image:'/api/uploads-files/new.webp',is_active:true}));
+  expect(api.post).toHaveBeenCalledWith('/admin/home-categories',expect.objectContaining({version:0,title:'Card Baru',link_url:'/flash-sale',sort_order:1,background_image:'/api/uploads-files/new.webp',is_active:true}));
   expect(form()).toBeNull();expect(host.textContent).toContain('Card Baru');
 });
 

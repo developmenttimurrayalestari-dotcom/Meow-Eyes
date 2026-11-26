@@ -56,7 +56,7 @@ export default function AdminHomeCategories() {
       {!items.length && <p className="rounded-2xl bg-white p-6 text-sm">Belum ada card. Klik Tambah Card untuk menampilkan kategori pilihan di beranda.</p>}
       <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">{items.map(item => <div key={item.id} className="rounded-3xl border bg-white p-3 space-y-3" data-testid={`admin-home-category-${item.id}`}>
         <HomeCategoryCard item={item} preview />
-        <p className="text-xs text-meow-gray">Urutan {item.sort_order} · {item.is_active ? 'Aktif' : 'Nonaktif'}</p><p className="text-xs break-all">Tujuan: {item.link_url}</p>
+        <p className="text-xs text-meow-gray">Urutan {item.sort_order} · {item.is_active ? 'Aktif' : 'Nonaktif'}</p><p className="text-xs break-all">URL tujuan: {item.link_url}</p><a href={item.link_url} target="_blank" rel="noopener noreferrer" className="text-xs underline">Uji URL tujuan</a>
         {canEdit && <div className="flex gap-4"><button type="button" disabled={saving} onClick={() => edit(item)} className="text-sm font-bold text-meow-salmon" aria-label={`Edit card ${item.title}`}>Edit</button><button type="button" disabled={saving} onClick={() => remove(item)} className="text-sm font-bold text-red-600" aria-label={`Hapus card ${item.title}`}>Hapus</button></div>}
       </div>)}</div></>}
     <Dialog open={!!editing} onOpenChange={open => { if (!open && !saving) setEditing(null); }}>
@@ -67,7 +67,7 @@ export default function AdminHomeCategories() {
           <fieldset disabled={saving} className="space-y-4">
             <FormField label="Judul card"><input required maxLength={100} value={editing.title} onChange={event => set('title', event.target.value)} className={control} /></FormField>
             <FormField label="Keterangan singkat (opsional)" hint="Teks singkat di bawah judul, maksimal 180 karakter."><textarea rows={2} maxLength={180} value={editing.description} onChange={event => set('description', event.target.value)} className={control} /></FormField>
-            <FormField label="Tautan tujuan" hint="Contoh: /shop-now?product_type=frame, /category/nama-kategori, atau URL https://…"><input required maxLength={2048} value={editing.link_url} onChange={event => set('link_url', event.target.value)} className={control} /></FormField>
+            <FormField label="URL tujuan card" hint="Klik card di beranda akan membuka URL ini. Gunakan path seperti /shop-now?product_type=frame, /category/nama-kategori, atau URL lengkap https://…"><input required maxLength={2048} data-testid="home-category-url" value={editing.link_url} onChange={event => set('link_url', event.target.value)} className={control} /></FormField>
             <ImagePicker label="Gambar latar card (opsional)" value={editing.background_image} onChange={url => set('background_image', url)} testId="home-category-image" />
             <p className="text-xs text-meow-gray">Unggah atau pilih gambar dari galeri. Gambar akan mengisi card dan dapat terpotong mengikuti layar. Lapisan gelap menjaga tulisan tetap terbaca. Tanpa gambar, card memakai warna tema.</p>
             <div className="grid sm:grid-cols-2 gap-3"><FormField label="Ikon"><select value={editing.icon} onChange={event => set('icon', event.target.value)} className={control}>{[['frame','Kacamata'],['lens','Lensa'],['package','Paket'],['sparkles','Bintang'],['tag','Label promo']].map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></FormField>
