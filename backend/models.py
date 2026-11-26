@@ -714,7 +714,7 @@ class BannerV2(BaseModel):
     link_type: Literal["internal", "product", "category", "shop_now", "flash_sale", "article", "external", "none"] = "internal"
     link_url: str = "/"
     reference_id: Optional[str] = None
-    position: str = "hero"  # hero, promo, shop_now, article, footer
+    position: str = "hero"  # hero, promo, shop_now, article, footer, popup
     target_device: Literal["desktop", "mobile", "all"] = "all"
     alt_text: Optional[str] = None
     sort_order: int = 0

@@ -3,7 +3,8 @@ import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, apiError, imageSrc } from "../lib/api";
 import ProductCard from "../components/ProductCard";
-import { Sparkles, Cat, Zap, Gift, Mail, ChevronRight, ChevronLeft, Glasses, Layers, Package2, Pause, Play } from "lucide-react";
+import HomeCategoryCard from '../components/HomeCategoryCard';
+import { Sparkles, Cat, Zap, Gift, Mail, ChevronRight, ChevronLeft, Pause, Play } from "lucide-react";
 import { toast } from "sonner";
 
 const Section = ({ title, subtitle, action, children, testid }) => {
@@ -231,22 +232,11 @@ const HomePage = () => {
       </section>
 
       {/* Category tiles */}
-      <Section title={"Kategori Pilihan"} subtitle={"Jenis Produk"} testid="category-tiles-section">
+      {data.home_categories?.length > 0 && <Section title={"Kategori Pilihan"} subtitle={"Jenis Produk"} testid="category-tiles-section">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-          {[
-          { slug: "frame", title: "Frame", desc: "Stylish & premium", icon: Glasses, bg: "bg-meow-salmon/15", color: "text-meow-salmon" },
-          { slug: "lensa", title: "Lensa", desc: "Blue Cut, Photochromic", icon: Layers, bg: "bg-meow-amber/15", color: "text-meow-amber" },
-          { slug: "paket-frame-lensa", title: "Paket Hemat", desc: "Frame + Lensa", icon: Package2, bg: "bg-meow-mint/15", color: "text-meow-mint" },
-          { slug: "leinz", title: "Leinz Series", desc: "Best of 2026", icon: Sparkles, bg: "bg-meow-midnight/10", color: "text-meow-midnight" }].
-          map((c) =>
-          <Link key={c.slug} to={`/category/${c.slug}`} className={`${c.bg} meow-card p-6 hover:scale-[1.02] transition`} data-testid={`category-tile-${c.slug}`}>
-              <c.icon className={`h-8 w-8 ${c.color}`} />
-              <p className="font-heading font-extrabold text-xl mt-3">{c?.["title"]}</p>
-              <p className="text-xs text-meow-gray mt-1">{c?.["desc"]}</p>
-            </Link>
-          )}
+          {data.home_categories.map(item => <HomeCategoryCard key={item.id} item={item} />)}
         </div>
-      </Section>
+      </Section>}
 
       {/* Flash sale products */}
       {flashSales.length > 0 && flashSales[0].items?.length > 0 &&

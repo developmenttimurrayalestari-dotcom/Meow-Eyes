@@ -1024,3 +1024,96 @@ Pemasangan: jalankan `npm ci` di frontend, build/deploy frontend, dan restart
 backend untuk memuat endpoint baru. Tidak ada migrasi database atau kredensial
 peta baru yang wajib diisi. Pengaturan ini tidak mengubah sumber data wilayah
 dan bearer token EVERPRO.
+
+### Popup banner promo saat kunjungan pertama
+
+Kelola melalui **Admin → Banner** (`/admin/banners`), lalu klik **Popup Promo
+Baru**, atau pilih **Lokasi banner: Popup Promo** pada banner yang diedit.
+
+1. Isi judul dan unggah/pilih gambar desktop yang wajib diisi. Gambar mobile
+   opsional; bila tidak ada atau gagal dimuat, gambar desktop dipakai.
+2. Pilih perangkat tujuan: semua perangkat, desktop, atau mobile. Batas mobile
+   mengikuti lebar layar maksimal 767 px pada awal permintaan banner.
+3. Pilih jenis tautan dan URL tujuan, atau None untuk gambar tanpa tautan.
+   Tautan internal membuka halaman website; URL HTTP/HTTPS eksternal dibuka di
+   tab baru. Klik tautan menutup popup.
+4. Atur mulai/selesai tayang bila perlu, urutan tampilan, lalu centang Aktif dan
+   simpan. Waktu input mengikuti perangkat admin dan dikonversi ke UTC seperti
+   banner lain. Jika beberapa popup memenuhi periode/perangkat, urutan terkecil
+   diprioritaskan, kemudian ID untuk urutan yang konsisten.
+
+Popup tampil sekali per sesi tab browser pada halaman pelanggan, termasuk
+pengunjung yang belum login. Refresh dan perpindahan halaman tidak memunculkan
+popup lagi dalam sesi yang sama. Banner baru yang diaktifkan admin juga tidak
+memunculkan popup kedua pada sesi yang sudah melihatnya. Halaman admin,
+login/registrasi, setup akun, profil/alamat/poin, pesanan, checkout, dan pembayaran
+tidak menampilkan atau meminta data popup; kunjungan awal ke halaman itu dapat
+melihat popup ketika kemudian membuka halaman pelanggan yang sesuai.
+
+Gambar tampil utuh dengan ukuran mengikuti layar; pelanggan dapat menutupnya
+melalui tombol X, Escape, atau klik area luar. Fokus keyboard berada di tombol
+tutup saat popup terbuka. Gambar dimuat terlebih dahulu supaya popup kosong
+tidak tampil. Gambar gagal dimuat dilanjutkan ke kandidat berikutnya; kegagalan
+API tidak menghambat website. Penanda sesi baru disimpan setelah gambar siap
+ditampilkan, menggunakan `sessionStorage` key `meow_promo_popup_seen_v1`.
+Jika storage browser diblokir, penanda di memori tetap mencegah pengulangan
+selama aplikasi terbuka, tetapi refresh dapat menghapus fallback tersebut.
+
+Untuk menguji ulang, gunakan sesi browser privat baru, atau hapus hanya key
+`meow_promo_popup_seen_v1` pada Session Storage melalui DevTools lalu refresh.
+Jangan menghapus seluruh storage akun. Beberapa browser menyalin Session Storage
+saat menggandakan tab atau memulihkan sesi, sehingga tab tersebut bisa tetap
+dianggap sudah melihat promo.
+
+Fitur memakai tabel `banners` yang sudah ada, `position=popup`, endpoint admin
+banner yang sudah memiliki permission, dan `GET /api/banners?position=popup&device=...`
+yang memfilter status/periode/perangkat di backend. Popup terpisah dari hero
+slider dan daftar banner pada API homepage. Tidak perlu migrasi database,
+layanan berbayar, API key, atau dependency baru. Deploy kode backend dan build
+frontend seperti biasa, lalu restart backend untuk memuat validasi banner baru.
+Banner promo tidak dibuat/diaktifkan otomatis; admin mengunggah materi promonya.
+
+### CRUD Kategori Pilihan Beranda dan gambar latar card
+
+Buka **Admin → Konten CMS → Kategori Pilihan Beranda**
+(`/admin/home-categories`). Menu ini mengelola card pada bagian Kategori Pilihan
+di beranda. Empat card awal mengikuti konfigurasi lama: Frame, Lensa, Paket
+Hemat, dan Leinz Series. Semua dapat diedit atau dihapus melalui halaman ini.
+
+- **Tambah Card**: isi judul, keterangan singkat bila perlu, dan tautan tujuan.
+  Tautan dapat berupa path internal seperti `/shop-now?product_type=frame`,
+  `/category/nama-kategori`, atau URL HTTP/HTTPS eksternal. Pastikan tautan
+  kategori/brand sesuai data katalog toko. URL eksternal dibuka di tab baru.
+- **Gambar latar**: unggah dari komputer atau pilih dari galeri melalui picker
+  gambar yang sudah digunakan di admin. Gambar bersifat opsional dan mengisi
+  card dengan `object-fit: cover`, sehingga tepinya dapat terpotong mengikuti
+  ukuran layar. Lapisan gelap membantu keterbacaan judul/keterangan. Bila tidak
+  diisi atau gambar gagal dimuat, card menggunakan warna tema dan ikon.
+- **Ikon, warna tema, urutan, status**: pilih ikon dan tema, isi urutan 0–9999,
+  lalu centang Tampilkan card di beranda. Card aktif ditampilkan menurut urutan
+  terkecil, dengan ID sebagai pembanding bila urutannya sama. Maksimal 50 card.
+- **Edit/Hapus** tersedia per card. Hapus meminta konfirmasi. Penghapusan card
+  hanya menghapus konfigurasi card beranda, bukan master kategori atau produk
+  yang dituju. Jika seluruh card dihapus/dinonaktifkan, bagian Kategori Pilihan
+  disembunyikan dan card awal tidak dimunculkan ulang.
+
+Pratinjau di form dan daftar admin memakai komponen card yang sama dengan
+beranda. Perubahan muncul pada kunjungan/muat ulang beranda berikutnya. Staff
+memerlukan permission `setting.view` untuk melihat dan `setting.update` untuk
+menambah/mengubah/menghapus. Admin/superadmin memakai aturan akses yang sudah ada.
+
+Data disimpan sebagai koleksi kecil ber-versi pada setting privat
+`homepage.category_cards` menggunakan tabel `settings` yang sudah ada. Read
+awal menyediakan empat card default; perubahan pertama menyimpan koleksi itu
+beserta hasil edit. Snapshot versi dicek saat mutasi untuk mencegah formulir
+lama menimpa konfigurasi yang sudah disimpan admin lain. Bila terjadi konflik,
+tutup form dan muat ulang sebelum mengedit lagi.
+
+Endpoint admin: `GET/POST /api/admin/home-categories`,
+`PUT /api/admin/home-categories/{id}`, dan
+`DELETE /api/admin/home-categories/{id}?version=...`. Field publik
+`home_categories` pada `GET /api/homepage` hanya berisi card aktif, tanpa versi
+setting privat. Judul, panjang teks, ikon, tema, urutan, dan URL divalidasi oleh
+backend. Deploy backend terlebih dahulu, restart backend untuk memuat endpoint
+baru, kemudian build/deploy frontend. Tidak perlu migrasi database atau
+dependency baru.

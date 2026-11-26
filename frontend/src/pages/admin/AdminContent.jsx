@@ -252,6 +252,7 @@ export const AdminBannersV2 = () => {
     e.preventDefault();
     setSaving(true);
     try {
+      if (!editing.title?.trim() || !editing.image_desktop?.trim()) { toast.error('Isi judul dan gambar desktop banner terlebih dahulu.'); return; }
       if (editing.id) await api.put(`/admin/banners-v2/${editing.id}`, editing);
       else await api.post("/admin/banners-v2", editing);
       toast.success("Banner tersimpan"); setEditing(null); await load();
@@ -260,16 +261,18 @@ export const AdminBannersV2 = () => {
   };
   return (
     <div data-testid="admin-banners">
-      <div className="flex justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <h1 className="font-heading text-3xl font-black">Banner Management</h1>
+        <button type="button" onClick={() => setEditing({ title: '', image_desktop: '', link_type: 'none', link_url: '/', position: 'popup', target_device: 'all', sort_order: 0, is_active: true })} className="btn-secondary text-sm" data-testid="add-popup-banner-btn"><Plus className="inline h-4 w-4 mr-1" /> Popup Promo Baru</button>
         <button onClick={() => setEditing({ title: "", image_desktop: "", link_type: "internal", link_url: "/", position: "hero", target_device: "all", sort_order: 0, is_active: true })} className="btn-primary text-sm" data-testid="add-banner-btn"><Plus className="inline h-4 w-4 mr-1" /> Banner Baru</button>
       </div>
+      <p className="text-sm text-meow-gray mb-4">Pilih lokasi Popup Promo untuk menampilkan gambar promosi sekali per sesi tab browser saat pelanggan membuka website. Gambar dapat diberi tautan dan periode tayang. Popup tidak muncul di admin, checkout, pembayaran, dan halaman akun.</p>
       <div className="grid md:grid-cols-2 gap-4">
         {items.map((b) => (
           <div key={b.id} className="bg-white rounded-3xl border border-zinc-200 p-4" data-testid={`banner-${b.id}`}>
             <img src={resolveImageUrl(b.image_desktop)} alt="" className="aspect-video object-cover rounded-2xl w-full" />
             <p className="font-bold mt-2">{b.title}</p>
-            <p className="text-xs text-meow-gray">Urutan {b.sort_order} · {b.position} · {b.link_url || "Tanpa tautan"} · {b.is_active ? "Aktif" : "Off"}</p>
+            <p className="text-xs text-meow-gray">Urutan {b.sort_order} · {b.position === 'popup' ? 'Popup Promo' : b.position} · {b.link_type === 'none' ? 'Tanpa tautan' : b.link_url || "Tanpa tautan"} · {b.is_active ? "Aktif" : "Off"}</p>
             <div className="flex gap-2 mt-2">
               <button onClick={() => setEditing({ ...b })} className="text-xs text-meow-amber font-bold">Edit</button>
               <button onClick={async () => { await api.delete(`/admin/banners-v2/${b.id}`); load(); }} className="text-xs text-red-500 font-bold" data-testid={`del-banner-${b.id}`}>Hapus</button>
@@ -298,12 +301,13 @@ export const AdminBannersV2 = () => {
               <FormField label="Lokasi banner"><select value={editing.position} onChange={(e) => setEditing({ ...editing, position: e.target.value })} className="px-3 py-2 rounded-xl bg-meow-bg outline-none">
                 <option value="hero">Hero</option><option value="promo">Promo</option>
                 <option value="shop_now">Shop Now</option><option value="article">Article</option>
-                <option value="footer">Footer</option>
+                <option value="footer">Footer</option><option value="popup">Popup Promo</option>
               </select></FormField>
               <FormField label="Perangkat tujuan"><select value={editing.target_device} onChange={(e) => setEditing({ ...editing, target_device: e.target.value })} className="px-3 py-2 rounded-xl bg-meow-bg outline-none">
                 <option value="all">All Device</option><option value="desktop">Desktop</option><option value="mobile">Mobile</option>
               </select></FormField>
             </div>
+            {editing.position === 'popup' && <p className="text-xs text-meow-gray rounded-xl bg-amber-50 p-3">Satu popup ditampilkan per sesi tab browser, termasuk setelah refresh/pindah halaman. Jika ada beberapa promo aktif, urutan terkecil diprioritaskan. Gambar tampil utuh tanpa dipotong; gunakan gambar mobile agar tulisan mudah dibaca. Kunjungan yang sudah melihat popup akan melihat promo lagi pada sesi tab berikutnya.</p>}
             <div className="grid grid-cols-2 gap-2">
               <FormField label="Jenis tautan"><select value={editing.link_type} onChange={(e) => setEditing({ ...editing, link_type: e.target.value })} className="px-3 py-2 rounded-xl bg-meow-bg outline-none">
                 <option value="internal">Internal</option><option value="external">External</option>

@@ -4,7 +4,7 @@ import json
 from decimal import Decimal, InvalidOperation
 from io import BytesIO
 from typing import Any, Dict, Optional
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
 from fastapi.responses import StreamingResponse
 from openpyxl import Workbook, load_workbook
 from sqlalchemy import delete, func, or_, select
@@ -22,6 +22,7 @@ from mysql.catalog import (apply_fields, article_dict, articles_dict, banner_dic
     reviews_dict, safe_values, slugify, strings, unique_slug, validate_payload, write_product)
 from mysql.features import normalize_whatsapp_phone
 from mysql.lenses import indexes_payload, replace_index_types
+from mysql.home_categories import CardInput, cards as home_cards, mutate as mutate_home_card
 
 router = APIRouter(prefix="/admin", tags=["admin-content"])
 
@@ -47,6 +48,27 @@ async def _delete_record(model, key):
 
 def _subset(payload, allowed):
     return {key: value for key, value in payload.items() if key in allowed}
+
+
+@router.get('/home-categories')
+async def home_categories_list(admin: User = Depends(require_permission('setting.view'))):
+    async with read_session() as session:
+        return await home_cards(session)
+
+
+@router.post('/home-categories')
+async def home_category_create(body: CardInput, admin: User = Depends(require_permission('setting.update'))):
+    return await mutate_home_card(admin.user_id, body.version, body=body)
+
+
+@router.put('/home-categories/{card_id}')
+async def home_category_update(card_id: str, body: CardInput, admin: User = Depends(require_permission('setting.update'))):
+    return await mutate_home_card(admin.user_id, body.version, card_id=card_id, body=body)
+
+
+@router.delete('/home-categories/{card_id}')
+async def home_category_delete(card_id: str, version: int = Query(ge=0), admin: User = Depends(require_permission('setting.update'))):
+    return await mutate_home_card(admin.user_id, version, card_id=card_id, remove=True)
 
 
 @router.get("/article-categories")

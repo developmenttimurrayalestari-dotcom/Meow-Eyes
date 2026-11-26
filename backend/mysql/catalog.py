@@ -345,6 +345,8 @@ def banner_values(payload: dict) -> dict:
         values["image_desktop"] = values["image"]
     if "link" in values and "link_url" not in values:
         values["link_url"] = values["link"]
+    if values.get('position') == 'popup' and (not str(values.get('title') or '').strip() or not str(values.get('image_desktop') or '').strip()):
+        raise HTTPException(422, 'Judul dan gambar desktop wajib diisi untuk Popup Promo')
     if "link_url" in values:
         url = values["link_url"] or "/"
         if not isinstance(url, str) or len(url) > 2048:

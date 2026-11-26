@@ -202,6 +202,7 @@ async def active_flash_sales():
 
 @router.get("/homepage")
 async def homepage():
+    from mysql.home_categories import cards as home_cards
     async with read_session() as s:
         base = select(m.Product).where(m.Product.is_active.is_(True))
         best = (await s.scalars(base.order_by(m.Product.sold_count.desc(), m.Product.id).limit(8))).all()
@@ -213,7 +214,7 @@ async def homepage():
         brands = (await s.scalars(select(m.Brand).where(m.Brand.is_active.is_(True))
             .order_by(m.Brand.name, m.Brand.id).limit(8))).all()
         now = utcnow()
-        banners = (await s.scalars(select(m.Banner).where(m.Banner.is_active.is_(True),
+        banners = (await s.scalars(select(m.Banner).where(m.Banner.is_active.is_(True), m.Banner.position != 'popup',
             or_(m.Banner.start_at.is_(None), m.Banner.start_at <= now),
             or_(m.Banner.end_at.is_(None), m.Banner.end_at > now))
             .order_by(m.Banner.sort_order, m.Banner.id).limit(10))).all()
@@ -222,5 +223,6 @@ async def homepage():
             "newest": [_to_card(p) for p in await public_products(s, newest)],
             "discounted": [_to_card(p) for p in await public_products(s, discounted)],
             "categories": [row_dict(c) for c in categories],
+            "home_categories": await home_cards(s, public=True),
             "brands": [row_dict(b) for b in brands], "banners": [banner_dict(b) for b in banners],
         }

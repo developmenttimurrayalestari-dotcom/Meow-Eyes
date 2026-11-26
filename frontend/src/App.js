@@ -43,6 +43,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminProducts from "./pages/admin/AdminProducts";
 import AdminMeowsurement from "./pages/admin/AdminMeowsurement";
 import AdminCategories from "./pages/admin/AdminCategories";
+import AdminHomeCategories from './pages/admin/AdminHomeCategories';
 import AdminOrders from "./pages/admin/AdminOrders";
 import AdminInventory from "./pages/admin/AdminInventory";
 import { AdminVouchers, AdminFlashSales } from "./pages/admin/AdminPromos";
@@ -104,6 +105,7 @@ function AppRouter() {
         <Route path="/admin/knowledge" element={<AdminKnowledge />} />
         <Route path="/admin/reviews" element={<AdminReviewsMod />} />
         <Route path="/admin/banners" element={<AdminBannersV2 />} />
+        <Route path="/admin/home-categories" element={<AdminHomeCategories />} />
         <Route path="/admin/faqs" element={<AdminFAQs />} />
         <Route path="/admin/pages" element={<AdminPages />} />
         <Route path="/admin/contact-setting" element={<AdminContactSetting />} />

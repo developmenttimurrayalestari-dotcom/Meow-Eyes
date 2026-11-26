@@ -14,6 +14,7 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
 import FooterPages from "./FooterPages";
 import { TranslationButtons } from '../ConveyThisTranslation';
+import PromoPopup from '../PromoPopup';
 
 const MainLayout = ({ children }) => {
 
@@ -29,6 +30,7 @@ const MainLayout = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-meow-bg flex flex-col" data-testid="main-layout">
+      <PromoPopup />
       <div className="flex justify-end px-4 md:px-8 py-1 bg-white border-b border-meow-midnight/5"><TranslationButtons /></div>
       {/* Marquee top bar */}
       <div className="bg-meow-midnight text-white text-xs overflow-hidden" data-testid="top-marquee">
