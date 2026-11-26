@@ -128,7 +128,7 @@ export const HeroSlider = ({ banners }) => {
       role="region" aria-label={"Banner promosi"} aria-roledescription="carousel"
       data-testid="hero-slider">
 
-      <div className="relative w-full overflow-hidden rounded-2xl md:rounded-[36px]">
+      <div className="relative w-full overflow-hidden rounded-2xl md:rounded-[36px]" style={{ boxShadow: '0 8px 20px rgba(255,107,107,0.3)' }}>
       {slides.map((s, i) =>
       <div
         key={s.id}
