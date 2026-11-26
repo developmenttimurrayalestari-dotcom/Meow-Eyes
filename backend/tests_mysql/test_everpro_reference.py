@@ -233,12 +233,19 @@ def test_checkout_quote_and_booking_use_shared_locations_and_token_end_to_end(ad
             return httpx.Response(200,json={'data':{'client_order_no':request.url.path.split('/')[-1],
                 'shipment_price':12000,'insurance_price':0,'tracking_code':'CREATED'}})
         payload=json.loads(request.content)
+        if request.url.path=='/location/v1/postalcode':
+            postal=payload['postal_code']
+            # Shared primary keys deliberately differ from provider IDs.
+            return httpx.Response(200,json={'data':[{
+                'province_name':'Alpha','city_name':'Same City','district_name':'Same District',
+                'sub_district_name':'North' if postal=='10001' else 'South',
+                'postal_code':postal,'sub_district_id':68371 if postal=='10001' else 9149}]})
         if request.url.path=='/shipment/v3/rates':
-            assert payload['origin']['id']==10 and payload['destination']['id']==11
+            assert payload['origin']['id']==68371 and payload['destination']['id']==9149
             return httpx.Response(200,json={'data':{'regular':[{'logistic_code':'JNE','rate_code':'REG',
                 'price':12000,'signed_key':'shared-rate-key'}]}})
         assert request.url.path=='/shipment/v3/orders'
-        assert payload['shipper']['id']==10 and payload['receiver']['id']==11
+        assert payload['shipper']['id']==68371 and payload['receiver']['id']==9149
         assert payload['signed_key']=='shared-rate-key'
         return httpx.Response(200,json={'client_order_no':payload['client_order_no'],'actual_price':12000})
     async def run():
@@ -257,5 +264,5 @@ def test_checkout_quote_and_booking_use_shared_locations_and_token_end_to_end(ad
             await service.apply_doku_event(payment_event(order),'shared-paid','shared-test-hash')
             await service.book_shipment(order['id'])
     asyncio.run(run())
-    assert calls[:2]==['/shipment/v3/rates','/shipment/v3/orders']
-    assert len(calls)==3 and calls[2].startswith('/shipment/v1/orders/')
+    assert calls[:4]==['/location/v1/postalcode','/location/v1/postalcode','/shipment/v3/rates','/shipment/v3/orders']
+    assert len(calls)==5 and calls[4].startswith('/shipment/v1/orders/')

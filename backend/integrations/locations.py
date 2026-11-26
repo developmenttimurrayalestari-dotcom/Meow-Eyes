@@ -61,9 +61,12 @@ async def canonical_shipping_location(address, client, *, require_id=False):
     row = matches[0]
     result = {local: row[remote] for local, remote in fields} | {'postal_code': str(row['postal_code'])}
     if require_id:
-        from integrations.everpro_v3 import location_id
+        from integrations.everpro_v3 import location_id, shipment_location_id
         identities = {location_id(match.get('sub_district_id')) for match in matches}
         if len(identities) != 1:
             raise HTTPException(422, 'Wilayah tujuan EVERPRO ambigu. Pilih ulang alamat tujuan.')
-        result['sub_district_id'] = identities.pop()
+        try:
+            result['sub_district_id'] = await shipment_location_id(client, row)
+        except ProviderError as error:
+            raise location_error(error) from None
     return result

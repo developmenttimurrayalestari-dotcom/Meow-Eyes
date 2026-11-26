@@ -82,6 +82,10 @@ def everpro_context(settings):
         context['account'] = hashlib.sha256(('shared-database:' + settings.reference_database).encode()).hexdigest()
     if settings.api_version == 3:
         context.update(api_version=3)
+        if settings.data_source == 'database':
+            # Invalidate quotes created before local IDs were translated to
+            # Everpro's namespace. Also block booking an old, incorrect route.
+            context['location_mapping'] = 'everpro-postal-v1'
         if settings.data_source == 'api': context['auth_path'] = settings.auth_path
     return context
 

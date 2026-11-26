@@ -114,6 +114,14 @@ class EverproClient:
             return await self.reference_store.locations(postal_code)
         return await self._location_request('POST', '/location/v1/postalcode', payload={'postal_code': postal_code})
 
+    async def shipment_locations(self, postal_code: str) -> dict:
+        """Resolve provider IDs; shared master primary keys are not Everpro IDs.
+
+        Address dropdowns still use the shared DB. Only shipment ID translation
+        needs this cached provider lookup, authenticated with the shared token.
+        """
+        return await self._location_request('POST', '/location/v1/postalcode', payload={'postal_code': postal_code})
+
     async def _location_request(self, method, path, *, payload=None, params=None):
         key = (path, tuple(sorted((payload or params or {}).items())))
         cached = self._locations_cache.get(key)

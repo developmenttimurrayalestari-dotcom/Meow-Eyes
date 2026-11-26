@@ -20,6 +20,30 @@ def location_id(value):
     return int(text)
 
 
+async def shipment_location_id(client, location):
+    """Translate a canonical shared-master row to the provider's own ID.
+
+    Never fall back to a local primary key if the provider lookup fails or
+    matches a different region. The same village name alone is insufficient.
+    """
+    if getattr(getattr(client, 'settings', None), 'data_source', 'api') != 'database':
+        return location_id(location.get('sub_district_id'))
+    normalize = lambda value: ' '.join(str(value or '').split()).casefold()
+    fields = ('province_name', 'city_name', 'district_name', 'sub_district_name', 'postal_code')
+    body = await client.shipment_locations(str(location.get('postal_code', '')))
+    rows = body.get('data')
+    if not isinstance(rows, list):
+        raise ProviderError('everpro', 'invalid_locations_response')
+    matches = [row for row in rows if isinstance(row, dict) and all(
+        normalize(location.get(field)) and normalize(row.get(field)) == normalize(location.get(field)) for field in fields)]
+    if not matches:
+        raise HTTPException(422, 'Wilayah pengiriman belum dapat dicocokkan dengan EVERPRO. Periksa alamat asal dan tujuan; hubungi toko jika wilayah sudah benar.')
+    identities = {location_id(row.get('sub_district_id')) for row in matches}
+    if len(identities) != 1:
+        raise HTTPException(422, 'Wilayah pengiriman EVERPRO ambigu; hubungi toko untuk memeriksa alamat.')
+    return identities.pop()
+
+
 async def origin_location(client, settings):
     normalize = lambda value: ' '.join(str(value or '').split()).casefold()
     body = await client.locations(settings.origin_postal_code)
@@ -34,7 +58,7 @@ async def origin_location(client, settings):
     ids = {location_id(row.get('sub_district_id')) for row in matches}
     if len(ids) != 1:
         raise HTTPException(422, 'Wilayah pengirim EVERPRO ambigu; hubungi toko untuk memperbaiki konfigurasi.')
-    return {'id': ids.pop()}
+    return {'id': await shipment_location_id(client, matches[0])}
 
 
 def rate_request(settings, origin, destination, *, weight, price, cod=False, coordinates=None):
