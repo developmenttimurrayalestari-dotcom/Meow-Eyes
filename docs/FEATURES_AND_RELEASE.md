@@ -872,11 +872,15 @@ Bahasa & Terjemahan di admin, endpoint localization, kamus UI, cache penerjemah
 internal, maupun pemanggilan Google Cloud Translation. Halaman sumber tetap
 Bahasa Indonesia. Penerjemahan customer memakai widget JavaScript ConveyThis.
 
-Tombol **Bahasa Indonesia** dan **English** tersedia pada header customer,
-halaman login/registrasi, header Meowsurement, serta panel bahasa Virtual
-Try-On mobile. Tombol English menunggu konfigurasi/widget yang valid dan baru
-menjadi aktif setelah ConveyThis mengonfirmasi pergantian bahasa. Saat layanan
-belum tersedia, halaman dan form tetap dapat digunakan dalam bahasa sumber.
+Kontrol bahasa memakai tab **Translate** yang menempel di kiri tengah layar.
+Pilihan bahasa ConveyThis hanya terlihat saat tab dibuka; tidak ada lagi widget
+mengambang di atas menu bawah mobile. Panel menggunakan kontrol native/branding
+ConveyThis yang sama, dipindahkan ke container lokal, sehingga penggantian bahasa
+tetap mengikuti SDK. Panel ditutup saat event pergantian bahasa berhasil diterima,
+melalui X/Escape/klik luar, atau ketika berpindah halaman. UI ini berlaku untuk
+halaman pelanggan, login, Meowsurement, dan Virtual Try-On; admin tetap dikecualikan.
+Tombol header lama tidak dimunculkan ulang. Tanpa key/widget valid, tab tidak
+ditampilkan; saat layanan belum siap, halaman sumber tetap dapat digunakan.
 
 #### Aktivasi
 
@@ -1202,5 +1206,27 @@ kedua file hasilnya, tes, dan build kembali.
 
 Deploy backend dan restart untuk memuat daftar izin ikon baru/filter banner,
 kemudian build/deploy frontend. Tidak perlu menjalankan migrasi database.
-Tombol translate yang sedang dinonaktifkan tetap tersembunyi; ekspor komponen
-kosong menjaga kompatibilitas import layout.
+Ekspor tombol translate inline tetap berupa komponen kosong untuk kompatibilitas.
+UI bahasa sekarang dikelola oleh tab Translate di kiri tengah layar.
+
+### Tab Translate menempel di kiri tengah
+
+`TranslationDock` menempatkan tab 40 px di kiri tengah viewport. Panel bahasa
+berada di sebelah kanannya dan menyesuaikan lebar layar, tanpa menggeser konten.
+Saat tertutup, panel disembunyikan secara visual dan dibuat `inert`/`aria-hidden`
+agar tidak menangkap sentuhan atau fokus. Ukurannya tetap tersedia bagi SDK
+yang menghitung dimensi widget saat inisialisasi. Panel memiliki scroll sendiri
+pada layar pendek. Di VTO mobile, lapisan dock berada di atas canvas kamera;
+tombol Bahasa pada toolbar membuka dock yang sama.
+
+SDK tetap dimuat sekali. Wrapper native `#conveythis-wrapper` dipindahkan ke
+`#meow-conveythis-widget` di panel, termasuk bila SDK membangun ulang widget.
+CSS lokal menonaktifkan posisi floating lamanya, tidak menghapus kontrol atau
+branding. Embed native yang sudah terpasang dapat dikenali tanpa menambah SDK
+kedua setelah kontrol bahasanya tersedia. Klik bahasa tetap diproses SDK dan
+status aktif menunggu event `conveythis-language-changed`.
+
+Header tidak lagi menyediakan bar bahasa kosong. Tidak perlu mengubah key,
+setting backend, atau database. Build/deploy frontend untuk menerapkan perubahan.
+Pengujian otomatis memakai fixture widget native; uji terjemahan langsung tetap
+memerlukan domain/key ConveyThis yang aktif.

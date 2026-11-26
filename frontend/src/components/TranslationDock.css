@@ -1,0 +1,75 @@
+.meow-translation-dock {
+  position: fixed;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #102138;
+  font: 500 13px/1.5 system-ui, sans-serif;
+}
+.meow-translation-dock[hidden] { display: none !important; }
+.meow-translation-dock[data-open="false"] .meow-translation-panel,
+.meow-translation-dock[data-open="false"] .meow-translation-panel * { visibility: hidden !important; }
+.meow-translation-dock[data-open="false"] .meow-translation-panel { pointer-events: none; }
+.meow-translation-handle {
+  width: 40px;
+  min-height: 114px;
+  padding: 10px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 0 14px 14px 0;
+  border: 1px solid #ffffff55;
+  border-left: 0;
+  background: #102138;
+  color: #fff;
+  box-shadow: 0 4px 18px #10213830;
+  cursor: pointer;
+}
+.meow-translation-handle span { writing-mode: vertical-rl; font-size: 12px; font-weight: 700; }
+.meow-translation-chevron-open { transform: rotate(180deg); }
+.meow-translation-handle:focus-visible, .meow-translation-heading button:focus-visible { outline: 3px solid #ff6b6b; outline-offset: 2px; }
+.meow-translation-panel {
+  position: absolute;
+  left: 48px;
+  top: 50%;
+  transform: translateY(-50%);
+  box-sizing: border-box;
+  width: min(320px, calc(100vw - 60px));
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  padding: 14px;
+  overflow: auto;
+  border: 1px solid #10213818;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 8px 28px #10213826;
+}
+.meow-translation-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.meow-translation-heading button { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: #f5f5f5; color: inherit; cursor: pointer; }
+.meow-translation-panel p { margin: 8px 0; font-size: 12px; }
+.meow-translation-native { width: 100%; min-width: 0; overflow-x: auto; }
+/* Suppress the old floating position, including widgets inserted/rebuilt by the SDK. */
+html.meow-conveythis-docked #conveythis-wrapper { visibility: hidden !important; pointer-events: none !important; }
+html.meow-conveythis-docked #meow-conveythis-widget #conveythis-wrapper {
+  display: block !important;
+  visibility: inherit !important;
+  pointer-events: inherit !important;
+  position: relative !important;
+  inset: auto !important;
+  transform: none !important;
+  margin: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  z-index: auto !important;
+  box-shadow: none !important;
+}
+#meow-conveythis-widget .conveythis-widget-language { max-width: 100% !important; white-space: normal !important; }
+#meow-conveythis-widget .language_title { white-space: normal !important; }
+html.vto-mobile-active .meow-translation-dock { z-index: 65; }

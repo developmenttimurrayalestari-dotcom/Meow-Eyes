@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ChevronLeft, ChevronRight, EyeOff, Info, Search, ShoppingCart, X, Globe } from 'lucide-react';
-import { TranslationButtons } from '../components/ConveyThisTranslation';
 import { api, apiError, formatIDR, imageSrc } from '../lib/api';
 import { TryOnStudio } from '../components/VirtualTryOn';
 import { useAuth } from '../contexts/AuthContext';
@@ -18,7 +17,6 @@ export default function VirtualTryOnPage() {
   const [offset, setOffset] = useState(0),[next, setNext] = useState(null);
   const [error, setError] = useState(''),[busy, setBusy] = useState(false),[loading, setLoading] = useState(true);
   const [searchOpen, setSearchOpen] = useState(false),[tipsOpen, setTipsOpen] = useState(false);
-  const [languageOpen, setLanguageOpen] = useState(false);
   const [detailsVisible, setDetailsVisible] = useState(true);
   const searchRef = useRef(null);
   const frameListRef = useRef(null);
@@ -126,11 +124,10 @@ export default function VirtualTryOnPage() {
     <div className="vto-mobile-toolbar">
       <Link to="/shop-now" aria-label={"Kembali ke toko"} className="vto-tool-button"><ArrowLeft aria-hidden="true" size={20} /></Link>
       <h1>{"Virtual Try-On"}</h1>
-      <button type="button" className="vto-tool-button" aria-label={'Bahasa'} aria-expanded={languageOpen} aria-controls="vto-language-panel" onClick={() => {setLanguageOpen(!languageOpen);setTipsOpen(false);}}><Globe aria-hidden="true" size={20} /></button>
-      <button type="button" className="vto-tool-button" aria-label={"Panduan kamera"} aria-expanded={tipsOpen} aria-controls="vto-camera-tips" onClick={() => {setTipsOpen(!tipsOpen);setLanguageOpen(false);}}><Info aria-hidden="true" size={20} /></button>
+      <button type="button" className="vto-tool-button" aria-label={'Bahasa'} aria-controls="meow-translation-panel" onClick={() => {window.dispatchEvent(new Event('meow:open-translation'));setTipsOpen(false);}}><Globe aria-hidden="true" size={20} /></button>
+      <button type="button" className="vto-tool-button" aria-label={"Panduan kamera"} aria-expanded={tipsOpen} aria-controls="vto-camera-tips" onClick={() => setTipsOpen(!tipsOpen)}><Info aria-hidden="true" size={20} /></button>
       <Link to="/cart" aria-label={"Keranjang belanja"} className="vto-tool-button"><ShoppingCart aria-hidden="true" size={20} /></Link>
     </div>
-    {languageOpen && <div id="vto-language-panel" className="vto-mobile-tips" role="region" aria-label={'Bahasa'}><TranslationButtons /></div>}
     {tipsOpen && <div id="vto-camera-tips" className="vto-mobile-tips" role="region" aria-label={"Panduan kamera"}>
       <div className="flex justify-between items-center gap-3"><strong>{"Panduan Kamera"}</strong><button type="button" className="vto-tool-button" aria-label={"Tutup panduan"} onClick={() => setTipsOpen(false)}><X aria-hidden="true" size={18} /></button></div>
       <p>{"Hadapkan wajah ke kamera dengan kedua mata terlihat dan pencahayaan cukup. Geser daftar frame untuk mencoba model lain."}</p>
