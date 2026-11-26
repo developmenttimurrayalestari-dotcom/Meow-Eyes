@@ -370,9 +370,12 @@ async def contact_msgs(admin: User = Depends(require_permission("setting.view"))
 
 
 @router.get("/banners-v2")
-async def bn_list(admin: User = Depends(require_permission("banner.view"))):
+async def bn_list(position: Optional[str] = None, exclude_position: Optional[str] = None, admin: User = Depends(require_permission("banner.view"))):
     async with read_session() as s:
-        rows = (await s.scalars(select(m.Banner).order_by(m.Banner.sort_order, m.Banner.id).limit(200))).all()
+        stmt = select(m.Banner)
+        if position: stmt = stmt.where(m.Banner.position == position)
+        if exclude_position: stmt = stmt.where(m.Banner.position != exclude_position)
+        rows = (await s.scalars(stmt.order_by(m.Banner.sort_order, m.Banner.id).limit(200))).all()
         return {"banners": [banner_dict(row) for row in rows]}
 
 

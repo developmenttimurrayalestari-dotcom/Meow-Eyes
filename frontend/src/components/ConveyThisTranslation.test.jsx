@@ -35,11 +35,9 @@ function nativeWidget() {
   return controls;
 }
 
-test('shows Indonesian/English buttons without faking a translation when no key is configured', async () => {
+test('keeps the disabled language controls hidden without loading an unconfigured SDK', async () => {
   await act(async () => root.render(<TranslationButtons />));
-  const [indonesia, english] = host.querySelectorAll('button');
-  expect(indonesia.textContent).toBe('Bahasa Indonesia'); expect(indonesia.disabled).toBe(false);
-  expect(indonesia.getAttribute('aria-pressed')).toBe('true'); expect(english.disabled).toBe(true);
+  expect(host.querySelectorAll('button')).toHaveLength(0);
   expect(startConveyThis()).toBe(false);
   expect(document.getElementById('meow-conveythis-script')).toBeNull();
 });
@@ -63,16 +61,16 @@ test('uses actual native controls and waits for the SDK event before marking Eng
   let controls;
   await act(async () => { controls = nativeWidget(); });
   const clickEnglish = jest.fn(); controls.en.addEventListener('click', clickEnglish);
-  act(() => host.querySelectorAll('button')[1].click());
+  act(() => requestPageLanguage('en'));
   expect(clickEnglish).toHaveBeenCalledTimes(1);
   expect(conveyThisSnapshot().phase).toBe('translating'); expect(conveyThisSnapshot().language).toBe('id');
   act(() => languageEvent('en'));
   expect(document.documentElement.lang).toBe('en');
-  expect(host.querySelectorAll('button')[1].getAttribute('aria-pressed')).toBe('true');
+  expect(conveyThisSnapshot().language).toBe('en');
   const clickIndonesia = jest.fn(() => languageEvent('id')); controls.id.addEventListener('click', clickIndonesia);
-  act(() => host.querySelectorAll('button')[0].click());
+  act(() => requestPageLanguage('id'));
   expect(clickIndonesia).toHaveBeenCalledTimes(1); expect(document.documentElement.lang).toBe('id');
-  expect(host.querySelectorAll('button')[0].getAttribute('aria-pressed')).toBe('true');
+  expect(conveyThisSnapshot().language).toBe('id');
   expect(requestPageLanguage('fr')).toBe(false);
 });
 
@@ -81,9 +79,9 @@ test('script failure leaves the page and form usable with an informative status'
   act(() => startConveyThis({key:'pub_test'}));
   act(() => document.getElementById('meow-conveythis-script').dispatchEvent(new Event('error')));
   expect(conveyThisSnapshot().phase).toBe('error');
-  expect(host.textContent).toContain('Penerjemah belum dapat dimuat');
+  expect(conveyThisSnapshot().message).toContain('Penerjemah belum dapat dimuat');
   expect(host.querySelector('input').value).toBe('Mira');
-  expect(host.querySelectorAll('button')[0].getAttribute('aria-pressed')).toBe('true');
+  expect(host.querySelectorAll('button')).toHaveLength(0);
 });
 
 test('a script that loads without accepted languages times out instead of pretending the integration is ready', async () => {
@@ -114,8 +112,8 @@ test('does not inject the SDK or language controls on admin pages', async () => 
   expect(startConveyThis({key:'pub_test'})).toBe(false);
 });
 
-test('auth customer pages receive the same language buttons', async () => {
+test('auth customer pages keep the language controls disabled', async () => {
   await act(async () => root.render(<MemoryRouter initialEntries={['/login']}><ConveyThisBoundary><h1>Masuk</h1></ConveyThisBoundary></MemoryRouter>));
-  expect(host.querySelectorAll('[data-testid="translation-buttons"] button').length).toBe(2);
+  expect(host.querySelectorAll('[data-testid="translation-buttons"] button').length).toBe(0);
   expect(host.querySelector('#meow-conveythis-widget')).not.toBeNull();
 });

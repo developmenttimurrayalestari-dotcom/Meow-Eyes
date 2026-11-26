@@ -3,6 +3,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from mysql.content_collections import ContentCollection
 from mysql.home_categories import safe_url
+from mysql.icon_library import validate_icon, MENU_ALIASES
 
 HEADER = [
     ('nav-home', 'Beranda', '/', 'none'), ('nav-shop-now', 'Shop Now', '/shop-now', 'none'),
@@ -34,10 +35,15 @@ class MenuInput(BaseModel):
     label: str = Field(min_length=1, max_length=80)
     url: str = Field(min_length=1, max_length=2048)
     location: Literal['header', 'footer', 'mobile'] = 'header'
-    icon: Literal['none', 'home', 'shop', 'games', 'cart', 'profile', 'sparkles', 'glasses', 'article', 'tag', 'flash', 'contact'] = 'none'
+    icon: str = Field(default='none', max_length=64)
     sort_order: int = Field(default=0, ge=0, le=9999)
     is_active: bool = True
     new_tab: bool = False
+
+    @field_validator('icon')
+    @classmethod
+    def validate_icon_name(cls, value):
+        return validate_icon(value, MENU_ALIASES)
 
     @field_validator('url')
     @classmethod

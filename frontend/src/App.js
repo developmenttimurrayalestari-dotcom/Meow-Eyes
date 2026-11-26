@@ -55,7 +55,7 @@ import AdminIntegrations from "./pages/admin/AdminIntegrations";
 import FlashSalePage from "./pages/FlashSalePage";
 import FloatingWhatsApp from "./components/FloatingWhatsApp";
 import {
-  AdminArticles, AdminKnowledge, AdminReviewsMod, AdminBannersV2,
+  AdminArticles, AdminKnowledge, AdminReviewsMod, AdminBannersV2, AdminPopupBanners,
   AdminFAQs, AdminPages, AdminContactSetting, AdminStaff, AdminImport, AdminLensIndexes } from
 "./pages/admin/AdminContent";
 import ShopNowPage from "./pages/ShopNowPage";
@@ -106,6 +106,7 @@ function AppRouter() {
         <Route path="/admin/knowledge" element={<AdminKnowledge />} />
         <Route path="/admin/reviews" element={<AdminReviewsMod />} />
         <Route path="/admin/banners" element={<AdminBannersV2 />} />
+        <Route path="/admin/popup-banners" element={<AdminPopupBanners />} />
         <Route path="/admin/home-categories" element={<AdminHomeCategories />} />
         <Route path="/admin/menus" element={<AdminMenus />} />
         <Route path="/admin/faqs" element={<AdminFAQs />} />

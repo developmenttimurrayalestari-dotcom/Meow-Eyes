@@ -5,6 +5,7 @@ from urllib.parse import urlsplit
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from mysql.content_collections import ContentCollection
+from mysql.icon_library import validate_icon, CARD_ALIASES
 
 KEY = 'homepage.category_cards'
 LIMIT = 50
@@ -35,10 +36,15 @@ class CardInput(BaseModel):
     description: str = Field(default='', max_length=180)
     link_url: str = Field(min_length=1, max_length=2048)
     background_image: str = Field(default='', max_length=2048)
-    icon: Literal['frame', 'lens', 'package', 'sparkles', 'tag'] = 'frame'
+    icon: str = Field(default='frame', max_length=64)
     theme: Literal['coral', 'amber', 'mint', 'midnight'] = 'coral'
     sort_order: int = Field(default=0, ge=0, le=9999)
     is_active: bool = True
+
+    @field_validator('icon')
+    @classmethod
+    def validate_icon_name(cls, value):
+        return validate_icon(value, CARD_ALIASES)
 
     @field_validator('link_url')
     @classmethod

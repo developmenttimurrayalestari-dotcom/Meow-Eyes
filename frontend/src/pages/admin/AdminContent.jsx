@@ -242,45 +242,44 @@ export const AdminReviewsMod = () => {
 };
 
 // ---------- Admin Banners V2 ----------
-export const AdminBannersV2 = () => {
+export const AdminBannersV2 = ({ popup = false }) => {
   const [items, setItems] = useState([]);
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
-  const load = () => api.get("/admin/banners-v2").then(({ data }) => setItems([...(data.banners || [])].sort((a, b) => a.sort_order - b.sort_order || a.id.localeCompare(b.id))));
-  useEffect(() => { load(); }, []);
+  const [error, setError] = useState('');
+  const load = useCallback(async () => {
+    setError('');
+    try {
+      const { data } = await api.get('/admin/banners-v2', { params: popup ? { position: 'popup' } : { exclude_position: 'popup' } });
+      setItems((data.banners || []).filter(item => popup ? item.position === 'popup' : item.position !== 'popup').sort((a,b) => a.sort_order-b.sort_order || a.id.localeCompare(b.id)));
+    } catch (err) { setError(adminError(err)); }
+  }, [popup]);
+  useEffect(() => { setEditing(null); load(); }, [load]);
   const submit = async (e) => {
     e.preventDefault();
     setSaving(true);
     try {
       if (!editing.title?.trim() || !editing.image_desktop?.trim()) { toast.error('Isi judul dan gambar desktop banner terlebih dahulu.'); return; }
-      if (editing.id) await api.put(`/admin/banners-v2/${editing.id}`, editing);
-      else await api.post("/admin/banners-v2", editing);
+      const body = { ...editing, position: popup ? 'popup' : editing.position };
+      if (editing.id) await api.put(`/admin/banners-v2/${editing.id}`, body);
+      else await api.post("/admin/banners-v2", body);
       toast.success("Banner tersimpan"); setEditing(null); await load();
     } catch (err) { toast.error(adminError(err)); }
     finally { setSaving(false); }
   };
   return (
-    <div data-testid="admin-banners">
+    <div data-testid={popup ? 'admin-popup-banners' : 'admin-banners'}>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <h1 className="font-heading text-3xl font-black">Banner Management</h1>
-        <button type="button" onClick={() => setEditing({ title: '', image_desktop: '', link_type: 'none', link_url: '/', position: 'popup', target_device: 'all', sort_order: 0, is_active: true })} className="btn-secondary text-sm" data-testid="add-popup-banner-btn"><Plus className="inline h-4 w-4 mr-1" /> Popup Promo Baru</button>
-        <button onClick={() => setEditing({ title: "", image_desktop: "", link_type: "internal", link_url: "/", position: "hero", target_device: "all", sort_order: 0, is_active: true })} className="btn-primary text-sm" data-testid="add-banner-btn"><Plus className="inline h-4 w-4 mr-1" /> Banner Baru</button>
+        <h1 className="font-heading text-3xl font-black">{popup ? 'Management Banner Popup' : 'Management Banner'}</h1>
+        <button type="button" onClick={() => setEditing({ title: '', image_desktop: '', link_type: popup ? 'none' : 'internal', link_url: '/', position: popup ? 'popup' : 'hero', target_device: 'all', sort_order: 0, is_active: true })} className="btn-primary text-sm" data-testid={popup ? 'add-popup-banner-btn' : 'add-banner-btn'}><Plus className="inline h-4 w-4 mr-1" />{popup ? 'Popup Promo Baru' : 'Banner Baru'}</button>
       </div>
-      <p className="text-sm text-meow-gray mb-4">Pilih lokasi Popup Promo untuk menampilkan gambar promosi sekali per sesi tab browser saat pelanggan membuka website. Gambar dapat diberi tautan dan periode tayang. Popup tidak muncul di admin, checkout, pembayaran, dan halaman akun.</p>
-      <div className="grid md:grid-cols-2 gap-4">
-        {items.map((b) => (
-          <div key={b.id} className="bg-white rounded-3xl border border-zinc-200 p-4" data-testid={`banner-${b.id}`}>
-            <img src={resolveImageUrl(b.image_desktop)} alt="" loading="lazy" decoding="async" className="block h-auto object-contain rounded-2xl w-full" />
-            {b.image_mobile && <div className="mt-3"><p className="text-xs font-semibold mb-1">Versi mobile</p><img src={resolveImageUrl(b.image_mobile)} alt={`Banner mobile ${b.title}`} loading="lazy" decoding="async" className="block w-full max-w-48 mx-auto h-auto object-contain rounded-xl" /></div>}
-            <p className="font-bold mt-2">{b.title}</p>
-            <p className="text-xs text-meow-gray">Urutan {b.sort_order} · {b.position === 'popup' ? 'Popup Promo' : b.position} · {b.link_type === 'none' ? 'Tanpa tautan' : b.link_url || "Tanpa tautan"} · {b.is_active ? "Aktif" : "Off"}</p>
-            <div className="flex gap-2 mt-2">
-              <button onClick={() => setEditing({ ...b })} className="text-xs text-meow-amber font-bold">Edit</button>
-              <button onClick={async () => { await api.delete(`/admin/banners-v2/${b.id}`); load(); }} className="text-xs text-red-500 font-bold" data-testid={`del-banner-${b.id}`}>Hapus</button>
-            </div>
-          </div>
-        ))}
-      </div>
+      <p className="text-sm text-meow-gray mb-4">{popup ? 'Popup tampil setiap kali pelanggan membuka halaman beranda. Atur gambar, tautan, periode, dan prioritas popup di sini.' : 'Kelola banner slider dan posisi banner lainnya. Popup promo dikelola melalui menu Management Banner Popup.'}</p>
+      {error && <p role="alert" className="text-sm text-red-600 mb-3">{error}</p>}
+      <div className="overflow-x-auto rounded-2xl border bg-white"><table className="w-full text-left text-sm"><thead className="bg-meow-bg"><tr><th className="p-3">Gambar</th><th className="p-3">Judul & Tujuan</th><th className="p-3">Posisi / Urutan</th><th className="p-3">Status</th><th className="p-3">Aksi</th></tr></thead><tbody>{items.map(b => <tr key={b.id} className="border-t" data-testid={`banner-${b.id}`}>
+        <td className="p-3"><div className="flex gap-2 items-start"><div><span className="block text-[10px] text-meow-gray">Desktop</span><img src={resolveImageUrl(b.image_desktop)} alt={`Banner ${b.title}`} loading="lazy" className="w-24 h-16 object-contain rounded-lg bg-meow-bg" /></div>{b.image_mobile && <div><span className="block text-[10px] text-meow-gray">Mobile</span><img src={resolveImageUrl(b.image_mobile)} alt={`Banner mobile ${b.title}`} loading="lazy" className="w-10 h-16 object-contain rounded-lg bg-meow-bg" /></div>}</div></td>
+        <td className="p-3"><p className="font-bold">{b.title}</p><p className="text-xs text-meow-gray break-all">{b.link_type === 'none' ? 'Tanpa tautan' : b.link_url}</p></td><td className="p-3 text-xs">{popup ? 'Popup Promo' : b.position} · {b.sort_order}<span className="block text-meow-gray">{b.target_device}</span></td><td className="p-3">{b.is_active ? 'Aktif' : 'Nonaktif'}</td>
+        <td className="p-3"><div className="flex gap-3"><button type="button" disabled={saving} onClick={() => setEditing({ ...b })} className="text-xs text-meow-amber font-bold">Edit</button><button type="button" disabled={saving} onClick={async () => { if (!window.confirm(`Hapus banner "${b.title}"?`)) return; try { await api.delete(`/admin/banners-v2/${b.id}`); await load(); } catch (err) { setError(adminError(err)); } }} className="text-xs text-red-500 font-bold" data-testid={`del-banner-${b.id}`}>Hapus</button></div></td>
+      </tr>)}</tbody></table>{!items.length && <p className="p-6 text-sm text-meow-gray">{popup ? 'Belum ada banner popup.' : 'Belum ada banner.'}</p>}</div>
       {editing && (
         <div className="fixed inset-0 bg-black/60 z-50 grid place-items-center p-4 overflow-y-auto" onClick={() => setEditing(null)}>
           <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl p-6 max-w-lg w-full space-y-3 max-h-[90dvh] overflow-y-auto" data-testid="banner-form">
@@ -298,22 +297,22 @@ export const AdminBannersV2 = () => {
               onChange={(url) => setEditing({ ...editing, image_mobile: url })}
               testId="banner-image-mobile-picker"
             />
-            <p className="text-xs text-meow-gray">Unggah atau pilih gambar mobile dari galeri. Pada layar sampai 767 px, gambar mobile digunakan otomatis. Jika kosong, gambar desktop digunakan. Pilih All Device untuk satu banner dengan kedua versi. Gambar slider beranda tampil selebar area banner, dengan tinggi mengikuti rasio asli tanpa crop.</p>
+            <p className="text-xs text-meow-gray">Unggah atau pilih gambar mobile dari galeri. Pada layar sampai 767 px, gambar mobile digunakan otomatis. Jika kosong, gambar desktop digunakan. Pilih All Device untuk satu banner dengan kedua versi. {popup ? 'Gambar popup ditampilkan utuh mengikuti ukuran layar.' : 'Gambar slider beranda tampil selebar area banner, dengan tinggi mengikuti rasio asli tanpa crop.'}</p>
             {(editing.image_desktop || editing.image_mobile) && <div className="grid grid-cols-2 gap-3 rounded-xl border p-3" data-testid="banner-artwork-preview">
-              <div><p className="text-xs font-semibold mb-2">Pratinjau desktop</p>{editing.image_desktop && <img src={resolveImageUrl(editing.image_desktop)} alt="Pratinjau banner desktop utuh" className="block w-full h-auto object-contain rounded-lg" />}</div>
-              <div><p className="text-xs font-semibold mb-2">Pratinjau mobile</p><img src={resolveImageUrl(editing.image_mobile || editing.image_desktop)} alt="Pratinjau banner mobile utuh" className="block w-full h-auto object-contain rounded-lg" />{!editing.image_mobile && <p className="text-xs text-meow-gray mt-1">Menggunakan gambar desktop.</p>}</div>
+              <div><p className="text-xs font-semibold mb-2">Pratinjau desktop</p>{editing.image_desktop && <img src={resolveImageUrl(editing.image_desktop)} alt="Pratinjau banner desktop utuh" className="block w-full h-auto max-h-40 object-contain rounded-lg" />}</div>
+              <div><p className="text-xs font-semibold mb-2">Pratinjau mobile</p><img src={resolveImageUrl(editing.image_mobile || editing.image_desktop)} alt="Pratinjau banner mobile utuh" className="block w-full h-auto max-h-40 object-contain rounded-lg" />{!editing.image_mobile && <p className="text-xs text-meow-gray mt-1">Menggunakan gambar desktop.</p>}</div>
             </div>}
             <div className="grid grid-cols-2 gap-2">
               <FormField label="Lokasi banner"><select value={editing.position} onChange={(e) => setEditing({ ...editing, position: e.target.value })} className="px-3 py-2 rounded-xl bg-meow-bg outline-none">
-                <option value="hero">Hero</option><option value="promo">Promo</option>
+                {popup ? <option value="popup">Popup Promo</option> : <><option value="hero">Hero</option><option value="promo">Promo</option>
                 <option value="shop_now">Shop Now</option><option value="article">Article</option>
-                <option value="footer">Footer</option><option value="popup">Popup Promo</option>
+                <option value="footer">Footer</option></>}
               </select></FormField>
               <FormField label="Perangkat tujuan"><select value={editing.target_device} onChange={(e) => setEditing({ ...editing, target_device: e.target.value })} className="px-3 py-2 rounded-xl bg-meow-bg outline-none">
                 <option value="all">All Device</option><option value="desktop">Desktop</option><option value="mobile">Mobile</option>
               </select></FormField>
             </div>
-            {editing.position === 'popup' && <p className="text-xs text-meow-gray rounded-xl bg-amber-50 p-3">Satu popup ditampilkan per sesi tab browser, termasuk setelah refresh/pindah halaman. Jika ada beberapa promo aktif, urutan terkecil diprioritaskan. Gambar tampil utuh tanpa dipotong; gunakan gambar mobile agar tulisan mudah dibaca. Kunjungan yang sudah melihat popup akan melihat promo lagi pada sesi tab berikutnya.</p>}
+            {popup && <p className="text-xs text-meow-gray rounded-xl bg-amber-50 p-3">Popup ditampilkan setiap kali halaman beranda dibuka, termasuk saat refresh atau kembali dari halaman lain. Menutup popup tidak memunculkannya kembali pada kunjungan beranda yang sama. Jika ada beberapa promo aktif, urutan terkecil diprioritaskan.</p>}
             <div className="grid grid-cols-2 gap-2">
               <FormField label="Jenis tautan"><select value={editing.link_type} onChange={(e) => setEditing({ ...editing, link_type: e.target.value })} className="px-3 py-2 rounded-xl bg-meow-bg outline-none">
                 <option value="internal">Internal</option><option value="external">External</option>
@@ -339,6 +338,8 @@ export const AdminBannersV2 = () => {
     </div>
   );
 };
+
+export const AdminPopupBanners = () => <AdminBannersV2 popup />;
 
 // ---------- Admin FAQs, Pages, Contact Setting ----------
 export const AdminFAQs = () => {

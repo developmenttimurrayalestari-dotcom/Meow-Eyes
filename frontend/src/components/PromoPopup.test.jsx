@@ -18,23 +18,24 @@ beforeEach(() => {
 });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); jest.restoreAllMocks(); });
 
-test('shows a loaded promo once per session and dismissal survives remount and navigation', async () => {
+test('dismissal lasts for the current homepage visit and the promo returns on the next homepage entry', async () => {
   await mount();
   expect(popup()).toBeNull();
   expect(sessionStorage.length).toBe(0);
   await loaded();
   expect(popup().textContent).toContain('Promo Akhir Tahun');
   expect(document.activeElement.getAttribute('aria-label')).toBe('Tutup promo');
-  expect(sessionStorage.getItem('meow_promo_popup_seen_v1')).toBe('1');
   await act(async () => document.querySelector('[data-testid="close-promo-popup"]').click());
   expect(popup()).toBeNull();
-  await act(async () => { root.render(null); });
-  await mount('/shop-now');
+  expect(host.querySelector('[data-testid="promo-popup-preload"]')).toBeNull();
+  await act(async () => navigate('/shop-now'));
   expect(popup()).toBeNull();
-  expect(api.get).toHaveBeenCalledTimes(1);
+  await act(async () => navigate('/'));
+  await loaded(); expect(popup()).not.toBeNull();
+  expect(api.get).toHaveBeenCalledTimes(2);
 });
 
-test('internal banner click navigates and prevents reopening after a protected-page round trip', async () => {
+test('internal banner click navigates and reopening the homepage shows the promo again', async () => {
   await mount(); await loaded();
   const link = popup().querySelector('a');
   expect(link.getAttribute('href')).toBe('/flash-sale');
@@ -42,10 +43,10 @@ test('internal banner click navigates and prevents reopening after a protected-p
   expect(popup()).toBeNull();
   await act(async () => navigate('/checkout'));
   await act(async () => navigate('/'));
-  expect(popup()).toBeNull();
+  await loaded(); expect(popup()).not.toBeNull();
 });
 
-test.each(['/admin/banners', '/checkout', '/payment/123', '/login', '/profile'])('never opens or requests a promo on %s', async path => {
+test.each(['/admin/banners', '/checkout', '/payment/123', '/login', '/profile', '/shop-now', '/products/frame', '/flash-sale'])('never opens or requests a promo on %s', async path => {
   await mount(path);
   expect(api.get).not.toHaveBeenCalled(); expect(popup()).toBeNull();
 });
@@ -113,7 +114,7 @@ test('Escape dismisses the accessible dialog', async () => {
   expect(popup()).toBeNull();
 });
 
-test('storage write/read restrictions fall back to session memory', async () => {
+test('homepage refreshes and blocked storage do not prevent the promo from appearing', async () => {
   jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('blocked'); });
   await mount(); await loaded();
   expect(popup()).not.toBeNull();
@@ -122,5 +123,13 @@ test('storage write/read restrictions fall back to session memory', async () => 
   expect(host.querySelector('[data-testid="promo-popup-preload"]')).toBeNull();
   await act(async () => root.render(null));
   jest.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('blocked'); });
-  await mount(); expect(popup()).toBeNull();
+  await mount(); await loaded(); expect(popup()).not.toBeNull();
+});
+
+test('legacy session markers are ignored and a new homepage history entry reopens the popup', async () => {
+  sessionStorage.setItem('meow_promo_popup_seen_v1','1');
+  await mount(); await loaded();
+  await act(async()=>document.querySelector('[data-testid="close-promo-popup"]').click());
+  await act(async()=>navigate('/'));
+  await loaded(); expect(popup()).not.toBeNull();
 });

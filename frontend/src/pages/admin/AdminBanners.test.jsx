@@ -1,6 +1,6 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { AdminBannersV2 } from './AdminContent';
+import { AdminBannersV2, AdminPopupBanners } from './AdminContent';
 import { api } from '../../lib/api';
 import { toast } from 'sonner';
 
@@ -16,14 +16,14 @@ const type = async (input, value) => act(async () => {
 beforeEach(async () => {
   jest.clearAllMocks(); api.get.mockResolvedValue({ data: { banners: [] } }); api.post.mockResolvedValue({ data: { ok: true } });
   host = document.createElement('div'); document.body.appendChild(host); root = createRoot(host);
-  await act(async () => root.render(<AdminBannersV2 />));
+  await act(async () => root.render(<AdminPopupBanners />));
   await act(async () => host.querySelector('[data-testid="add-popup-banner-btn"]').click());
 });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); });
 
-test('creates a popup via existing banner management with labelled images and session guidance', async () => {
+test('creates a popup through its dedicated management page with homepage guidance', async () => {
   const form = host.querySelector('form');
-  expect(form.textContent).toContain('Satu popup ditampilkan per sesi tab browser');
+  expect(form.textContent).toContain('Popup ditampilkan setiap kali halaman beranda dibuka');
   expect(form.querySelector('option[value="popup"]').selected).toBe(true);
   await type(form.querySelector('input[placeholder="Judul"]'), 'Promo November');
   await type(form.querySelector('[data-testid="banner-image-desktop-picker"]'), '/promo.jpg');
@@ -44,6 +44,7 @@ test('requires a banner image before allowing save', async () => {
 
 test('hero banners save independent mobile artwork and preview both images without hiding the upload fields',async()=>{
   await act(async()=>[...host.querySelector('form').querySelectorAll('button')].find(button=>button.textContent==='Batal').click());
+  await act(async()=>root.render(<AdminBannersV2/>));
   await act(async()=>host.querySelector('[data-testid="add-banner-btn"]').click());
   const form=host.querySelector('form');
   await type(form.querySelector('input[placeholder="Judul"]'),'Promo Mobile');
@@ -65,4 +66,18 @@ test('an existing hero can replace its mobile artwork through Edit',async()=>{
   await type(form.querySelector('[data-testid="banner-image-mobile-picker"]'),'/new-mobile.webp');
   await act(async()=>form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
   expect(api.put).toHaveBeenCalledWith('/admin/banners-v2/hero',expect.objectContaining({image_desktop:'/desktop.webp',image_mobile:'/new-mobile.webp'}));
+});
+
+test('normal and popup management isolate their lists and creation forms',async()=>{
+  api.get.mockResolvedValue({data:{banners:[{id:'hero',title:'Slider',position:'hero',image_desktop:'/hero.png',sort_order:0},{id:'pop',title:'Popup',position:'popup',image_desktop:'/popup.png',sort_order:0}]}});
+  await act(async()=>root.render(<AdminBannersV2/>));
+  expect(host.querySelector('[data-testid="banner-hero"]')).not.toBeNull();
+  expect(host.querySelector('[data-testid="banner-pop"]')).toBeNull();
+  expect(host.querySelector('[data-testid="add-popup-banner-btn"]')).toBeNull();
+  expect(host.querySelector('table img')).not.toBeNull();
+  expect(api.get).toHaveBeenCalledWith('/admin/banners-v2',{params:{exclude_position:'popup'}});
+  await act(async()=>root.render(<AdminPopupBanners/>));
+  expect(host.querySelector('[data-testid="banner-pop"]')).not.toBeNull();
+  expect(host.querySelector('[data-testid="banner-hero"]')).toBeNull();
+  expect(api.get).toHaveBeenCalledWith('/admin/banners-v2',{params:{position:'popup'}});
 });

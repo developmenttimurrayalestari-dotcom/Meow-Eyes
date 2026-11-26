@@ -1025,53 +1025,35 @@ backend untuk memuat endpoint baru. Tidak ada migrasi database atau kredensial
 peta baru yang wajib diisi. Pengaturan ini tidak mengubah sumber data wilayah
 dan bearer token EVERPRO.
 
-### Popup banner promo saat kunjungan pertama
+### Popup promo setiap kunjungan halaman beranda
 
-Kelola melalui **Admin → Banner** (`/admin/banners`), lalu klik **Popup Promo
-Baru**, atau pilih **Lokasi banner: Popup Promo** pada banner yang diedit.
+Terdapat dua menu terpisah di Admin → Konten CMS:
 
-1. Isi judul dan unggah/pilih gambar desktop yang wajib diisi. Gambar mobile
-   opsional; bila tidak ada atau gagal dimuat, gambar desktop dipakai.
-2. Pilih perangkat tujuan: semua perangkat, desktop, atau mobile. Batas mobile
-   mengikuti lebar layar maksimal 767 px pada awal permintaan banner.
-3. Pilih jenis tautan dan URL tujuan, atau None untuk gambar tanpa tautan.
-   Tautan internal membuka halaman website; URL HTTP/HTTPS eksternal dibuka di
-   tab baru. Klik tautan menutup popup.
-4. Atur mulai/selesai tayang bila perlu, urutan tampilan, lalu centang Aktif dan
-   simpan. Waktu input mengikuti perangkat admin dan dikonversi ke UTC seperti
-   banner lain. Jika beberapa popup memenuhi periode/perangkat, urutan terkecil
-   diprioritaskan, kemudian ID untuk urutan yang konsisten.
+- **Management Banner** (`/admin/banners`) untuk slider/posisi banner biasa.
+- **Management Banner Popup** (`/admin/popup-banners`) untuk popup promosi.
 
-Popup tampil sekali per sesi tab browser pada halaman pelanggan, termasuk
-pengunjung yang belum login. Refresh dan perpindahan halaman tidak memunculkan
-popup lagi dalam sesi yang sama. Banner baru yang diaktifkan admin juga tidak
-memunculkan popup kedua pada sesi yang sudah melihatnya. Halaman admin,
-login/registrasi, setup akun, profil/alamat/poin, pesanan, checkout, dan pembayaran
-tidak menampilkan atau meminta data popup; kunjungan awal ke halaman itu dapat
-melihat popup ketika kemudian membuka halaman pelanggan yang sesuai.
+Daftar memakai tabel dengan thumbnail kecil desktop/mobile. Tambah dan edit
+tetap menyediakan upload, galeri, gambar desktop/mobile, URL tujuan, periode
+tayang, perangkat, urutan, dan status aktif. Popup dibuat pada halaman khusus
+dan tidak tercampur dengan daftar banner biasa. Filter API diterapkan sebelum
+batas jumlah baris agar daftar popup/normal tidak saling menggeser.
 
-Gambar tampil utuh dengan ukuran mengikuti layar; pelanggan dapat menutupnya
-melalui tombol X, Escape, atau klik area luar. Fokus keyboard berada di tombol
-tutup saat popup terbuka. Gambar dimuat terlebih dahulu supaya popup kosong
-tidak tampil. Gambar gagal dimuat dilanjutkan ke kandidat berikutnya; kegagalan
-API tidak menghambat website. Penanda sesi baru disimpan setelah gambar siap
-ditampilkan, menggunakan `sessionStorage` key `meow_promo_popup_seen_v1`.
-Jika storage browser diblokir, penanda di memori tetap mencegah pengulangan
-selama aplikasi terbuka, tetapi refresh dapat menghapus fallback tersebut.
+Popup hanya muncul ketika halaman beranda `/` dibuka: kunjungan pertama,
+refresh, kembali dari halaman lain, atau navigasi beranda yang membuat entry
+history baru. Setelah ditutup, popup tidak terbuka berulang pada kunjungan
+beranda yang sama. Tidak ada penanda sessionStorage; penanda lama
+`meow_promo_popup_seen_v1` diabaikan tanpa perlu menghapus storage akun.
 
-Untuk menguji ulang, gunakan sesi browser privat baru, atau hapus hanya key
-`meow_promo_popup_seen_v1` pada Session Storage melalui DevTools lalu refresh.
-Jangan menghapus seluruh storage akun. Beberapa browser menyalin Session Storage
-saat menggandakan tab atau memulihkan sesi, sehingga tab tersebut bisa tetap
-dianggap sudah melihat promo.
+Gambar dimuat sebelum popup dibuka. Gambar mobile digunakan sampai lebar 767 px
+dan fallback ke desktop bila kosong/gagal dimuat. Jika ada beberapa popup aktif,
+urutan terkecil diprioritaskan, kemudian ID; gambar gagal dilanjutkan ke kandidat
+berikutnya. API gagal tidak menghambat beranda. Popup dapat ditutup dengan X,
+Escape, atau area luar. Klik banner membuka URL tujuan yang diatur admin.
 
-Fitur memakai tabel `banners` yang sudah ada, `position=popup`, endpoint admin
-banner yang sudah memiliki permission, dan `GET /api/banners?position=popup&device=...`
-yang memfilter status/periode/perangkat di backend. Popup terpisah dari hero
-slider dan daftar banner pada API homepage. Tidak perlu migrasi database,
-layanan berbayar, API key, atau dependency baru. Deploy kode backend dan build
-frontend seperti biasa, lalu restart backend untuk memuat validasi banner baru.
-Banner promo tidak dibuat/diaktifkan otomatis; admin mengunggah materi promonya.
+Halaman selain beranda tidak meminta atau menampilkan popup. Status aktif,
+periode, dan perangkat tetap difilter backend. Data banner/tabel tetap sama;
+API admin GET `/api/admin/banners-v2` menerima `position=popup` atau
+`exclude_position=popup`. Tidak ada migrasi database.
 
 ### CRUD Kategori Pilihan Beranda dan gambar latar card
 
@@ -1193,3 +1175,32 @@ None tidak diberi tautan/tombol tujuan. Tampilan awal tanpa banner tetap tersedi
 Field database/API `image_mobile` sudah tersedia; tidak perlu migrasi database
 atau perubahan konfigurasi backend. Build/deploy frontend untuk memasang
 pembaruan tampilan dan form admin ini.
+
+### Pilihan ikon Lucide dengan pencarian dan pratinjau
+
+Form **Manage Menu** dan **Kategori Pilihan Beranda** memakai pemilih ikon
+bersama. Klik **Pilih ikon**, cari nama atau istilah Indonesia seperti kamera,
+kacamata, belanja, hati, paket, atau bintang, lalu klik ikon. Nama dan pratinjau
+ikon terpilih ditampilkan langsung. Pilihan **Tanpa ikon** tersedia. Koleksi
+Lucide 0.516.0 berisi 1.602 ikon, ditampilkan maksimal 48 per halaman agar form
+tetap ringan. Pencarian dilakukan lokal tanpa mengirim kueri ke layanan luar.
+
+Ikon lama tetap didukung. Pilihan baru disimpan sebagai `lucide:nama-ikon` dan
+divalidasi terhadap daftar nama yang tersedia di backend. SVG/HTML dari input
+pengguna tidak diterima. Renderer yang sama digunakan pada menu pelanggan,
+preview admin, dan card beranda, sehingga ikon pilihan tampil setelah disimpan.
+Koleksi SVG dimuat sebagai chunk lokal saat diperlukan; menu/ikon lama tidak
+perlu memuat seluruh koleksi pada kunjungan awal.
+
+Sumber merupakan package `lucide-react` yang sudah terpasang, tanpa dependency
+atau API key tambahan. Data/daftar izin yang dihasilkan disimpan pada
+`frontend/src/lib/iconCatalog.json` dan
+`backend/mysql/data/lucide-icon-names.json`; keduanya harus ikut deploy.
+Informasi versi/lisensi Lucide disertakan dalam katalog. Jika versi package
+Lucide diperbarui, jalankan `npm run generate:icons` di frontend lalu commit
+kedua file hasilnya, tes, dan build kembali.
+
+Deploy backend dan restart untuk memuat daftar izin ikon baru/filter banner,
+kemudian build/deploy frontend. Tidak perlu menjalankan migrasi database.
+Tombol translate yang sedang dinonaktifkan tetap tersembunyi; ekspor komponen
+kosong menjaga kompatibilitas import layout.

@@ -7,6 +7,7 @@ import ImagePicker from '../../components/ImagePicker';
 import HomeCategoryCard from '../../components/HomeCategoryCard';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../../components/ui/dialog';
 import { toast } from 'sonner';
+import IconPicker from '../../components/IconPicker';
 
 const empty = { title: '', description: '', link_url: '/shop-now', background_image: '', icon: 'frame', theme: 'coral', sort_order: 0, is_active: true };
 const control = 'w-full rounded-xl border border-meow-midnight/10 bg-meow-bg px-3 py-2.5 outline-none focus:border-meow-salmon';
@@ -70,7 +71,8 @@ export default function AdminHomeCategories() {
             <FormField label="URL tujuan card" hint="Klik card di beranda akan membuka URL ini. Gunakan path seperti /shop-now?product_type=frame, /category/nama-kategori, atau URL lengkap https://…"><input required maxLength={2048} data-testid="home-category-url" value={editing.link_url} onChange={event => set('link_url', event.target.value)} className={control} /></FormField>
             <ImagePicker label="Gambar latar card (opsional)" value={editing.background_image} onChange={url => set('background_image', url)} testId="home-category-image" />
             <p className="text-xs text-meow-gray">Unggah atau pilih gambar dari galeri. Gambar akan mengisi card dan dapat terpotong mengikuti layar. Lapisan gelap menjaga tulisan tetap terbaca. Tanpa gambar, card memakai warna tema.</p>
-            <div className="grid sm:grid-cols-2 gap-3"><FormField label="Ikon"><select value={editing.icon} onChange={event => set('icon', event.target.value)} className={control}>{[['frame','Kacamata'],['lens','Lensa'],['package','Paket'],['sparkles','Bintang'],['tag','Label promo']].map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></FormField>
+            <IconPicker label="Ikon card" value={editing.icon} onChange={value=>set('icon',value)} disabled={saving}/>
+            <div className="grid sm:grid-cols-2 gap-3">
               <FormField label="Warna tema (tanpa gambar)"><select value={editing.theme} onChange={event => set('theme', event.target.value)} className={control}>{[['coral','Coral'],['amber','Amber'],['mint','Mint'],['midnight','Midnight']].map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></FormField></div>
             <FormField label="Urutan tampilan" hint="Angka 0–9999; angka lebih kecil tampil lebih dahulu."><input required type="number" min={0} max={9999} step={1} value={editing.sort_order} onChange={event => set('sort_order', event.target.value === '' ? '' : Number(event.target.value))} className={control} /></FormField>
             <label className="flex gap-2 items-center text-sm"><input type="checkbox" checked={editing.is_active} onChange={event => set('is_active', event.target.checked)} />Tampilkan card di beranda</label>

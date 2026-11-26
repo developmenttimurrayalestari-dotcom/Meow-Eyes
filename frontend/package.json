@@ -75,6 +75,7 @@
     "zod": "3.24.4"
   },
   "scripts": {
+    "generate:icons": "node scripts/generate-icon-library.cjs",
     "prepare:try-on": "node scripts/prepare-try-on-vision.cjs",
     "start": "craco start",
     "build": "craco build && node scripts/build-optifit-offline.cjs",
