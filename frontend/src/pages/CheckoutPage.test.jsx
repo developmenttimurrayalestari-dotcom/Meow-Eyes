@@ -48,7 +48,10 @@ test.each([[1250,1250],[80,100]])('shipping shows authoritative item weight %i g
   const prescription=sections.indexOf(host.querySelector('[data-testid="checkout-prescriptions"]'));
   const shipping=sections.indexOf(host.querySelector('[data-testid="shipping-section"]'));
   const payment=sections.indexOf(host.querySelector('[data-testid="payment-method-section"]'));
-  expect(shipping).toBe(prescription+1);expect(payment).toBe(shipping+1);
+  const address=sections.indexOf(host.querySelector('[data-testid="address-section"]'));
+  const products=sections.indexOf(host.querySelector('[data-testid="checkout-products"]'));
+  expect(prescription).toBe(products+1);expect(address).toBe(prescription+1);
+  expect(shipping).toBe(address+1);expect(payment).toBe(shipping+1);
   expect(host.querySelector('[data-testid="shipping-weight"]').textContent.includes('Berat perhitungan ongkir:')).toBe(itemsWeight!==ratedWeight);
 });
 

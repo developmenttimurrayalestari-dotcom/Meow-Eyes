@@ -978,9 +978,49 @@ superadmin tidak memerlukan perubahan env atau restart.
 
 ### Berat barang dan urutan checkout
 
-Bagian Pengiriman berada tepat setelah Lensa & Resep per Item dan sebelum
-Metode Pembayaran. Total berat barang ditampilkan dalam gram dari backend,
+Urutan checkout: Produk Pilihan → Lensa & Resep per Item → Alamat Pengiriman
+→ Pengiriman (pilihan kurir/layanan) → Metode Pembayaran.
+Total berat barang ditampilkan dalam gram dari backend,
 termasuk kuantitas, lensa, dan Add On pada item yang dipilih. Berat untuk
 permintaan ongkir ditampilkan terpisah bila berbeda karena batas minimum.
 Angka berat lama disembunyikan selama perhitungan ulang agar sesuai tarif baru.
 Perubahan ini tidak memerlukan migrasi database.
+
+### Peta alamat dan pencarian titik pengantaran
+
+Peta alamat memakai Leaflet 1.9.4 dengan tile OpenStreetMap. Peta dapat digeser
+langsung, diperbesar dengan gulir mouse/cubit dua jari/tombol +/−, dan dipilih
+dengan ketukan. Pin dapat diseret. Tombol Lihat titik kembali ke koordinat yang
+disimpan; perubahan koordinat manual juga memusatkan peta ke titik baru.
+Gunakan Lokasi Saya meminta izin lokasi browser; bila tidak tersedia, pencarian
+alamat dan pemilihan manual tetap dapat digunakan. Kolom koordinat tersedia di
+bagian Isi koordinat secara manual (opsional).
+
+Isi Cari alamat atau nama tempat lalu tekan Cari, atau gunakan alamat yang
+sudah diisi sebagai kata pencarian. Pilih salah satu hasil dan sesuaikan pin.
+Pencarian hanya mengganti koordinat, tidak mengganti alamat lengkap maupun
+provinsi/kota/kecamatan/kelurahan dari data EVERPRO. Pastikan lokasi pin sesuai
+alamat pengiriman. Koordinat tetap opsional untuk layanan yang tidak memerlukannya.
+
+Endpoint login `POST /api/shipping/map-search` meneruskan pencarian eksplisit ke
+Photon dengan filter Indonesia, maksimal lima hasil. Tidak ada autocomplete atau
+pengiriman otomatis alamat/nama/telepon saat formulir dibuka/diketik. Permintaan
+provider menggunakan alamat pencarian yang dimasukkan pengguna. HTTP client
+server dapat mencatat URL provider pada level INFO; sesuaikan kebijakan logging
+produksi bila tidak ingin kata pencarian tersimpan di log.
+
+Backend membatasi permintaan baru satu per detik per proses dan menyimpan cache
+terbatas 128 pencarian selama lima menit. Kegagalan provider tidak menghalangi
+penggunaan peta/manual. `MAP_GEOCODING_URL` bersifat opsional, default
+`https://photon.komoot.io/api/`, tanpa API key. Server demo publik Photon
+ditujukan untuk penggunaan wajar dan tidak menjamin ketersediaan. Untuk trafik
+besar, gunakan endpoint Photon yang sesuai kapasitas dan ketentuan penyedia;
+rate limit per proses bukan kuota global untuk beberapa worker. Tile OSM juga
+mengikuti [kebijakan penyedia tile](https://operations.osmfoundation.org/policies/tiles/).
+Lihat [dokumentasi Photon](https://github.com/komoot/photon) dan
+[Leaflet](https://leafletjs.com/reference-1.9.4.html).
+
+Pemasangan: jalankan `npm ci` di frontend, build/deploy frontend, dan restart
+backend untuk memuat endpoint baru. Tidak ada migrasi database atau kredensial
+peta baru yang wajib diisi. Pengaturan ini tidak mengubah sumber data wilayah
+dan bearer token EVERPRO.

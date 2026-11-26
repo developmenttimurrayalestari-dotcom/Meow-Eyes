@@ -44,7 +44,7 @@ export default function AddressForm({ onSaved, onCancel, defaultAddress = false,
         placeholder={"Nama jalan, nomor rumah, RT/RW, dan petunjuk pengiriman"}
         className="block w-full mt-1 px-3 py-2.5 rounded-xl bg-meow-bg border border-meow-midnight/10 focus:border-meow-salmon outline-none" data-testid="addr-street" />
       </label>
-      <AddressPinpoint value={coordinates} onChange={setCoordinates} disabled={saving} />
+      <AddressPinpoint value={coordinates} onChange={setCoordinates} disabled={saving} searchHint={[form.street, region.subdistrict || initialAddress?.subdistrict, region.district || initialAddress?.district, region.city || initialAddress?.city, region.province || initialAddress?.province].filter(Boolean).join(', ')} />
       <label className="sm:col-span-2 flex items-center gap-2 text-xs"><input type="checkbox" checked={form.is_default} onChange={(event) => set("is_default", event.target.checked)} />{" Jadikan alamat utama"}</label>
     </fieldset>
     {error && <p role="alert" className="text-red-600">{error}</p>}

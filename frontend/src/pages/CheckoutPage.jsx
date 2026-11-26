@@ -184,20 +184,7 @@ export default function CheckoutPage() {
     <h1 className="font-heading text-3xl md:text-4xl font-black mb-6">{"Checkout"}</h1>
     <div className="grid lg:grid-cols-3 gap-6">
       <div className="lg:col-span-2 space-y-5 min-w-0">
-        <section className="bg-white rounded-3xl p-5 md:p-6" data-testid="address-section">
-          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-            <h2 className="font-heading font-extrabold text-xl flex items-center gap-2"><MapPin className="h-5 w-5 text-meow-salmon" />{"Alamat Pengiriman"}</h2>
-            <button type="button" disabled={submitting} onClick={() => {setEditingAddress(null);setShowAddForm(!showAddForm);setShipping(null);setPreview(null);if (showAddForm) setShippingReload((value) => value + 1);}} className="text-sm font-bold text-meow-salmon flex items-center gap-1">{showAddForm ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}{showAddForm ? "Tutup" : "Tambah"}</button>
-          </div>
-          {showAddForm ? <AddressForm key={editingAddress?.id || 'new'} initialAddress={editingAddress} defaultAddress={!addresses.length} onCancel={() => {setShowAddForm(false);setEditingAddress(null);setShippingReload((value) => value + 1);}} onSaved={(address) => {setAddresses((items) => [...items.filter((item) => item.id !== address.id).map((item) => address.is_default ? { ...item, is_default: false } : item), address]);setAddressId(address.id);setShowAddForm(false);setEditingAddress(null);setShipping(null);setPreview(null);setShippingReload((value) => value + 1);}} /> :
-          !addresses.length ? <p className="text-sm text-meow-gray">{"Tambahkan alamat pengiriman untuk menghitung ongkir."}</p> :
-          <div className="space-y-2">{addresses.map((address) => <div key={address.id} className={`flex gap-2 p-3 rounded-2xl border-2 cursor-pointer ${addressId === address.id ? "border-meow-salmon bg-meow-salmon/5" : "border-meow-midnight/5"}`}>
-                <label className="flex items-start gap-2 flex-1 min-w-0"><input type="radio" name="checkout-address" disabled={submitting} checked={addressId === address.id} onChange={() => setAddressId(address.id)} className="mt-1" />
-                <span className="text-sm"><span className="font-bold">{address.label} — <span className="conveythis-no-translate notranslate" translate="no" data-conveythis-private="">{address.recipient}</span></span> · <span className="conveythis-no-translate notranslate" translate="no" data-conveythis-private="">{address.phone}</span><br /><span className="text-meow-gray"><span className="conveythis-no-translate notranslate" translate="no" data-conveythis-private="">{[address.street, address.subdistrict, address.district, address.city, address.province, address.postal_code].filter(Boolean).join(", ")}</span></span></span></label><button type="button" disabled={submitting} data-testid={`checkout-edit-address-${address.id}`} onClick={() => {setEditingAddress(address);setShowAddForm(true);setShipping(null);setPreview(null);}} className="text-xs font-bold text-meow-salmon self-start">{"Ubah"}</button>
-              </div>)}</div>}
-        </section>
-
-        <section className="bg-white rounded-3xl p-5 md:p-6">
+        <section className="bg-white rounded-3xl p-5 md:p-6" data-testid="checkout-products">
           <h2 className="font-heading font-extrabold text-xl mb-4">{"Produk Pilihan"}</h2>
           <div className="divide-y divide-meow-midnight/10">{cartItems.map((item) => <div key={item.id} className="flex items-center gap-3 py-3">
             <img src={imageSrc(item.product.main_image)} alt="" className="w-14 h-14 rounded-xl object-cover" />
@@ -217,6 +204,19 @@ export default function CheckoutPage() {
           <div><h2 className="font-heading font-extrabold text-xl flex items-center gap-2"><Glasses className="h-5 w-5 text-meow-salmon" />{"Lensa & Resep per Item (Opsional)"}</h2><p className="text-sm text-meow-gray mt-1">{"Untuk produk Frame, Anda boleh membeli frame saja tanpa lensa, catatan, atau foto resep. Anda juga dapat memakai resep yang sudah disimpan di Profil. Isi bagian ini hanya jika diperlukan. Klik Simpan Resep jika ada perubahan; setiap baris produk disimpan terpisah."}</p></div>
           {cartItems.map((item) => <PrescriptionForm key={item.id} item={item} onDirtyChange={handleDirty} onSaved={handlePrescriptionSaved} disabled={submitting} showMeasurements={false} selectLens allowProfile />)}
         </section>}
+
+        <section className="bg-white rounded-3xl p-5 md:p-6" data-testid="address-section">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <h2 className="font-heading font-extrabold text-xl flex items-center gap-2"><MapPin className="h-5 w-5 text-meow-salmon" />{"Alamat Pengiriman"}</h2>
+            <button type="button" disabled={submitting} onClick={() => {setEditingAddress(null);setShowAddForm(!showAddForm);setShipping(null);setPreview(null);if (showAddForm) setShippingReload((value) => value + 1);}} className="text-sm font-bold text-meow-salmon flex items-center gap-1">{showAddForm ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}{showAddForm ? "Tutup" : "Tambah"}</button>
+          </div>
+          {showAddForm ? <AddressForm key={editingAddress?.id || 'new'} initialAddress={editingAddress} defaultAddress={!addresses.length} onCancel={() => {setShowAddForm(false);setEditingAddress(null);setShippingReload((value) => value + 1);}} onSaved={(address) => {setAddresses((items) => [...items.filter((item) => item.id !== address.id).map((item) => address.is_default ? { ...item, is_default: false } : item), address]);setAddressId(address.id);setShowAddForm(false);setEditingAddress(null);setShipping(null);setPreview(null);setShippingReload((value) => value + 1);}} /> :
+          !addresses.length ? <p className="text-sm text-meow-gray">{"Tambahkan alamat pengiriman untuk menghitung ongkir."}</p> :
+          <div className="space-y-2">{addresses.map((address) => <div key={address.id} className={`flex gap-2 p-3 rounded-2xl border-2 cursor-pointer ${addressId === address.id ? "border-meow-salmon bg-meow-salmon/5" : "border-meow-midnight/5"}`}>
+                <label className="flex items-start gap-2 flex-1 min-w-0"><input type="radio" name="checkout-address" disabled={submitting} checked={addressId === address.id} onChange={() => setAddressId(address.id)} className="mt-1" />
+                <span className="text-sm"><span className="font-bold">{address.label} — <span className="conveythis-no-translate notranslate" translate="no" data-conveythis-private="">{address.recipient}</span></span> · <span className="conveythis-no-translate notranslate" translate="no" data-conveythis-private="">{address.phone}</span><br /><span className="text-meow-gray"><span className="conveythis-no-translate notranslate" translate="no" data-conveythis-private="">{[address.street, address.subdistrict, address.district, address.city, address.province, address.postal_code].filter(Boolean).join(", ")}</span></span></span></label><button type="button" disabled={submitting} data-testid={`checkout-edit-address-${address.id}`} onClick={() => {setEditingAddress(address);setShowAddForm(true);setShipping(null);setPreview(null);}} className="text-xs font-bold text-meow-salmon self-start">{"Ubah"}</button>
+              </div>)}</div>}
+        </section>
 
         {addressId && <section className="bg-white rounded-3xl p-5 md:p-6" data-testid="shipping-section">
           <div className="flex items-center justify-between gap-2 mb-3"><h2 className="font-heading font-extrabold text-xl flex items-center gap-2"><Truck className="h-5 w-5 text-meow-mint" />{"Pengiriman"}</h2><button type="button" onClick={() => setShippingReload((value) => value + 1)} disabled={shippingLoading || submitting} className="text-xs font-bold flex items-center gap-1"><RefreshCw className={`h-3.5 w-3.5 ${shippingLoading ? "animate-spin" : ""}`} />{"Cek ulang"}</button></div>

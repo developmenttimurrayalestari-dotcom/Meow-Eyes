@@ -31,6 +31,16 @@ from integrations.locations import region_options
 router = APIRouter(tags=["integrations"])
 
 
+class MapSearchInput(BaseModel):
+    query: str = Field(min_length=3, max_length=200)
+
+
+@router.post('/shipping/map-search')
+async def map_search(body: MapSearchInput, user: User = Depends(current_user)):
+    from integrations.map_search import search_address
+    return await search_address(body.query)
+
+
 async def configured_status(*, admin=False):
     result = integration_status(admin=admin)
     if result['shipping']['provider'] == 'everpro':
