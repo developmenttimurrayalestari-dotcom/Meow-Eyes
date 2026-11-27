@@ -17,6 +17,7 @@ const NAV = [
 { to: "/admin/categories", icon: FolderTree, label: "Kategori", testid: "admin-nav-categories", section: "catalog", perm: "product.view" },
 { to: "/admin/lens-indexes", icon: Layers, label: "Lens Indexes", testid: "admin-nav-lens", section: "catalog", perm: "product.view" },
 { to: '/admin/tinting', icon: Layers, label: 'Manage Tinting', testid: 'admin-nav-tinting', section: 'catalog', perm: 'product.view' },
+{ to: '/admin/lens-products', icon: Layers, label: 'Produk Lensa & Harga', testid: 'admin-nav-lens-products', section: 'catalog', perm: 'product.view' },
 { to: "/admin/try-on", icon: Glasses, label: "Virtual Try-On", testid: "admin-nav-tryon", section: "catalog", perm: "product.update" },
 { to: "/admin/inventory", icon: Boxes, label: "Inventory", testid: "admin-nav-inventory", section: "catalog", perm: "product.update" },
 { to: "/admin/orders", icon: ShoppingBag, label: "Pesanan", testid: "admin-nav-orders", section: "sales", perm: "order.view" },

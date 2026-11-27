@@ -18,6 +18,7 @@ from mysql.commerce import (
 )
 from mysql.features import PAID_ORDER_STATUSES, safe_web_url
 from integrations.locations import selected_location
+from mysql.lenses import indexes_payload
 
 
 router = APIRouter(tags=["shopping"])
@@ -40,7 +41,7 @@ async def _cart_payload(s, item: PricedItem) -> dict[str, Any]:
         "lens_product": {key: getattr(item.lens_product, key) for key in ("id", "name", "slug")}
             if item.lens_product else None,
         "lens_variant": row_dict(item.lens_variant) if item.lens_variant else None,
-        "lens_index": row_dict(item.lens_index) if item.lens_index else None,
+        "lens_index": (await indexes_payload(s,[item.lens_index]))[0] if item.lens_index else None,
         "lens_price": float(item.lens_price), "frame_price": float(item.frame_price),
         "addon_price": float(item.addon_price),
         "tinting": item.tinting, "tinting_price": float(item.tinting_price),
@@ -105,7 +106,7 @@ async def add_to_cart(req: CartItemCreate, user: User = Depends(current_user)):
                 m.LensIndex.id == req.lens_index_id, m.LensIndex.is_active.is_(True)
             )) is None:
                 raise HTTPException(400, "Indeks lensa tidak tersedia")
-        if not req.lens_product_id and not req.prescription and not req.lens_index_id and not addons:
+        if not req.lens_product_id and not req.prescription and not req.lens_index_id and not addons and not req.tinting_id:
             existing = await s.scalar(select(m.CartItem).where(
                 m.CartItem.user_id == user.user_id, m.CartItem.product_id == product.id,
                 m.CartItem.variant_id == variant.id, m.CartItem.lens_product_id.is_(None),
@@ -131,6 +132,14 @@ async def add_to_cart(req: CartItemCreate, user: User = Depends(current_user)):
         s.add(item)
         await s.flush()
         s.add_all([m.CartAddon(cart_item_id=item.id, product_id=pid, variant_id=vid) for pid, vid in addons])
+        if req.tinting_id:
+            from mysql.tinting import catalog, eligible, snapshot
+            if not eligible(product): raise HTTPException(422, 'Tinting tidak tersedia untuk produk ini')
+            colors = await catalog(s, lock=True)
+            color = next((color for color in colors['items'] if color['id'] == req.tinting_id), None)
+            if not color or not color['is_active'] or color['requires_sample']:
+                raise HTTPException(409, 'Warna tinting tidak tersedia. Pilih kembali warna.')
+            s.add(m.CartTinting(cart_item_id=item.id, tinting_id=color['id'], details=snapshot(color)))
         await s.flush()
         return {"ok": True, "id": item.id}
 

@@ -1309,3 +1309,69 @@ warna nonaktif tetap dapat dihapus, dan snapshot order tetap utuh setelah master
 diubah. Edge headless memakai komponen asli dengan API fixture (tanpa login atau
 backend) memeriksa tata letak checkout 390/320 piksel dan admin desktop, termasuk
 warna gradasi serta tidak adanya pratinjau yang melampaui kartu.
+
+### Konfigurasi lensa di detail produk dan katalog harga kombinasi — 27 November 2026
+
+Pembaruan ini menggantikan posisi input lensa/resep/tinting pada checkout yang
+dijelaskan dalam rilis sebelumnya. Form **Lensa & Resep per Item (Opsional)**
+dan **Tinting Lensa** sekarang berada tepat di bawah tombol Tambah ke Cart /
+Beli Sekarang pada halaman detail produk. Pilih **jenis lensa → indeks lensa**,
+lalu catatan/foto resep atau resep Profil, serta warna tinting bila diperlukan.
+Frame tetap dapat dibeli tanpa lensa, resep, atau tinting. Satu pilihan berlaku
+untuk seluruh jumlah produk pada satu baris; biaya mengikuti jumlah tersebut.
+
+Halaman **Admin > Katalog > Produk Lensa & Harga** (`/admin/lens-products`)
+mengelola setiap kombinasi secara terpisah. Contoh: Clear 1.61 dan UV420 1.61
+memiliki ID serta harga sendiri; Clear 1.67 dapat berbeda dari Clear 1.61.
+Clear, UV420, Photochromic, dan UV420 + Photochromic disediakan sebagai jenis
+awal. Jenis lain bisa ditambahkan pada Master Kategori > Jenis Lensa, kemudian
+dipakai pada halaman harga kombinasi. Indeks diisi dua desimal (misalnya 1.61
+atau 1.67); harga jual diisi admin, tidak dibuat otomatis tanpa persetujuan.
+Nama tampilan menyertakan jenis dan indeks agar dapat dibaca pada cart/pesanan.
+
+Katalog memakai tabel `lens_indexes` dan `lens_index_types` yang sudah ada.
+Harga `additional_price` pada entri kombinasi adalah biaya lensa per produk
+yang ditambahkan ke harga Frame. Pada Paket, pilihan tetap difilter mengikuti
+Jenis Lensa yang ditetapkan pada produk dan biaya lensa tetap termasuk paket.
+Tinting tetap berbayar terpisah. Lens Index lama tidak dihapus atau diberi
+harga baru secara otomatis: klasifikasikan entri lama dan periksa harga melalui
+halaman baru. Entah tanpa klasifikasi atau memiliki lebih dari satu jenis,
+entri lama perlu diperjelas menjadi satu jenis per entri sebelum ditampilkan
+pada pemilih kombinasi baru. Edit lensa lama pada keranjang menampilkan
+keterangan dan menyediakan penggantian/penghapusan pilihan.
+
+Permission mengikuti `product.view/create/update/delete`. Kombinasi jenis dan
+indeks yang sama tidak dibuat dua kali; gunakan Edit untuk mengubah harga atau
+mengaktifkan kembali entri. Nonaktifkan mempertahankan ID/riwayat. Perubahan
+versi pada editor baru menolak penyimpanan dari form lama. Empat master jenis
+awal yang belum ada dibuat saat admin menyimpan kombinasinya; GET tidak membuat
+data. Halaman Lens Indexes lama tetap tersedia untuk kompatibilitas dan berbagi
+data dengan halaman ini.
+
+Pemilihan pada detail produk masih berupa draft. Foto diunggah privat saat
+penambahan produk; kemudian **satu POST /api/cart** menyimpan lensa, resep,
+tinting, dan Add On dalam transaksi yang sama. Kegagalan validasi membatalkan
+seluruh penambahan. Lensa kombinasi baru tidak ditumpuk lagi dengan pilihan
+produk lensa dari picker bundle lama. Rekomendasi/picker bundle lama pada
+detail produk digantikan oleh alur jenis → indeks ini; API bundle lama dan
+data transaksi lama tetap dipertahankan.
+
+Checkout menampilkan detail Frame/produk, lensa dan harganya, Add On, tinting,
+serta resep/foto tiap baris. Tidak ada pemilih lensa, upload foto, editor resep,
+atau pemilih tinting di checkout. Tautan **Ubah lensa, resep, atau tinting**
+membuka `/products/{slug}?cart_item_id={id}` dengan pilihan yang sudah tersimpan.
+**PATCH /api/cart/{id}/configuration** memeriksa pemilik, varian, stok, lensa,
+resep, dan tinting lalu memperbarui baris yang sama secara atomik. Add On tetap
+tersimpan. Daftar item checkout lain tetap dipertahankan ketika kembali dari
+proses edit. Penggantian lensa bundle lama melepas komponen lensa lama agar
+biayanya tidak dihitung dua kali. Perubahan pilihan/jenis/indeks/nama/harga
+memerlukan quote ongkir baru. Resep yang dibaca pada ringkasan dikecualikan dari
+ConveyThis agar data resep privat tidak ikut diterjemahkan.
+
+Penerapan membutuhkan backend dan build frontend terbaru. **Tidak ada migrasi
+database tambahan pada pembaruan ini**; migrasi tinting `20261127_0017` dari
+rilis sebelumnya tetap harus sudah terpasang. Jangan reset database atau
+mengimpor ulang transaksi. Setelah deploy/restart, buka Produk Lensa & Harga
+untuk mengklasifikasikan data lama dan mengisi harga kombinasi yang akan dijual.
+
+Validasi alur baru: 352 tes frontend lulus; 597 tes backend lulus dengan dua tes symlink lama dikecualikan karena izin Windows. Setelah penyesuaian akhir, tes terarah checkout/detail produk, kombinasi harga, tinting, integrasi pembayaran/pengiriman, dan COD juga lulus. Audit 413 kontrol form tidak menemukan label yang hilang. Build produksi berhasil dengan peringatan dependency MediaPipe yang sudah ada. Tidak ada perubahan database aktif atau proses backend/PM2 yang dijalankan otomatis.

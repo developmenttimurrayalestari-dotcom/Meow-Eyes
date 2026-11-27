@@ -25,7 +25,7 @@ async def indexes_payload(s, indexes):
             .order_by(m.Category.sort_order, m.Category.id))).all()
         for index_id, category in rows:
             result[index_id]['lens_type_ids'].append(category.id)
-            result[index_id]['lens_types'].append({'id': category.id, 'name': category.name, 'is_active': category.is_active})
+            result[index_id]['lens_types'].append({'id': category.id, 'code': category.code, 'name': category.name, 'is_active': category.is_active})
     return list(result.values())
 
 

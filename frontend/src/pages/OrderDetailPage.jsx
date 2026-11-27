@@ -42,6 +42,7 @@ const OrderDetailPage = () => {
                   <img src={imageSrc(it.main_image)} alt="" className="w-16 h-16 rounded-xl object-cover" />
                   <div className="flex-1">
                     <p className="font-bold">{it.product_name}</p>
+                    {it.components?.filter(component=>component.lens_index_name).map(component=><p key={`lens-${component.id}`} className="text-xs text-meow-gray">Lensa: {component.lens_index_name}</p>)}
                     {it.components?.filter((c) => c.component_type === 'add_on').map((c) => <p key={c.id} className="text-xs text-meow-gray">+ {c.product_name} · {c.quantity} × <span className="conveythis-no-translate notranslate" translate="no" data-conveythis-private="">{formatIDR(c.unit_price)}</span></p>)}
                     <TintingDetails tinting={it.tinting}/>
                     {it.variant_label && <p className="text-xs text-meow-gray">{it.variant_label}</p>}

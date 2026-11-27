@@ -1,13 +1,13 @@
-import FormField from "../components/FormField";
 import React, { useEffect, useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
 import { api, apiError, formatIDR, imageSrc } from "../lib/api";
 import { useAuth } from "../contexts/AuthContext";
 import ProductCard from "../components/ProductCard";
 import HtmlContent from "../components/HtmlContent";
 import VirtualTryOn from "../components/VirtualTryOn";
 import ProductMeowsurement from "../components/ProductMeowsurement";
-import PrescriptionPhotoInput from "../components/PrescriptionPhotoInput";
+import ProductOpticalOptions, { emptyOptical } from '../components/ProductOpticalOptions';
+import { prescriptionValues } from '../components/PrescriptionForm';
 import AddonChooser from '../components/AddonChooser';
 import { ChevronRight, Heart, Truck, ShieldCheck, Sparkles, Star, BellRing, Cat } from "lucide-react";
 import { toast } from "sonner";
@@ -25,54 +25,28 @@ const ProductDetailPage = () => {
   const [selectedImg, setSelectedImg] = useState(0);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [qty, setQty] = useState(1);
-  // Lens bundle state
-  const [wantLens, setWantLens] = useState(false);
-  const [lensOptions, setLensOptions] = useState({ lens_products: [], lens_indexes: [] });
-  const [lensProductId, setLensProductId] = useState("");
-  const [lensIndexId, setLensIndexId] = useState("");
-  const [prescriptionPhoto, setPrescriptionPhoto] = useState(null);
-  const [prescriptionUploadId, setPrescriptionUploadId] = useState(null);
-  // Recommended bundle picks (Basic / Popular / Premium)
-  const [bundlePicks, setBundlePicks] = useState([]);
-  const [bundleFor, setBundleFor] = useState("");
-  const [bundleLoading, setBundleLoading] = useState(false);
-  const [bundleError, setBundleError] = useState("");
-  const [bundleReload, setBundleReload] = useState(0);
-
+  const location = useLocation();
+  const editCartId = new URLSearchParams(location.search).get('cart_item_id') || '';
+  const [optical,setOptical] = useState(emptyOptical);
+  const [opticalBusy,setOpticalBusy] = useState(false);
+  const [uploadedPhoto,setUploadedPhoto] = useState(null);
+  const [editItem,setEditItem] = useState(null);
   useEffect(() => {
-    const controller = new AbortController();
-    setData(null);setError("");setQty(1);setPrescriptionPhoto(null);setPrescriptionUploadId(null);
-    setPurchaseIntent(null);
-    setSelectedImg(0);setSelectedVariant(null);
-    setWantLens(false);setLensProductId("");setLensIndexId("");
-    setLensOptions({ lens_products: [], lens_indexes: [] });setBundlePicks([]);
-    api.get(`/products/${slug}`, { signal: controller.signal }).then(({ data: response }) => {
-      setData(response);
-      if (response.product.variants?.length > 0) setSelectedVariant(response.product.variants[0]);
-      if (response.product.product_type === "frame") {
-        api.get(`/lens/options-for-frame/${response.product.id}`, { signal: controller.signal }).then(({ data: options }) => setLensOptions(options)).catch(() => {});
-      }
-    }).catch((err) => {if (!controller.signal.aborted) setError(apiError(err, "Produk belum dapat dimuat."));});
-    return () => controller.abort();
-  }, [slug]);
-
-  const frameId = data?.product?.product_type === "frame" ? data.product.id : null;
-  const variantId = selectedVariant?.id;
-  const currentBundleKey = frameId && variantId ? `${frameId}:${variantId}` : "";
-  useEffect(() => {
-    const controller = new AbortController();
-    setBundlePicks([]);setBundleFor("");setBundleError("");
-    if (!frameId || !variantId) {setBundleLoading(false);return () => controller.abort();}
-    setBundleLoading(true);
-    api.get(`/lens/recommended-bundle/${frameId}`, { params: { variant_id: variantId }, signal: controller.signal }).then(({ data: response }) => {
-      if (controller.signal.aborted) return;
-      if (response.frame?.variant_id !== variantId) {setBundleError("Paket belum tersedia untuk varian ini. Coba muat ulang rekomendasi.");return;}
-      setBundlePicks(response.picks || []);setBundleFor(`${frameId}:${variantId}`);
-    }).catch((err) => {if (!controller.signal.aborted) setBundleError(apiError(err, "Rekomendasi paket belum dapat dimuat."));}).
-    finally(() => {if (!controller.signal.aborted) setBundleLoading(false);});
-    return () => controller.abort();
-  }, [frameId, variantId, bundleReload]);
-  const bundleCurrent = Boolean(currentBundleKey && bundleFor === currentBundleKey);
+    const controller=new AbortController();
+    setData(null);setError('');setQty(1);setSelectedImg(0);setSelectedVariant(null);
+    setOptical(emptyOptical());setOpticalBusy(false);setUploadedPhoto(null);setEditItem(null);setPurchaseIntent(null);
+    const load=async()=>{
+      try {
+        const {data:response}=await api.get(`/products/${slug}`,{signal:controller.signal});
+        let item=null;
+        if(editCartId){const {data:cart}=await api.get('/cart',{signal:controller.signal});item=cart.items?.find(item=>item.id===editCartId&&item.product.id===response.product.id);if(!item)throw new Error('cart item missing');}
+        if(controller.signal.aborted)return;
+        setData(response);setSelectedVariant(response.product.variants?.find(variant=>variant.id===item?.variant_id)||response.product.variants?.[0]||null);
+        if(item){setQty(item.quantity);setEditItem(item);setOptical({...emptyOptical(),lens_index_id:item.lens_index?.id||'',lens_index_name:item.lens_index?.name||'',prescription:prescriptionValues(item.prescription),tinting:item.tinting||null});}
+      }catch(err){if(!controller.signal.aborted)setError(apiError(err,'Produk atau item keranjang belum dapat dimuat.'));}
+    };
+    load();return()=>controller.abort();
+  },[slug,editCartId]);
 
   if (error) return <div className="max-w-xl mx-auto p-8 text-center" role="alert"><p>{error}</p><Link to="/shop-now" className="btn-secondary inline-block mt-4">{"Kembali ke Shop Now"}</Link></div>;
 
@@ -86,80 +60,42 @@ const ProductDetailPage = () => {
   const price = hasFlash ? data.flash_item.flash_price : selectedVariant?.price_override ?? p.discount_price ?? p.price;
   const hasDiscount = p.discount_price && p.discount_price < p.price;
   const stock = selectedVariant ? Math.max(0, (selectedVariant.stock || 0) - (selectedVariant.reserved || 0)) : 0;
-  const selectedLens = lensOptions.lens_products?.find((lens) => lens.id === lensProductId);
-  const selectedLensVariant = selectedLens?.variants?.find((variant) => variant.is_active !== false);
-  const lensStock = selectedLensVariant ? Math.max(0, Number(selectedLensVariant.stock || 0) - Number(selectedLensVariant.reserved || 0)) : 0;
-
+  const opticalEligible=['frame','lens','package'].includes(p.product_type)&&(p.sale_role||'main')==='main';
+  const incompleteLens=Boolean(optical.lens_type&&!optical.lens_index_id);
   const addToCart = async (addons = []) => {
-    if (!user) {navigate("/login");return false;}
-    if (stock <= 0 || qty > stock) {toast.error("Jumlah melebihi stok yang tersedia");return false;}
-    if (wantLens && !lensProductId) {toast.error("Pilih jenis lensa terlebih dahulu");return false;}
-    if (wantLens && (!selectedLensVariant || lensStock < qty)) {toast.error("Stok lensa tidak cukup untuk jumlah yang dipilih");return false;}
-    if (adding) return false;
+    if(!user){navigate('/login');return false;}
+    if(adding||opticalBusy)return false;
+    if(stock<=0||qty>stock){toast.error('Jumlah melebihi stok yang tersedia');return false;}
+    if(incompleteLens){toast.error('Pilih indeks lensa terlebih dahulu');return false;}
     setAdding(true);
-    try {
-      const body = {
-        product_id: p.id,
-        variant_id: selectedVariant?.id,
-        quantity: qty,
-        addons
-      };
-      if (wantLens && lensProductId) {
-        body.lens_product_id = lensProductId;
-        body.lens_variant_id = selectedLensVariant.id;
-        body.lens_index_id = lensIndexId || null;
-        if (prescriptionPhoto) {
-          let uploadId = prescriptionUploadId;
-          if (!uploadId) {
-            const formData = new FormData();
-            formData.append("file", prescriptionPhoto);
-            const { data: upload } = await api.post("/uploads/prescription", formData);
-            uploadId = upload.id;
-            setPrescriptionUploadId(uploadId);
-          }
-          body.prescription = { attachment_upload_id: uploadId };
-        }
+    try{
+      const prescription={...optical.prescription};
+      if(optical.file){
+        let uploadId=uploadedPhoto?.file===optical.file?uploadedPhoto.id:null;
+        if(!uploadId){const upload=new FormData();upload.append('file',optical.file);const{data}=await api.post('/uploads/prescription',upload);uploadId=data.id;setUploadedPhoto({file:optical.file,id:uploadId});}
+        prescription.attachment_upload_id=uploadId;
       }
-      await api.post("/cart", body);
-      toast.success(wantLens && lensProductId ? "Frame + Lensa ditambahkan ke keranjang" : "Ditambahkan ke keranjang");
-      refreshCartCount();
-      return true;
-    } catch (e) {
-      toast.error(apiError(e, "Gagal menambahkan"));
-      return false;
-    } finally {setAdding(false);}
+      if(editCartId){
+        await api.patch(`/cart/${encodeURIComponent(editCartId)}/configuration`,{variant_id:selectedVariant?.id,quantity:qty,
+          lens_index_id:optical.lens_index_id||null,prescription,tinting_id:optical.tinting?.id||null,replace_lens_product:optical.replace_lens_product});
+      }else{
+        await api.post('/cart',{product_id:p.id,variant_id:selectedVariant?.id,quantity:qty,addons,
+          ...(opticalEligible?{lens_index_id:optical.lens_index_id||null,prescription:Object.values(prescription).some(value=>value!==''&&value!=null)?prescription:null,tinting_id:optical.tinting?.id||null}:{})});
+      }
+      toast.success(editCartId?'Pilihan produk diperbarui':'Ditambahkan ke keranjang');refreshCartCount();return true;
+    }catch(err){toast.error(apiError(err,'Pilihan produk belum berhasil disimpan'));return false;}
+    finally{setAdding(false);}
   };
 
   const beginPurchase = async (intent) => {
     if (!user) {navigate('/login');return;}
+    if(editCartId){if(await addToCart()){const previous=location.state?.checkout_item_ids;const ids=Array.isArray(previous)&&previous.includes(editCartId)?[...new Set(previous.filter(id=>typeof id==='string'))]:[editCartId];navigate('/checkout',{state:{selected_item_ids:ids}});}return;}
+    if(incompleteLens){toast.error('Pilih indeks lensa terlebih dahulu');return;}
     if ((p.sale_role || 'main') === 'main') {setPurchaseIntent(intent);return;}
     if (await addToCart()) {if (intent === 'buy') navigate('/cart');}
   };
   const confirmAddons = async (addons) => {
     if (await addToCart(addons)) {const intent = purchaseIntent;setPurchaseIntent(null);if (intent === 'buy') navigate('/cart');}
-  };
-
-  // One-click checkout for a curated Basic / Popular / Premium bundle pick.
-  const buyBundle = async (pick) => {
-    if (!user) {navigate("/login");return;}
-    if (adding || !bundleCurrent || bundleLoading || pick.frame_variant_id !== variantId || !pick.available || !pick.lens_variant_id) {toast.error("Paket belum tersedia untuk varian ini");return;}
-    if (stock <= 0) {toast.error("Stok habis");return;}
-    setAdding(true);
-    try {
-      await api.post("/cart", {
-        product_id: p.id,
-        variant_id: pick.frame_variant_id,
-        quantity: 1,
-        lens_product_id: pick.lens_product_id,
-        lens_variant_id: pick.lens_variant_id,
-        lens_index_id: pick.lens_index_id
-      });
-      refreshCartCount();
-      toast.success(`Paket ${pick.label} ditambahkan ke keranjang`);
-      navigate("/cart");
-    } catch (e) {
-      toast.error(apiError(e, "Gagal menambahkan paket"));
-    } finally {setAdding(false);}
   };
 
   const toggleWishlist = async () => {
@@ -243,7 +179,7 @@ const ProductDetailPage = () => {
               <p className="text-sm font-bold mb-2">{"Pilih Varian:"}</p>
               <div className="flex flex-wrap gap-2" data-testid="variant-list">
                 {p.variants.map((v) =>
-              <button key={v.id} onClick={() => {setSelectedVariant(v);setQty((current) => Math.max(1, Math.min(current, Number(v.stock || 0) - Number(v.reserved || 0))));}}
+              <button key={v.id} disabled={adding||opticalBusy||Boolean(purchaseIntent)} onClick={() => {setSelectedVariant(v);setQty((current) => Math.max(1, Math.min(current, Number(v.stock || 0) - Number(v.reserved || 0))));}}
               className={`px-4 py-2 rounded-full border-2 text-sm font-semibold ${selectedVariant?.id === v.id ? "border-meow-salmon bg-meow-salmon/10 text-meow-salmon" : "border-meow-midnight/10 hover:border-meow-midnight"}`}
               data-testid={`variant-${v.sku}`}>
                     {v.color_hex && <span className="inline-block h-3 w-3 rounded-full mr-2 align-middle" style={{ background: v.color_hex }} />}
@@ -257,106 +193,19 @@ const ProductDetailPage = () => {
           <div className="flex items-center gap-4">
             <p className="text-sm font-bold">{"Jumlah:"}</p>
             <div className="flex items-center bg-meow-bg rounded-full">
-              <button onClick={() => setQty(Math.max(1, qty - 1))} className="px-3 py-1.5 font-bold" data-testid="qty-minus">-</button>
+              <button disabled={adding||opticalBusy||Boolean(purchaseIntent)} onClick={() => setQty(Math.max(1, qty - 1))} className="px-3 py-1.5 font-bold" data-testid="qty-minus">-</button>
               <span className="px-3 py-1.5 font-bold" data-testid="qty-display">{qty}</span>
-              <button disabled={qty >= stock} onClick={() => setQty(Math.min(stock, qty + 1))} className="px-3 py-1.5 font-bold" data-testid="qty-plus">+</button>
+              <button disabled={qty >= stock||adding||opticalBusy||Boolean(purchaseIntent)} onClick={() => setQty(Math.min(stock, qty + 1))} className="px-3 py-1.5 font-bold" data-testid="qty-plus">+</button>
             </div>
             <p className="text-xs text-meow-gray">{"Stok: "}{stock}</p>
           </div>
 
-          {/* Recommended One-Click Bundle Picks */}
-          {p.product_type === "frame" && variantId && (bundleLoading || !bundleCurrent || bundleError || bundlePicks.length > 0) &&
-          <div className="rounded-3xl p-5 bg-gradient-to-br from-meow-salmon/10 via-white to-meow-amber/10 border border-meow-salmon/20" data-testid="bundle-picks">
-              <div className="flex items-center gap-2 mb-3">
-                <Sparkles className="h-5 w-5 text-meow-salmon" />
-                <p className="font-heading text-lg font-black">{"Paket Rekomendasi"}</p>
-                <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-meow-salmon text-white font-bold uppercase tracking-wider">{"Hemat 1-Klik"}</span>
-              </div>
-              <p className="text-xs text-meow-gray mb-4">{"Satu frame + satu lensa + index untuk varian yang dipilih. Harga dan stok diperiksa kembali saat checkout."}</p>
-              {bundleError ? <p role="alert" className="text-xs text-red-600">{bundleError} <button type="button" onClick={() => setBundleReload((value) => value + 1)} className="underline font-bold">{"Coba lagi"}</button></p> : !bundleCurrent || bundleLoading ? <p role="status" className="text-xs text-meow-gray" data-testid="bundle-loading">{"Memperbarui harga paket untuk varian ini…"}</p> : null}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {(bundleCurrent && !bundleLoading ? bundlePicks : []).map((pick) => {
-                const featured = pick.tier === "popular";
-                return (
-                  <div
-                    key={pick.tier}
-                    className={`rounded-2xl p-4 flex flex-col border-2 transition-all ${
-                    featured ? "border-meow-salmon bg-white shadow-lg" : "border-meow-midnight/10 bg-white/60"}`
-                    }
-                    data-testid={`bundle-pick-${pick.tier}`}>
-
-                      <div className="flex items-start justify-between mb-1">
-                        <p className="font-black text-sm">{pick.label}</p>
-                        {featured &&
-                      <span className="text-[9px] px-2 py-0.5 rounded-full bg-meow-salmon text-white font-bold uppercase">{"Populer"}</span>
-                      }
-                      </div>
-                      <p className="text-xs text-meow-gray leading-snug mb-3">{pick.tagline}</p>
-                      <ul className="text-xs space-y-1 mb-3">
-                        <li className="flex gap-1"><span className="text-meow-mint">▪</span> {pick.lens_product_name}</li>
-                        <li className="flex gap-1"><span className="text-meow-mint">▪</span>{" Index "}{pick.lens_index_name}</li>
-                      </ul>
-                      <div className="mt-auto">
-                        <p className="font-heading text-xl font-black text-meow-salmon" data-testid={`bundle-total-${pick.tier}`}><span className="conveythis-no-translate notranslate" translate="no" data-conveythis-private="">{formatIDR(pick.bundle_total)}</span></p>
-                        {pick.savings > 0 &&
-                      <p className="text-[11px] text-meow-mint font-bold">{"Hemat "}<span className="conveythis-no-translate notranslate" translate="no" data-conveythis-private="">{formatIDR(pick.savings)}</span></p>
-                      }
-                        <button
-                        onClick={() => buyBundle(pick)}
-                        disabled={adding || !bundleCurrent || bundleLoading || !pick.available || pick.frame_variant_id !== variantId}
-                        className={`mt-3 w-full py-2 rounded-full text-xs font-bold transition-transform hover:scale-[1.02] disabled:opacity-40 ${
-                        featured ? "bg-meow-salmon text-white" : "bg-meow-midnight text-white"}`
-                        }
-                        data-testid={`bundle-buy-${pick.tier}`}>
-
-                          {pick.available ? "Ambil Paket Ini" : "Stok Paket Habis"}
-                        </button>
-                      </div>
-                    </div>);
-
-              })}
-              </div>
-            </div>
-          }
-
-          {/* Frame + Lens picker */}
-          {p.product_type === "frame" && lensOptions.lens_products?.length > 0 &&
-          <div className="bg-meow-amber/10 rounded-3xl p-4" data-testid="lens-picker">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={wantLens} disabled={adding} onChange={(e) => setWantLens(e.target.checked)} data-testid="want-lens-checkbox" />
-                <span className="font-bold">{"🐱 Tambahkan Lensa (Bundle Hemat)"}</span>
-              </label>
-              {wantLens &&
-            <div className="mt-3 space-y-2">
-                  <FormField label={"Jenis lensa tambahan"}><select value={lensProductId} onChange={(e) => setLensProductId(e.target.value)} className="w-full px-3 py-2 rounded-xl bg-white outline-none text-sm" data-testid="lens-product-select">
-                    <option value="">{"— Pilih Jenis Lensa —"}</option>
-                    {lensOptions.lens_products.map((lens) => {
-                    const variant = lens.variants?.find((item) => item.is_active !== false);
-                    const available = variant ? Math.max(0, Number(variant.stock || 0) - Number(variant.reserved || 0)) : 0;
-                    const lensPrice = variant?.price_override ?? lens.discount_price ?? lens.price;
-                    return <option key={lens.id} value={lens.id} disabled={!available} translate="no" data-conveythis-private="">{lens?.["name"]} — {formatIDR(lensPrice)}{!available ? " · Stok habis" : ""}</option>;
-                  })}
-                  </select></FormField>
-                  {lensProductId &&
-              <FormField label={"Lens Index (opsional)"}><select value={lensIndexId} onChange={(e) => setLensIndexId(e.target.value)} className="w-full px-3 py-2 rounded-xl bg-white outline-none text-sm" data-testid="lens-index-select">
-                      <option value="">{"— Pilih Index Lensa (Opsional) —"}</option>
-                      {lensOptions.lens_indexes.map((li) =>
-                  <option key={li.id} value={li.id} translate="no" data-conveythis-private="">{li?.["name"]} (+{formatIDR(li.additional_price)}) — {li?.["recommended_power_range"]}</option>
-                  )}
-                    </select></FormField>
-              }
-                  {lensProductId &&
-              <PrescriptionPhotoInput file={prescriptionPhoto} disabled={adding} onChange={(file) => {setPrescriptionPhoto(file);setPrescriptionUploadId(null);}} />
-              }
-                </div>
-            }
-            </div>
-          }
-
           <div className="grid grid-cols-2 gap-3">
-            <button onClick={() => beginPurchase('cart')} disabled={adding || stock <= 0} className="btn-secondary disabled:opacity-50" data-testid="add-to-cart-btn">{"+ Tambah ke Cart"}</button>
-            <button onClick={() => beginPurchase('buy')} disabled={adding || stock <= 0} className="btn-primary disabled:opacity-50" data-testid="buy-now-btn">{"Beli Sekarang"}</button>
+            <button onClick={() => beginPurchase('cart')} disabled={adding || opticalBusy || incompleteLens || stock <= 0} className="btn-secondary disabled:opacity-50" data-testid="add-to-cart-btn">{editCartId?"Perbarui Pilihan":"+ Tambah ke Cart"}</button>
+            <button onClick={() => beginPurchase('buy')} disabled={adding || opticalBusy || incompleteLens || stock <= 0} className="btn-primary disabled:opacity-50" data-testid="buy-now-btn">{"Beli Sekarang"}</button>
           </div>
+          {opticalEligible && <ProductOpticalOptions key={`${p.id}:${editCartId}`} product={p} quantity={qty} value={optical} onChange={setOptical} disabled={adding||Boolean(purchaseIntent)} onBusyChange={setOpticalBusy}/>}
+          {editItem?.lens_product&&!optical.replace_lens_product&&<p className="text-xs text-meow-gray">Lensa lama: {editItem.lens_product.name}. <button type="button" disabled={adding||opticalBusy} className="underline" onClick={()=>setOptical({...optical,lens_type:'',lens_index_id:'',replace_lens_product:true})}>Hapus lensa lama / beli frame saja</button></p>}
           <div className="flex gap-2 text-xs">
             <button onClick={toggleWishlist} className="flex items-center gap-1 text-meow-gray hover:text-meow-salmon" data-testid="add-wishlist-btn">
               <Heart className="h-4 w-4" />{" Wishlist"}

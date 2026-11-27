@@ -111,6 +111,7 @@ def shipping_fingerprint(items, address: m.Address, settings: EverproSettings, p
         "lens_variant_id": item.lens_variant.id if item.lens_variant else None,
         "lens_weight": item.lens_product.weight_gram if item.lens_product else None,
         "prescription_id": item.cart.prescription_id,
+        "lens_index": {"id":item.lens_index.id,"name":item.lens_index.name,"index_value":item.lens_index.index_value} if item.lens_index else None,
         "tinting": item.tinting,
         "addons": [{'product_id': a['product'].id, 'variant_id': a['variant'].id, 'price': str(a['price']),
             'weight': a['product'].weight_gram} for a in item.addons],

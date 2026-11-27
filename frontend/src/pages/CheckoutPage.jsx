@@ -2,12 +2,11 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { api, apiError, formatIDR, imageSrc } from "../lib/api";
 import { useAuth } from "../contexts/AuthContext";
-import { MapPin, Truck, Ticket, Coins, Plus, Shield, X, Glasses, RefreshCw } from "lucide-react";
+import { MapPin, Truck, Ticket, Coins, Plus, Shield, X, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import AddressForm from "../components/AddressForm";
-import PrescriptionForm from "../components/PrescriptionForm";
+import PrescriptionDetails from '../components/PrescriptionDetails';
 import ShippingOptions from "../components/ShippingOptions";
-import CheckoutTinting from '../components/CheckoutTinting';
 import { TintingDetails } from '../components/TintingSwatch';
 
 const newRequestId = () => window.crypto?.randomUUID?.() || `checkout-${Array.from(window.crypto.getRandomValues(new Uint32Array(4))).map((value) => value.toString(16)).join("")}`;
@@ -27,7 +26,7 @@ export default function CheckoutPage() {
     } catch {return location.state?.selected_item_ids || [];}
   });
   const [cartItems, setCartItems] = useState([]);
-  const [cartVersion, setCartVersion] = useState(0);
+  const cartVersion = 0;
   const [addresses, setAddresses] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingAddress, setEditingAddress] = useState(null);
@@ -60,7 +59,6 @@ export default function CheckoutPage() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [initialError, setInitialError] = useState("");
   const [pin, setPin] = useState(["", "", "", "", "", ""]);
-  const [dirtyPrescriptions, setDirtyPrescriptions] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [now, setNow] = useState(Date.now());
@@ -136,12 +134,6 @@ export default function CheckoutPage() {
     return () => controller.abort();
   }, [payloadKey, currentShipping, cartVersion]);
 
-  const handleDirty = useCallback((id, dirty) => setDirtyPrescriptions((current) => current[id] === dirty ? current : { ...current, [id]: dirty }), []);
-  const handlePrescriptionSaved = useCallback((id, prescription, cartItem) => {
-    setCartItems((current) => current.map((item) => item.id === id ? cartItem || { ...item, prescription } : item));
-    setCartVersion((version) => version + 1);
-  }, []);
-  const hasUnsavedPrescription = Object.values(dirtyPrescriptions).some(Boolean);
   const validPreview = preview && previewKey === payloadKey && previewCartVersion === cartVersion && currentShipping && !previewLoading;
   const lensSubtotal = Number(preview?.lens_subtotal ?? cartItems.reduce((sum, item) => sum + Number(item.lens_price || 0) * item.quantity, 0));
   const addonSubtotal = Number(preview?.addon_subtotal ?? cartItems.reduce((sum, item) => sum + Number(item.addon_price || 0) * item.quantity, 0));
@@ -154,7 +146,7 @@ export default function CheckoutPage() {
     if (value && index < 5) pinRef.current[index + 1]?.focus();
   };
   const submit = async () => {
-    if (submitting || !validPreview || hasUnsavedPrescription) return;
+    if (submitting || !validPreview) return;
     if (pin.some((digit) => digit === "")) {setSubmitError("Masukkan PIN 6 digit.");pinRef.current[0]?.focus();return;}
     setSubmitting(true);setSubmitError("");
     try {
@@ -196,6 +188,8 @@ export default function CheckoutPage() {
               <p className="font-bold">{item.product?.["name"]}</p>
               {item.addons?.map((a) => <p key={a.product_id} className="text-xs text-meow-gray">+ {a?.["name"]} · <span className="conveythis-no-translate notranslate" translate="no" data-conveythis-private="">{formatIDR(a.unit_price)}</span>{" / produk"}</p>)}
               <TintingDetails tinting={item.tinting}/>
+              <PrescriptionDetails prescription={item.prescription}/>
+              <Link to={`/products/${item.product.slug}?cart_item_id=${encodeURIComponent(item.id)}`} state={{checkout_item_ids:selectedItemIds}} className="mt-2 inline-block text-xs text-meow-salmon underline">Ubah lensa, resep, atau tinting</Link>
               {(item.lens_index || item.lens_product) && <div className="text-xs text-meow-gray space-y-1 my-1" data-testid={`checkout-item-pricing-${item.id}`}>
                 <p>{item.product.product_type === 'frame' ? "Frame" : "Produk"}{item.flash_sale_active ? " (Flash Sale)" : ""}: <span className="conveythis-no-translate notranslate" translate="no" data-conveythis-private="">{formatIDR(item.frame_price)}</span>{" / produk"}</p>
                 <p>{"Lensa"}{item.lens_product ? ` ${item.lens_product?.["name"]}` : ""}{item.lens_index ? ` · ${item.lens_index?.["name"]}` : ""}: <span className="conveythis-no-translate notranslate" translate="no" data-conveythis-private="">{formatIDR(item.lens_price)}</span>{item.product.product_type === 'package' ? " (termasuk harga paket)" : " / produk"}</p>
@@ -205,13 +199,6 @@ export default function CheckoutPage() {
             <span className="font-bold text-sm"><span className="conveythis-no-translate notranslate" translate="no" data-conveythis-private="">{formatIDR(item.subtotal)}</span></span>
           </div>)}</div>
         </section>
-        {cartItems.length > 0 && <section className="bg-white rounded-3xl p-5 md:p-6 space-y-4" data-testid="checkout-prescriptions">
-          <div><h2 className="font-heading font-extrabold text-xl flex items-center gap-2"><Glasses className="h-5 w-5 text-meow-salmon" />{"Lensa & Resep per Item (Opsional)"}</h2><p className="text-sm text-meow-gray mt-1">{"Untuk produk Frame, Anda boleh membeli frame saja tanpa lensa, catatan, atau foto resep. Anda juga dapat memakai resep yang sudah disimpan di Profil. Isi bagian ini hanya jika diperlukan. Klik Simpan Resep jika ada perubahan; setiap baris produk disimpan terpisah."}</p></div>
-          {cartItems.map((item) => <PrescriptionForm key={item.id} item={item} onDirtyChange={handleDirty} onSaved={handlePrescriptionSaved} disabled={submitting} showMeasurements={false} selectLens allowProfile />)}
-        </section>}
-
-        <CheckoutTinting items={cartItems} onDirtyChange={handleDirty} disabled={submitting} onSaved={item=>handlePrescriptionSaved(item.id,item.prescription,item)}/>
-
         <section className="bg-white rounded-3xl p-5 md:p-6" data-testid="address-section">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <h2 className="font-heading font-extrabold text-xl flex items-center gap-2"><MapPin className="h-5 w-5 text-meow-salmon" />{"Alamat Pengiriman"}</h2>
@@ -268,10 +255,9 @@ export default function CheckoutPage() {
           <div className="border-t pt-3 mt-3 flex justify-between"><span className="font-bold">{"Total"}</span><span className="font-heading font-black text-xl text-meow-salmon" data-testid="checkout-total"><span className="conveythis-no-translate notranslate" translate="no" data-conveythis-private="">{previewLoading ? "Menghitung…" : validPreview ? formatIDR(preview.total) : "—"}</span></span></div>
         </div>
         {previewError && <p role="alert" className="text-sm text-red-600 mt-3">{previewError}</p>}
-        {hasUnsavedPrescription && <p role="alert" className="text-sm text-amber-700 mt-3">{"Simpan perubahan resep sebelum membuat pesanan."}</p>}
         {!paymentReady && <p role="alert" className="text-sm text-amber-700 mt-3">{"Pembayaran sementara belum tersedia. Silakan coba lagi atau hubungi toko."}</p>}
         {submitError && <p role="alert" className="text-sm text-red-600 mt-3">{submitError}</p>}
-        <button type="button" onClick={submit} disabled={submitting || !validPreview || !user.has_pin || hasUnsavedPrescription || !paymentReady} className="w-full btn-primary mt-5 disabled:opacity-50" data-testid="submit-order-btn">{submitting ? "Membuat Pesanan…" : paymentMode === 'cod' ? "Buat Pesanan COD" : "Buat Pesanan & Bayar"}</button>
+        <button type="button" onClick={submit} disabled={submitting || !validPreview || !user.has_pin || !paymentReady} className="w-full btn-primary mt-5 disabled:opacity-50" data-testid="submit-order-btn">{submitting ? "Membuat Pesanan…" : paymentMode === 'cod' ? "Buat Pesanan COD" : "Buat Pesanan & Bayar"}</button>
         <p className="text-xs text-meow-gray mt-3 text-center">{paymentMode === 'cod' ? "Siapkan pembayaran saat kurir mengantarkan pesanan." : "Selesaikan pembayaran sebelum batas waktu pada halaman pembayaran."}</p>
         {integrations.payment?.mock && <p className="text-xs text-amber-700 mt-2 text-center">{"Mode demo: pembayaran disimulasikan."}</p>}
       </div></aside>

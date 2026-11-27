@@ -356,6 +356,7 @@ class CartAddonCreate(BaseModel):
 
 
 class CartItemCreate(BaseModel):
+    tinting_id: Optional[str] = Field(default=None, max_length=64)
     addons: List[CartAddonCreate] = Field(default_factory=list, max_length=30)
     product_id: str
     variant_id: Optional[str] = None

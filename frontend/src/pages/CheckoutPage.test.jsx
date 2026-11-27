@@ -56,46 +56,6 @@ test('selecting a shipping type updates the exact quote and authoritative checko
   expect(api.post).toHaveBeenCalledWith('/checkout/preview',expect.objectContaining({shipping_quote_id:'cargo-quote',courier_code:'JTC',service_code:'FT'}),expect.any(Object));
 });
 
-test('tinting is optional, blocks payment while saving and charges each product in its own cart line',async()=>{
-  const previousGet=api.get.getMockImplementation();
-  const color={id:'black',code:'04S',name:'Black',kind:'solid',group:'fashion',hex_color:'#000000',additional_price:60000};
-  const row={id:'cart-owned',quantity:2,unit_price:100000,subtotal:200000,product:{name:'Frame A',product_type:'frame'}};
-  let tinting=null,complete;
-  api.get.mockImplementation(url=>url==='/cart'?Promise.resolve({data:{items:[row]}}):url==='/tinting'?Promise.resolve({data:{items:[color]}}):previousGet(url));
-  api.post.mockImplementation((url)=>Promise.resolve({data:url==='/checkout/shipping-options'?{options:[quote]}:
-    {subtotal:200000+(tinting?120000:0),product_subtotal:200000,tinting_subtotal:tinting?120000:0,total:210000+(tinting?120000:0),shipping:{cost:10000}}}));
-  api.patch.mockImplementation((url,payload)=>new Promise(resolve=>{complete=()=>{tinting=payload.tinting_id?color:null;resolve({data:{cart_item:{...row,tinting,tinting_price:tinting?60000:0,subtotal:tinting?320000:200000}}});};}));
-  await mountCheckout();
-  expect(host.querySelector('[data-testid=checkout-total]').textContent).toBe('Rp 210000');
-  await click(host.querySelector('[data-testid=choose-tinting-cart-owned]'));
-  await click(host.querySelector('[data-testid=tinting-cart-owned] input[type=radio]'));
-  expect(host.querySelector('[data-testid=submit-order-btn]').disabled).toBe(true);
-  await act(async()=>complete());await flush();await flush();
-  expect(api.patch).toHaveBeenCalledWith('/cart/cart-owned/tinting',{tinting_id:'black'});
-  expect(host.querySelector('[data-testid=checkout-tinting-subtotal]').textContent).toContain('Rp 120000');
-  expect(host.querySelector('[data-testid=checkout-total]').textContent).toBe('Rp 330000');
-  expect(host.querySelector('[data-testid=submit-order-btn]').disabled).toBe(false);
-  await click(host.querySelector('[aria-label="Hapus tinting Frame A"]'));
-  await act(async()=>complete());await flush();await flush();
-  expect(host.querySelector('[data-testid=checkout-tinting-subtotal]')).toBeNull();
-  expect(host.querySelector('[data-testid=checkout-total]').textContent).toBe('Rp 210000');
-});
-
-test.each([[1250,1250],[80,100]])('shipping shows authoritative item weight %i grams and follows prescription before payment',async(itemsWeight,ratedWeight)=>{
-  const previous=api.post.getMockImplementation();
-  api.post.mockImplementation((url,body)=>url==='/checkout/shipping-options'?Promise.resolve({data:{options:[quote],items_weight_gram:itemsWeight,weight_gram:ratedWeight}}):previous(url,body));
-  await mountCheckout();
-  expect(host.querySelector('[data-testid="shipping-items-weight"]').textContent).toBe(`${itemsWeight.toLocaleString('id-ID')} gram`);
-  const sections=[...host.querySelectorAll('section')];
-  const prescription=sections.indexOf(host.querySelector('[data-testid="checkout-prescriptions"]'));
-  const shipping=sections.indexOf(host.querySelector('[data-testid="shipping-section"]'));
-  const payment=sections.indexOf(host.querySelector('[data-testid="payment-method-section"]'));
-  const address=sections.indexOf(host.querySelector('[data-testid="address-section"]'));
-  const products=sections.indexOf(host.querySelector('[data-testid="checkout-products"]'));
-  expect(prescription).toBe(products+1);expect(address).toBe(prescription+1);
-  expect(shipping).toBe(address+1);expect(payment).toBe(shipping+1);
-  expect(host.querySelector('[data-testid="shipping-weight"]').textContent.includes('Berat perhitungan ongkir:')).toBe(itemsWeight!==ratedWeight);
-});
 
 test('reloading shipping clears the previous weight until the new quote arrives',async()=>{
   let pending;
@@ -110,262 +70,6 @@ test('reloading shipping clears the previous weight until the new quote arrives'
   expect(host.querySelector('[data-testid="shipping-items-weight"]').textContent).toBe('750 gram');
 });
 
-test("each selected cart line has its own photo and notes, including a quantity of two without added lenses", async () => {
-  const originalGet = api.get.getMockImplementation();
-  const originalPost = api.post.getMockImplementation();
-  api.get.mockImplementation((url) => url === "/cart" ? Promise.resolve({ data: { items: [
-    { id: "cart-owned", quantity: 2, unit_price: 100000, subtotal: 200000, product: { name: "Frame A" } },
-    { id: "cart-package", quantity: 1, unit_price: 200000, subtotal: 200000, product: { name: "Paket B" } },
-    { id: "cart-unselected", quantity: 1, product: { name: "Tidak dipilih" } },
-  ] } }) : originalGet(url));
-  api.post.mockImplementation((url, body) => url === "/uploads/prescription"
-    ? Promise.resolve({ data: { id: `upload-${body.get("file").name}` } }) : originalPost(url, body));
-  api.patch.mockImplementation((url, payload) => Promise.resolve({ data: { prescription: { id: url, ...payload } } }));
-  await mountCheckout(["cart-owned", "cart-package"]);
-  const forms = [...host.querySelectorAll('[data-testid^="prescription-"]')];
-  expect(forms).toHaveLength(2);
-  expect(host.querySelector('[data-testid="prescription-cart-unselected"]')).toBeNull();
-  expect(forms[0].textContent).toContain("Satu resep berlaku untuk seluruh 2 produk");
-  expect(forms[0].querySelector('input[type="number"]')).toBeNull();
-  for (const [index, form] of forms.entries()) {
-    await type(form.querySelector("textarea"), `Catatan resep ${index + 1}`);
-    const input = form.querySelector('input[type="file"]');
-    Object.defineProperty(input, "files", { configurable: true, value: [new File(["photo"], `resep-${index + 1}.png`, { type: "image/png" })] });
-    await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
-  }
-  expect(forms[0].querySelector("textarea").value).toBe("Catatan resep 1");
-  expect(forms[1].querySelector("textarea").value).toBe("Catatan resep 2");
-  expect(host.querySelector('[data-testid="submit-order-btn"]').disabled).toBe(true);
-  await act(async () => forms[0].dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
-  await flush();
-  expect(host.querySelector('[data-testid="submit-order-btn"]').disabled).toBe(true);
-  await act(async () => forms[1].dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
-  await flush(); await flush();
-  expect(api.patch).toHaveBeenCalledWith("/cart/cart-owned/prescription", expect.objectContaining({ notes: "Catatan resep 1", attachment_upload_id: "upload-resep-1.png" }));
-  expect(api.patch).toHaveBeenCalledWith("/cart/cart-package/prescription", expect.objectContaining({ notes: "Catatan resep 2", attachment_upload_id: "upload-resep-2.png" }));
-  expect(host.querySelector('[data-testid="submit-order-btn"]').disabled).toBe(false);
-});
-
-test('profile prescription copies zero, paired PD and notes only into the chosen cart line', async () => {
-  const originalGet = api.get.getMockImplementation();
-  const rx = { id: 'profile-rx', date: '2026-01-01', od: { sph: 0, cyl: 0, axis: null, add: null },
-    os: { sph: -1.25, cyl: -.5, axis: 90, add: 1 }, pd_total: null, pd_right: 31, pd_left: 30.5, notes: 'Catatan profil' };
-  api.get.mockImplementation((url, options) => {
-    if (url === '/customer/profile') return Promise.resolve({ data: { ready: false, profile: { prescription: rx } } });
-    if (url === '/cart') return Promise.resolve({ data: { items: [
-      { id:'cart-owned', quantity:2, product:{ name:'Frame A' }, prescription:{ attachment_upload_id:'previous-photo', notes:'Catatan lama' } },
-      { id:'cart-second', quantity:1, product:{ name:'Frame B' } },
-    ] } });
-    return originalGet(url, options);
-  });
-  api.patch.mockImplementation((url, payload) => Promise.resolve({ data: { prescription: payload } }));
-  await mountCheckout(['cart-owned','cart-second']);
-  expect(api.get.mock.calls.some(([url]) => url === '/customer/profile')).toBe(false);
-  const form = host.querySelector('[data-testid="prescription-cart-owned"]');
-  const second = host.querySelector('[data-testid="prescription-cart-second"]');
-  await click(form.querySelector('[data-testid="use-profile-prescription-cart-owned"]'));
-  expect(form.querySelector('textarea').value).toBe('Catatan profil');
-  expect(second.querySelector('textarea').value).toBe('');
-  expect(form.querySelector('[data-testid="prescription-summary"]').textContent).toContain('PD kanan: 31 mm');
-  expect(form.querySelector('input[type=number]')).toBeNull();
-  expect(form.textContent).not.toContain('Foto resep tersimpan');
-  expect(host.querySelector('[data-testid="submit-order-btn"]').disabled).toBe(true);
-  await act(async () => form.dispatchEvent(new Event('submit', { bubbles:true, cancelable:true })));
-  await flush(); await flush();
-  expect(api.patch).toHaveBeenCalledWith('/cart/cart-owned/prescription', expect.objectContaining({
-    od_sph:0, od_cyl:0, od_axis:null, os_sph:-1.25, os_cyl:-.5, os_axis:90, os_add:1,
-    pd_total:null, pd_right:31, pd_left:30.5, notes:'Catatan profil', attachment_upload_id:null,
-  }));
-  expect(api.patch).toHaveBeenCalledTimes(1);
-  expect(host.querySelector('[data-testid="submit-order-btn"]').disabled).toBe(false);
-  expect(form.querySelector('[data-testid="prescription-summary"]')).not.toBeNull();
-});
-
-test.each(['missing','network'])('unavailable profile (%s) keeps photo/note drafts and checkout optional', async failure => {
-  const originalGet = api.get.getMockImplementation();
-  api.get.mockImplementation((url, options) => url !== '/customer/profile' ? originalGet(url, options)
-    : failure === 'network' ? Promise.reject(new Error('offline')) : Promise.resolve({ data:{ profile:{ prescription:{ id:null } } } }));
-  await mountCheckout();
-  const form = host.querySelector('[data-testid="prescription-cart-owned"]');
-  await click(form.querySelector('[data-testid="use-profile-prescription-cart-owned"]'));
-  expect(form.querySelector('[role=alert]')).not.toBeNull();
-  expect(form.querySelector('input[type=file]')).not.toBeNull();
-  expect(form.querySelector('a[href="/profile#resep"]')).not.toBeNull();
-  expect(host.querySelector('[data-testid="submit-order-btn"]').disabled).toBe(false);
-  await type(form.querySelector('textarea'),'Catatan saya');
-  await click(form.querySelector('[data-testid="use-profile-prescription-cart-owned"]'));
-  expect(form.querySelector('textarea').value).toBe('Catatan saya');
-  expect(host.querySelector('[data-testid="submit-order-btn"]').disabled).toBe(true);
-  expect(api.patch).not.toHaveBeenCalled();
-});
-
-test('pending profile lookup blocks payment and copied sizes can be removed for photo-only checkout', async () => {
-  const originalGet = api.get.getMockImplementation();
-  let complete;
-  api.get.mockImplementation((url, options) => url === '/customer/profile' ? new Promise(resolve => { complete=resolve; }) : originalGet(url, options));
-  await mountCheckout();
-  const form = host.querySelector('[data-testid="prescription-cart-owned"]');
-  await click(form.querySelector('[data-testid="use-profile-prescription-cart-owned"]'));
-  expect(host.querySelector('[data-testid="submit-order-btn"]').disabled).toBe(true);
-  expect(form.querySelector('input[type=file]').disabled).toBe(true);
-  await act(async () => complete({ data:{ profile:{ prescription:{ id:'profile', od:{ sph:0 }, pd_total:62 } } } }));
-  expect(form.querySelector('[data-testid="prescription-summary"]')).not.toBeNull();
-  await click([...form.querySelectorAll('button')].find(button => button.textContent.includes('hapus ukuran')));
-  expect(form.querySelector('[data-testid="prescription-summary"]')).toBeNull();
-  expect(host.querySelector('[data-testid="submit-order-btn"]').disabled).toBe(false);
-});
-
-test("saving Frame and Paket Lens Index choices refreshes authoritative totals and keeps each row separate", async () => {
-  const originalGet = api.get.getMockImplementation();
-  const indexes = [{ id: 'standard', name: 'Standard', additional_price: 50000 }, { id: 'photo', name: 'Photochromic', additional_price: 75000 }];
-  const rows = [
-    { id: 'cart-owned', quantity: 2, frame_price: 100000, unit_price: 100000, subtotal: 200000, product: { name: 'Frame', product_type: 'frame' } },
-    { id: 'cart-package', quantity: 1, frame_price: 200000, unit_price: 200000, subtotal: 200000, product: { name: 'Paket', product_type: 'package' } },
-  ];
-  api.get.mockImplementation((url) => {
-    if (url === '/cart') return Promise.resolve({ data: { items: rows } });
-    if (url === '/cart/cart-owned/lens-options') return Promise.resolve({ data: { items: indexes } });
-    if (url === '/cart/cart-package/lens-options') return Promise.resolve({ data: { items: [indexes[0]], lens_types: [{ name: 'Single Vision' }] } });
-    return originalGet(url);
-  });
-  let quoteNumber = 0;
-  api.post.mockImplementation((url) => {
-    if (url === '/checkout/shipping-options') return Promise.resolve({ data: { options: [{ ...quote, quote_id: `quote-${++quoteNumber}` }] } });
-    const subtotal = rows.reduce((sum, row) => sum + row.subtotal, 0);
-    const lens_subtotal = rows.reduce((sum, row) => sum + (row.lens_price || 0) * row.quantity, 0);
-    return Promise.resolve({ data: { subtotal, product_subtotal: subtotal - lens_subtotal, lens_subtotal, total: subtotal + 10000, shipping: { cost: 10000 } } });
-  });
-  api.patch.mockImplementation((url, prescription) => {
-    const row = rows.find(item => url === `/cart/${item.id}/prescription`);
-    row.prescription = prescription;
-    row.lens_index = indexes.find(index => index.id === prescription.lens_index_id) || null;
-    row.lens_price = row.product.product_type === 'frame' ? row.lens_index?.additional_price || 0 : 0;
-    row.unit_price = row.frame_price + row.lens_price;
-    row.subtotal = row.unit_price * row.quantity;
-    return Promise.resolve({ data: { prescription, cart_item: { ...row } } });
-  });
-  await mountCheckout(['cart-owned', 'cart-package']);
-  const frame = host.querySelector('[data-testid="rx-lens-cart-owned"]');
-  const pack = host.querySelector('[data-testid="rx-lens-cart-package"]');
-  expect(frame.options.length).toBe(3);
-  expect(pack.options.length).toBe(2);
-  expect(pack.textContent).toContain('Termasuk harga paket');
-  expect(host.querySelector('[data-testid="checkout-total"]').textContent).toBe('Rp 410000');
-  await act(async () => { frame.value = 'photo'; frame.dispatchEvent(new Event('change', { bubbles: true })); });
-  expect(host.querySelector('[data-testid="submit-order-btn"]').disabled).toBe(true);
-  await act(async () => host.querySelector('[data-testid="prescription-cart-owned"]').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
-  await flush(); await flush();
-  expect(host.querySelector('[data-testid="checkout-total"]').textContent).toBe('Rp 560000');
-  expect(host.querySelector('[data-testid="checkout-product-subtotal"]').textContent).toBe('Rp 400000');
-  expect(host.querySelector('[data-testid="checkout-lens-subtotal"]').textContent).toBe('Rp 150000');
-  await act(async () => { pack.value = 'standard'; pack.dispatchEvent(new Event('change', { bubbles: true })); });
-  await act(async () => host.querySelector('[data-testid="prescription-cart-package"]').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
-  await flush(); await flush();
-  expect(host.querySelector('[data-testid="checkout-total"]').textContent).toBe('Rp 560000');
-  expect(host.querySelector('[data-testid="checkout-lens-subtotal"]').textContent).toBe('Rp 150000');
-  expect(frame.value).toBe('photo'); expect(pack.value).toBe('standard');
-  expect(api.patch).toHaveBeenCalledWith('/cart/cart-owned/prescription', expect.objectContaining({ lens_index_id: 'photo' }));
-  expect(api.patch).toHaveBeenCalledWith('/cart/cart-package/prescription', expect.objectContaining({ lens_index_id: 'standard' }));
-  await act(async () => { frame.value = ''; frame.dispatchEvent(new Event('change', { bubbles: true })); });
-  await act(async () => host.querySelector('[data-testid="prescription-cart-owned"]').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
-  await flush(); await flush();
-  expect(host.querySelector('[data-testid="checkout-total"]').textContent).toBe('Rp 410000');
-  expect(host.querySelector('[data-testid="checkout-lens-subtotal"]').textContent).toBe('Rp 0');
-});
-
-test('an old price response cannot overwrite saved lens pricing when the shipping quote ID stays the same', async () => {
-  const originalGet = api.get.getMockImplementation();
-  const row = { id: 'cart-owned', quantity: 1, frame_price: 449000, lens_price: 0, unit_price: 449000, subtotal: 449000,
-    product: { name: 'Frame', product_type: 'frame' } };
-  const index = { id: 'thin', name: 'Super Thin', additional_price: 350000 };
-  api.get.mockImplementation(url => {
-    if (url === '/cart') return Promise.resolve({ data: { items: [row] } });
-    if (url === '/cart/cart-owned/lens-options') return Promise.resolve({ data: { items: [index] } });
-    return originalGet(url);
-  });
-  const pending = [];
-  api.post.mockImplementation(url => url === '/checkout/shipping-options'
-    ? Promise.resolve({ data: { options: [quote] } }) : new Promise(resolve => pending.push(resolve)));
-  api.patch.mockImplementation((_url, prescription) => Promise.resolve({ data: { prescription, cart_item: {
-    ...row, lens_index: index, lens_price: 350000, unit_price: 799000, subtotal: 799000, prescription,
-  } } }));
-  await mountCheckout();
-  expect(pending).toHaveLength(1);
-  const select = host.querySelector('[data-testid="rx-lens-cart-owned"]');
-  await act(async () => { select.value = 'thin'; select.dispatchEvent(new Event('change', { bubbles: true })); });
-  await act(async () => host.querySelector('[data-testid="prescription-cart-owned"]').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
-  await flush(); await flush();
-  expect(host.querySelector('[data-testid="submit-order-btn"]').disabled).toBe(true);
-  expect(pending).toHaveLength(2);
-  await act(async () => pending[1]({ data: { subtotal: 799000, product_subtotal: 449000, lens_subtotal: 350000, total: 807000, shipping: { cost: 8000 } } }));
-  expect(host.querySelector('[data-testid="checkout-total"]').textContent).toBe('Rp 807000');
-  expect(host.querySelector('[data-testid="checkout-lens-subtotal"]').textContent).toBe('Rp 350000');
-  expect(host.querySelector('[data-testid="checkout-item-pricing-cart-owned"]').textContent).toContain('Lensa · Super Thin: Rp 350000');
-  await act(async () => pending[0]({ data: { subtotal: 449000, product_subtotal: 449000, lens_subtotal: 0, total: 457000, shipping: { cost: 8000 } } }));
-  expect(host.querySelector('[data-testid="checkout-total"]').textContent).toBe('Rp 807000');
-  expect(host.querySelector('[data-testid="submit-order-btn"]').disabled).toBe(false);
-});
-
-test('Frame can checkout without lenses or prescription, including after reverting optional edits', async () => {
-  const originalGet = api.get.getMockImplementation();
-  api.get.mockImplementation(async url => {
-    if (url === '/cart/cart-owned/lens-options') return { data: { items: [{ id: 'thin', name: 'Thin', additional_price: 350000 }] } };
-    const response = await originalGet(url);
-    if (url === '/cart') Object.assign(response.data.items[0], { frame_price: 100000, lens_price: 0,
-      product: { name: 'Frame', main_image: 'frame.png', product_type: 'frame' } });
-    return response;
-  });
-  await mountCheckout();
-  const form = host.querySelector('[data-testid="prescription-cart-owned"]');
-  const select = host.querySelector('[data-testid="rx-lens-cart-owned"]');
-  const submit = host.querySelector('[data-testid="submit-order-btn"]');
-  expect(select.value).toBe('');
-  expect(select.selectedOptions[0].textContent).toBe('Beli frame saja (tanpa lensa)');
-  expect([...form.querySelectorAll('input,textarea,select')].every(input => !input.required)).toBe(true);
-  expect(submit.disabled).toBe(false);
-  await act(async () => { select.value = 'thin'; select.dispatchEvent(new Event('change', { bubbles: true })); });
-  expect(submit.disabled).toBe(true);
-  await act(async () => { select.value = ''; select.dispatchEvent(new Event('change', { bubbles: true })); });
-  expect(submit.disabled).toBe(false);
-  await type(form.querySelector('textarea'), 'Catatan sementara');
-  expect(submit.disabled).toBe(true);
-  await type(form.querySelector('textarea'), '');
-  expect(submit.disabled).toBe(false);
-  for (let i = 0; i < 6; i += 1) await type(host.querySelector(`[data-testid="checkout-pin-${i}"]`), String(i + 1));
-  await click(submit); await flush();
-  expect(api.patch).not.toHaveBeenCalled();
-  expect(api.post).not.toHaveBeenCalledWith('/uploads/prescription', expect.anything());
-  expect(api.post).toHaveBeenCalledWith('/checkout/confirm', expect.objectContaining({ selected_item_ids: ['cart-owned'] }), expect.anything());
-  expect(host.querySelector('[data-testid="checkout-lens-subtotal"]').textContent).toBe('Rp 0');
-});
-
-test('choosing Frame only removes an existing lens bundle and its surcharge', async () => {
-  const originalGet = api.get.getMockImplementation();
-  let row = { id: 'cart-owned', quantity: 1, frame_price: 100000, lens_price: 50000, unit_price: 150000, subtotal: 150000,
-    product: { name: 'Frame', product_type: 'frame' }, lens_product: { id: 'lens', name: 'Lensa' }, lens_index: null };
-  api.get.mockImplementation(url => {
-    if (url === '/cart') return Promise.resolve({ data: { items: [row] } });
-    if (url === '/cart/cart-owned/lens-options') return Promise.resolve({ data: { items: [] } });
-    return originalGet(url);
-  });
-  api.post.mockImplementation(url => Promise.resolve({ data: url === '/checkout/shipping-options' ? { options: [quote] }
-    : { subtotal: row.subtotal, product_subtotal: row.frame_price, lens_subtotal: row.lens_price, total: row.subtotal + 10000, shipping: { cost: 10000 } } }));
-  api.patch.mockImplementation((_url, payload) => {
-    expect(payload.frame_only).toBe(true);
-    row = { ...row, lens_product: null, lens_variant: null, lens_index: null, prescription: null, lens_price: 0, unit_price: 100000, subtotal: 100000 };
-    return Promise.resolve({ data: { prescription: null, cart_item: row } });
-  });
-  await mountCheckout();
-  const select = host.querySelector('[data-testid="rx-lens-cart-owned"]');
-  expect(select.selectedOptions[0].textContent).toContain('Lensa — tanpa tambahan Lens Index');
-  expect(host.querySelector('[data-testid="checkout-total"]').textContent).toBe('Rp 160000');
-  await act(async () => { select.value = ''; select.dispatchEvent(new Event('change', { bubbles: true })); });
-  await act(async () => host.querySelector('[data-testid="prescription-cart-owned"]').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
-  await flush(); await flush();
-  expect(host.querySelector('[data-testid="checkout-total"]').textContent).toBe('Rp 110000');
-  expect(host.querySelector('[data-testid="checkout-lens-subtotal"]').textContent).toBe('Rp 0');
-  expect(host.querySelector('[data-testid="submit-order-btn"]').disabled).toBe(false);
-});
 
 test("flash sale checkout disables other promotions and submits no stacked discounts", async () => {
   const originalGet = api.get.getMockImplementation();
@@ -382,6 +86,7 @@ test("flash sale checkout disables other promotions and submits no stacked disco
   expect(calls[calls.length - 1][1]).toEqual(expect.objectContaining({ voucher_code: null, use_points: 0, roulette_spin_id: null }));
 });
 
+
 test("checkout sends the owned shipping quote and reuses the same request key after network failure", async () => {
   await mountCheckout();
   for (let i = 0; i < 6; i += 1) await type(host.querySelector(`[data-testid="checkout-pin-${i}"]`), String(i + 1));
@@ -397,6 +102,7 @@ test("checkout sends the owned shipping quote and reuses the same request key af
   expect(sessionStorage.getItem("meow_checkout_request_customer")).not.toContain("123456");
 });
 
+
 test("changing a voucher blocks checkout until a fresh server price returns", async () => {
   await mountCheckout();
   let resolvePreview;
@@ -409,6 +115,7 @@ test("changing a voucher blocks checkout until a fresh server price returns", as
   expect(host.querySelector('[data-testid="submit-order-btn"]').disabled).toBe(false);
   expect(host.querySelector('[data-testid="checkout-total"]').textContent).toBe("Rp 100000");
 });
+
 
 test('editing the same address clears the old quote and fetches new shipping options after saving', async () => {
   const originalGet = api.get.getMockImplementation();
@@ -429,4 +136,21 @@ test('editing the same address clears the old quote and fetches new shipping opt
   expect(api.patch).toHaveBeenCalledWith('/addresses/address-owned', expect.objectContaining({ postal_code: '40115', subdistrict: 'Citarum' }));
   expect(api.post.mock.calls.filter(([url]) => url === '/checkout/shipping-options').length).toBeGreaterThan(before);
   expect(host.querySelector('[data-testid="address-section"]').textContent).toContain('Citarum');
+});
+
+test('checkout displays saved lenses, tinting and prescriptions per row without configuration forms',async()=>{
+  const previous=api.get.getMockImplementation();
+  api.get.mockImplementation(url=>url==='/cart'?Promise.resolve({data:{items:[
+    {id:'cart-owned',quantity:2,product:{name:'Frame A',product_type:'frame',slug:'frame-a'},frame_price:100000,lens_price:60000,tinting_price:60000,unit_price:220000,subtotal:440000,
+     lens_index:{id:'clear161',name:'Clear · Indeks 1.61'},prescription:{notes:'Resep A',attachment_upload_id:'private-photo'},tinting:{id:'black',code:'04S',name:'Black',kind:'solid',hex_color:'#000000',additional_price:60000}},
+    {id:'second',quantity:1,product:{name:'Paket B',product_type:'package',slug:'paket-b'},unit_price:200000,subtotal:200000,prescription:{notes:'Resep B'}},
+  ]}}):previous(url));
+  await mountCheckout(['cart-owned','second']);
+  const section=host.querySelector('[data-testid=checkout-products]');
+  expect(section.textContent).toContain('Clear · Indeks 1.61');expect(section.textContent).toContain('04S');
+  expect(section.textContent).toContain('Resep A');expect(section.textContent).toContain('Resep B');
+  expect(section.querySelectorAll('[data-testid=prescription-details]')).toHaveLength(2);
+  expect(host.querySelector('input[type=file]')).toBeNull();expect(host.querySelector('textarea')).toBeNull();
+  expect(host.querySelector('[data-testid=checkout-prescriptions]')).toBeNull();expect(host.querySelector('[data-testid=checkout-tinting]')).toBeNull();
+  expect(section.querySelector('a[href="/products/frame-a?cart_item_id=cart-owned"]')).not.toBeNull();
 });

@@ -4,12 +4,13 @@ import { api, apiError, formatIDR } from '../lib/api';
 import FormField from './FormField';
 import TintingSwatch, { TintingDetails, TINTING_GROUPS } from './TintingSwatch';
 
-function TintingPicker({ item, colors, load, loading, loadError, onSaved, onDirtyChange, disabled }) {
+export function TintingPicker({ item, colors, load, loading, loadError, onSaved, onDirtyChange, disabled, onSelect }) {
   const [open,setOpen]=useState(false), [search,setSearch]=useState(''), [kind,setKind]=useState(''), [group,setGroup]=useState('');
   const [busy,setBusy]=useState(false), [error,setError]=useState(''), [pending,setPending]=useState(undefined);
   const current = pending === undefined ? item.tinting?.id || null : pending;
   const save = async tintingId => {
     if (busy || disabled) return;
+    if (onSelect) { onSelect((colors || []).find(color=>color.id===tintingId) || null);setOpen(false);return; }
     setBusy(true);setError('');setPending(tintingId);onDirtyChange(`tinting:${item.id}`,true);
     try {
       const {data}=await api.patch(`/cart/${encodeURIComponent(item.id)}/tinting`,{tinting_id:tintingId});

@@ -38,6 +38,6 @@ export default function PrescriptionPhotoInput({ file, onChange, disabled = fals
       <p className="text-xs text-meow-gray">{"Foto akan diunggah secara privat saat Anda menambahkan produk ke keranjang."}</p>
     </div>}
     {error && <p role="alert" className="text-xs text-red-600">{error}</p>}
-    <p className="text-xs text-meow-gray">{"Belum punya fotonya? Anda dapat melampirkannya saat checkout."}</p>
+    <p className="text-xs text-meow-gray">{"Foto resep bersifat opsional. Pilih foto sebelum menambahkan produk ke keranjang."}</p>
   </div>;
 }
