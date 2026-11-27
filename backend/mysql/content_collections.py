@@ -15,6 +15,7 @@ class ContentCollection:
     defaults: list
     label: str
     limit: int = 50
+    unique_fields: tuple[str, ...] = ()
 
     def value(self, row):
         value = deepcopy(row.value) if row else {'version': 0, 'items': deepcopy(self.defaults)}
@@ -41,6 +42,9 @@ class ContentCollection:
                     if not item_id and len(value['items']) >= self.limit:
                         raise HTTPException(422, f'Maksimal {self.limit} item {self.label.lower()}. Hapus item yang tidak digunakan terlebih dahulu.')
                     item = {'id': item_id or uuid4().hex, **body.model_dump(exclude={'version'})}
+                    for field in self.unique_fields:
+                        if any(old['id'] != item_id and str(old.get(field, '')).casefold() == str(item.get(field, '')).casefold() for old in value['items']):
+                            raise HTTPException(422, f'{field} sudah digunakan pada {self.label.lower()} lain')
                     value['items'] = [item if old['id'] == item_id else old for old in value['items']] if item_id else [*value['items'], item]
                 value['version'] += 1
                 value['items'].sort(key=lambda item: (item['sort_order'], item['id']))

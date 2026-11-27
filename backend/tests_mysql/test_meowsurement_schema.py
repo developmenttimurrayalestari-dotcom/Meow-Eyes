@@ -179,9 +179,9 @@ def test_new_tables_and_guard_predicates_cover_all_metadata_without_organization
     old, new, loyalty = load_revision(), load_meowsurement_revision(), load_loyalty_revision()
     assert len(new.ALL_TABLES) == 11
     assert not set(old.ALL_TABLES).intersection(new.ALL_TABLES)
-    from mysql.check_integrity import load_lens_index_types_revision, load_accessories_revision, load_growth_revision
+    from mysql.check_integrity import load_lens_index_types_revision, load_accessories_revision, load_growth_revision, load_tinting_revision
     growth = load_growth_revision()
-    assert set(old.ALL_TABLES).union(new.ALL_TABLES, loyalty.ALL_TABLES, load_lens_index_types_revision().ALL_TABLES, growth.TABLE_DDL) == set(Base.metadata.tables)
+    assert set(old.ALL_TABLES).union(new.ALL_TABLES, loyalty.ALL_TABLES, load_lens_index_types_revision().ALL_TABLES, growth.TABLE_DDL, load_tinting_revision().ALL_TABLES) == set(Base.metadata.tables)
     assert not any(name.startswith("of_") or name in {"organizations", "patients", "operators"} for name in new.ALL_TABLES)
     expected = {str(check.name): (table.name, str(check.sqltext)) for table in Base.metadata.tables.values()
                 for check in table.constraints if isinstance(check, CheckConstraint)}

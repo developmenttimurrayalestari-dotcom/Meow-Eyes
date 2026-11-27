@@ -241,6 +241,11 @@ class PricedItem:
     index_surcharge: Decimal = ZERO
     flash_item: m.FlashSaleItem | None = None
     addons: list = field(default_factory=list)
+    tinting: dict | None = None
+
+    @property
+    def tinting_price(self):
+        return money(self.tinting['additional_price']) if self.tinting else ZERO
 
     @property
     def has_flash(self):
@@ -252,7 +257,7 @@ class PricedItem:
 
     @property
     def unit_price(self) -> Decimal:
-        return self.frame_price + self.lens_price + self.addon_price
+        return self.frame_price + self.lens_price + self.addon_price + self.tinting_price
 
     @property
     def subtotal(self) -> Decimal:
@@ -286,6 +291,7 @@ class CheckoutQuote:
             "product_subtotal": float(sum((item.frame_price * item.cart.quantity for item in self.items), ZERO)),
             "lens_subtotal": float(sum((item.lens_price * item.cart.quantity for item in self.items), ZERO)),
             "addon_subtotal": float(sum((item.addon_price * item.cart.quantity for item in self.items), ZERO)),
+            "tinting_subtotal": float(sum((item.tinting_price * item.cart.quantity for item in self.items), ZERO)),
             "voucher": row_dict(self.voucher) if self.voucher else None,
             "voucher_discount": float(self.voucher_discount),
             "points_used": self.points_used, "points_discount": float(self.points_discount),
@@ -318,6 +324,8 @@ async def priced_cart(
         raise HTTPException(400, "Item pilihan tidak tersedia di keranjang Anda")
     if not carts:
         return [], 0
+    from .tinting import cart_tintings, eligible as tinting_eligible
+    tintings = await cart_tintings(s, carts, lock=lock)
     addon_rows = (await s.scalars(select(m.CartAddon).where(m.CartAddon.cart_item_id.in_([c.id for c in carts]))
         .order_by(m.CartAddon.cart_item_id, m.CartAddon.product_id))).all()
     product_ids = sorted({pid for c in carts for pid in (c.product_id, c.lens_product_id) if pid} | {a.product_id for a in addon_rows})
@@ -368,6 +376,11 @@ async def priced_cart(
             frame_price = money(flash_item.flash_price)
         item = PricedItem(cart=cart, product=product, variant=variant,
                           frame_price=frame_price, flash_item=flash_item)
+        item.tinting = tintings.get(cart.id)
+        if item.tinting and (not item.tinting['is_available'] or not tinting_eligible(product)):
+            if not skip_unavailable:
+                raise HTTPException(409, 'Pilihan tinting tidak tersedia. Hapus atau pilih ulang warna tinting pada checkout.')
+            item.tinting['is_available'] = False
         if cart.lens_product_id:
             lens = products.get(cart.lens_product_id)
             lv = variants.get(cart.lens_variant_id)
@@ -594,6 +607,9 @@ async def _save_order(s: AsyncSession, quote: CheckoutQuote, key: str | None, fi
         )
         s.add(row)
         await s.flush()
+        if item.tinting:
+            from .tinting import snapshot as tinting_snapshot
+            s.add(m.OrderItemTinting(order_item_id=row.id, details=tinting_snapshot(item.tinting)))
         standalone_index = item.lens_index is not None and item.lens_product is None
         primary_surcharge = item.index_surcharge if standalone_index else ZERO
         components = [("primary", item.product, item.variant, item.frame_price + primary_surcharge, primary_surcharge)]

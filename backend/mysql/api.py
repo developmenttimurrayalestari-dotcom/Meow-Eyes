@@ -138,6 +138,9 @@ async def order_dict(session: AsyncSession, order: m.Order) -> dict[str, Any]:
         it["components"] = []
     for component in components:
         by_id[component.order_item_id]["components"].append(row_dict(component))
+    if by_id:
+        for tinting in (await session.scalars(select(m.OrderItemTinting).where(m.OrderItemTinting.order_item_id.in_(by_id)))).all():
+            by_id[tinting.order_item_id]['tinting'] = tinting.details
     for link in (await session.scalars(select(m.OrderItemPrescription).where(
             m.OrderItemPrescription.order_id == order.id))).all():
         from .commerce import prescription_payload

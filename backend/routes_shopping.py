@@ -34,7 +34,7 @@ async def _cart_payload(s, item: PricedItem) -> dict[str, Any]:
         "id": item.cart.id, "product_id": product.id, "variant_id": variant.id,
         "quantity": item.cart.quantity,
         "product": {key: row_dict(product)[key] for key in (
-            "id", "name", "slug", "main_image", "weight_gram", "product_type"
+            "id", "name", "slug", "main_image", "weight_gram", "product_type", "sale_role"
         )},
         "variant": row_dict(variant),
         "lens_product": {key: getattr(item.lens_product, key) for key in ("id", "name", "slug")}
@@ -43,6 +43,7 @@ async def _cart_payload(s, item: PricedItem) -> dict[str, Any]:
         "lens_index": row_dict(item.lens_index) if item.lens_index else None,
         "lens_price": float(item.lens_price), "frame_price": float(item.frame_price),
         "addon_price": float(item.addon_price),
+        "tinting": item.tinting, "tinting_price": float(item.tinting_price),
         "addons": [{'product_id': a['product'].id, 'variant_id': a['variant'].id,
             'name': a['product'].name, 'sku': a['variant'].sku, 'unit_price': float(a['price'])}
             for a in item.addons],
@@ -111,6 +112,7 @@ async def add_to_cart(req: CartItemCreate, user: User = Depends(current_user)):
                 m.CartItem.prescription_id.is_(None),
                 m.CartItem.lens_index_id.is_(None),
                 ~select(m.CartAddon.cart_item_id).where(m.CartAddon.cart_item_id == m.CartItem.id).exists(),
+                ~select(m.CartTinting.cart_item_id).where(m.CartTinting.cart_item_id == m.CartItem.id).exists(),
             ).order_by(m.CartItem.id).with_for_update())
             if existing:
                 existing.quantity = integer(existing.quantity + quantity, "Jumlah", 1, MAX_CART_QUANTITY)

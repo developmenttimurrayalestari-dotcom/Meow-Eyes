@@ -1,0 +1,9 @@
+PASS src/components/ShippingOptions.test.jsx
+PASS src/pages/CheckoutPage.test.jsx
+PASS src/pages/CheckoutCOD.test.jsx
+
+Test Suites: 3 passed, 3 total
+Tests:       22 passed, 22 total
+Snapshots:   0 total
+Time:        5.213 s
+Ran all test suites within paths "src/components/ShippingOptions.test.jsx", "src/pages/CheckoutPage.test.jsx", "src/pages/CheckoutCOD.test.jsx".

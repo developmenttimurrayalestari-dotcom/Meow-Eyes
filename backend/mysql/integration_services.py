@@ -111,6 +111,7 @@ def shipping_fingerprint(items, address: m.Address, settings: EverproSettings, p
         "lens_variant_id": item.lens_variant.id if item.lens_variant else None,
         "lens_weight": item.lens_product.weight_gram if item.lens_product else None,
         "prescription_id": item.cart.prescription_id,
+        "tinting": item.tinting,
         "addons": [{'product_id': a['product'].id, 'variant_id': a['variant'].id, 'price': str(a['price']),
             'weight': a['product'].weight_gram} for a in item.addons],
     } for item in sorted(items, key=lambda x: x.cart.id)]
@@ -163,6 +164,7 @@ def _rate_options(body: dict, *, coordinates=False, cod=False, api_version=1) ->
                 everpro_v3.surcharge(rate)  # Validate the provider's breakdown; price is authoritative.
             seen.add(key)
             options.append({"courier_code": courier, "service_code": service,
+                            "service_type": "same_day" if group == "sameday" else group,
                             "courier_name": str(rate.get("logistic_name") or courier)[:255],
                             "service_label": str(rate.get("rate_name") or service)[:255],
                             "cost": cost, "insurance_cost": insurance,
@@ -259,6 +261,7 @@ async def shipping_options(user_id: str, address_id: str, selected_ids: list[str
             )
             s.add(row)
             result.append({"quote_id": row.id, "courier_code": row.courier_code, "courier_name": option["courier_name"],
+                           "service_type": option["service_type"],
                            "service_code": row.service_code, "service_label": row.service_label,
                            "cost": float(row.cost + row.insurance_cost), "insurance_cost": float(row.insurance_cost),
                            "etd": option["etd"], "expires_at": expires.isoformat(), "provider": "everpro"})

@@ -6,6 +6,9 @@ import { MapPin, Truck, Ticket, Coins, Plus, Shield, X, Glasses, RefreshCw } fro
 import { toast } from "sonner";
 import AddressForm from "../components/AddressForm";
 import PrescriptionForm from "../components/PrescriptionForm";
+import ShippingOptions from "../components/ShippingOptions";
+import CheckoutTinting from '../components/CheckoutTinting';
+import { TintingDetails } from '../components/TintingSwatch';
 
 const newRequestId = () => window.crypto?.randomUUID?.() || `checkout-${Array.from(window.crypto.getRandomValues(new Uint32Array(4))).map((value) => value.toString(16)).join("")}`;
 
@@ -142,7 +145,8 @@ export default function CheckoutPage() {
   const validPreview = preview && previewKey === payloadKey && previewCartVersion === cartVersion && currentShipping && !previewLoading;
   const lensSubtotal = Number(preview?.lens_subtotal ?? cartItems.reduce((sum, item) => sum + Number(item.lens_price || 0) * item.quantity, 0));
   const addonSubtotal = Number(preview?.addon_subtotal ?? cartItems.reduce((sum, item) => sum + Number(item.addon_price || 0) * item.quantity, 0));
-  const productSubtotal = Number(preview?.product_subtotal ?? Number(preview?.subtotal || 0) - lensSubtotal - addonSubtotal);
+  const tintingSubtotal = Number(preview?.tinting_subtotal ?? cartItems.reduce((sum, item) => sum + Number(item.tinting_price || 0) * item.quantity, 0));
+  const productSubtotal = Number(preview?.product_subtotal ?? Number(preview?.subtotal || 0) - lensSubtotal - addonSubtotal - tintingSubtotal);
   const paymentReady = paymentMode === 'cod' ? integrations?.cod?.ready : integrations?.payment?.ready;
   const setPinAt = (index, value) => {
     if (!/^\d?$/.test(value)) return;
@@ -191,6 +195,7 @@ export default function CheckoutPage() {
             <div className="flex-1 min-w-0 text-sm">
               <p className="font-bold">{item.product?.["name"]}</p>
               {item.addons?.map((a) => <p key={a.product_id} className="text-xs text-meow-gray">+ {a?.["name"]} · <span className="conveythis-no-translate notranslate" translate="no" data-conveythis-private="">{formatIDR(a.unit_price)}</span>{" / produk"}</p>)}
+              <TintingDetails tinting={item.tinting}/>
               {(item.lens_index || item.lens_product) && <div className="text-xs text-meow-gray space-y-1 my-1" data-testid={`checkout-item-pricing-${item.id}`}>
                 <p>{item.product.product_type === 'frame' ? "Frame" : "Produk"}{item.flash_sale_active ? " (Flash Sale)" : ""}: <span className="conveythis-no-translate notranslate" translate="no" data-conveythis-private="">{formatIDR(item.frame_price)}</span>{" / produk"}</p>
                 <p>{"Lensa"}{item.lens_product ? ` ${item.lens_product?.["name"]}` : ""}{item.lens_index ? ` · ${item.lens_index?.["name"]}` : ""}: <span className="conveythis-no-translate notranslate" translate="no" data-conveythis-private="">{formatIDR(item.lens_price)}</span>{item.product.product_type === 'package' ? " (termasuk harga paket)" : " / produk"}</p>
@@ -204,6 +209,8 @@ export default function CheckoutPage() {
           <div><h2 className="font-heading font-extrabold text-xl flex items-center gap-2"><Glasses className="h-5 w-5 text-meow-salmon" />{"Lensa & Resep per Item (Opsional)"}</h2><p className="text-sm text-meow-gray mt-1">{"Untuk produk Frame, Anda boleh membeli frame saja tanpa lensa, catatan, atau foto resep. Anda juga dapat memakai resep yang sudah disimpan di Profil. Isi bagian ini hanya jika diperlukan. Klik Simpan Resep jika ada perubahan; setiap baris produk disimpan terpisah."}</p></div>
           {cartItems.map((item) => <PrescriptionForm key={item.id} item={item} onDirtyChange={handleDirty} onSaved={handlePrescriptionSaved} disabled={submitting} showMeasurements={false} selectLens allowProfile />)}
         </section>}
+
+        <CheckoutTinting items={cartItems} onDirtyChange={handleDirty} disabled={submitting} onSaved={item=>handlePrescriptionSaved(item.id,item.prescription,item)}/>
 
         <section className="bg-white rounded-3xl p-5 md:p-6" data-testid="address-section">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
@@ -225,15 +232,8 @@ export default function CheckoutPage() {
             {shippingWeight.rated != null && shippingWeight.rated !== shippingWeight.items && <p className="mt-1 text-xs text-meow-gray">Berat perhitungan ongkir: <span className="conveythis-no-translate" translate="no">{Number(shippingWeight.rated).toLocaleString('id-ID')} gram</span>.</p>}
             <p className="mt-1 text-xs text-meow-gray">Berat mencakup jumlah produk, lensa, dan Add On yang dipilih. Tarif akhir mengikuti ketentuan kurir.</p>
           </div>}
-          {shippingLoading ? <p role="status" className="text-sm text-meow-gray">{"Menghitung ongkir…"}</p> : shippingError ? <p role="alert" className="text-sm text-red-600">{shippingError}</p> : <div className="space-y-2 max-h-80 overflow-y-auto">{shippingOptions.map((option, index) => {
-              const key = option.quote_id || `${option.courier_code}-${option.service_code}-${index}`;
-              const checked = shipping?.quote_id ? shipping.quote_id === option.quote_id : shipping?.courier_code === option.courier_code && shipping?.service_code === option.service_code;
-              return <label key={key} className={`flex items-start gap-2 p-3 rounded-2xl border-2 cursor-pointer ${checked ? "border-meow-salmon bg-meow-salmon/5" : "border-meow-midnight/5"}`}>
-              <input type="radio" name="checkout-shipping" disabled={submitting} checked={checked} onChange={() => setShipping({ ...option, address_id: addressId, request_key: shippingRequestKey })} className="mt-1" />
-              <span className="text-sm flex-1"><span className="font-bold">{option.courier_name || option.courier_code} · {option.service_label || option.service_code}</span>{option.etd && <span className="block text-xs text-meow-gray">{"Estimasi "}{option.etd}</span>}{Number(option.insurance_cost) > 0 && <span className="block text-xs text-meow-gray">{"Termasuk asuransi "}<span className="conveythis-no-translate notranslate" translate="no" data-conveythis-private="">{formatIDR(option.insurance_cost)}</span></span>}</span>
-              <span className="text-sm font-bold text-meow-salmon"><span className="conveythis-no-translate notranslate" translate="no" data-conveythis-private="">{formatIDR(option.cost)}</span></span>
-            </label>;
-            })}</div>}
+          {shippingLoading ? <p role="status" className="text-sm text-meow-gray">{"Menghitung ongkir…"}</p> : shippingError ? <p role="alert" className="text-sm text-red-600">{shippingError}</p> : <ShippingOptions options={shippingOptions} selected={shipping} disabled={submitting}
+            onChange={option => setShipping({ ...option, address_id: addressId, request_key: shippingRequestKey })} />}
           {shippingExpired && <p role="alert" className="mt-3 text-sm text-amber-700">{"Penawaran ongkir telah berakhir. Klik Cek ulang untuk memperbarui."}</p>}
           {integrations.shipping?.mock && <p className="text-xs text-amber-700 mt-3">{"Mode demo: tarif dan pengiriman disimulasikan."}</p>}
         </section>}
@@ -259,6 +259,7 @@ export default function CheckoutPage() {
           <Row label={"Harga produk"} testId="checkout-product-subtotal" value={validPreview ? formatIDR(productSubtotal) : "—"} />
           <Row label={"Tambahan lensa"} testId="checkout-lens-subtotal" value={validPreview ? formatIDR(lensSubtotal) : "—"} />
           {addonSubtotal > 0 && <Row label={"Add On"} testId="checkout-addon-subtotal" value={validPreview ? formatIDR(addonSubtotal) : '—'} />}
+          {cartItems.some(item=>item.tinting) && <Row label="Tinting" testId="checkout-tinting-subtotal" value={validPreview ? formatIDR(tintingSubtotal) : '—'} />}
           <Row label={"Subtotal"} value={validPreview ? formatIDR(preview.subtotal) : "—"} />
           <Row label={"Voucher"} value={validPreview ? `−${formatIDR(preview.voucher_discount)}` : "—"} />
           <Row label={"Poin"} value={validPreview ? `−${formatIDR(preview.points_discount)}` : "—"} />

@@ -4,6 +4,7 @@ import { api, apiError, formatIDR, imageSrc } from "../lib/api";
 import { Cat } from "lucide-react";
 import PurchaseRatings from "../components/PurchaseRatings";
 import OrderReturns from '../components/Returns';
+import { TintingDetails } from '../components/TintingSwatch';
 
 const OrderDetailPage = () => {
 
@@ -42,6 +43,7 @@ const OrderDetailPage = () => {
                   <div className="flex-1">
                     <p className="font-bold">{it.product_name}</p>
                     {it.components?.filter((c) => c.component_type === 'add_on').map((c) => <p key={c.id} className="text-xs text-meow-gray">+ {c.product_name} · {c.quantity} × <span className="conveythis-no-translate notranslate" translate="no" data-conveythis-private="">{formatIDR(c.unit_price)}</span></p>)}
+                    <TintingDetails tinting={it.tinting}/>
                     {it.variant_label && <p className="text-xs text-meow-gray">{it.variant_label}</p>}
                     <p className="text-sm">{it.quantity} × <span className="conveythis-no-translate notranslate" translate="no" data-conveythis-private="">{formatIDR(it.unit_price)}</span></p>
                   </div>

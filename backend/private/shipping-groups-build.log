@@ -1,0 +1,50 @@
+(node:15868) [DEP0176] DeprecationWarning: fs.F_OK is deprecated, use fs.constants.F_OK instead
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Creating an optimized production build...
+Browserslist: browsers data (caniuse-lite) is 6 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Compiled with warnings.
+
+Critical dependency: the request of a dependency is an expression
+
+Search for the keywords to learn more about each warning.
+To ignore, add // eslint-disable-next-line to the line before.
+
+File sizes after gzip:
+
+  412.26 kB         build\static\js\997.b65c8853.chunk.js
+  146.63 kB         build\static\js\485.6c6559d3.chunk.js
+  128.29 kB         build\static\js\612.3a6bdd56.chunk.js
+  104.87 kB         build\static\js\226.1406316b.chunk.js
+  98.29 kB          build\static\js\703.bcbedfce.chunk.js
+  88.87 kB          build\static\js\437.d06478a7.chunk.js
+  81.67 kB          build\static\js\624.16434cdb.chunk.js
+  60.04 kB (+9 B)   build\static\js\main.a372318a.js
+  46.46 kB          build\static\js\308.5ac5118d.chunk.js
+  46.3 kB           build\static\js\52.07c15228.chunk.js
+  43.56 kB          build\static\js\239.ef2c2b8d.chunk.js
+  31.54 kB          build\static\js\261.31026b5f.chunk.js
+  21.77 kB (+17 B)  build\static\css\624.ba50d008.chunk.css
+  15.54 kB (+17 B)  build\static\css\238.897173eb.chunk.css
+  14.92 kB          build\static\js\112.f136bed8.chunk.js
+  13.71 kB          build\static\js\267.1c705f3e.chunk.js
+  11.69 kB          build\static\js\82.0c8b6dfa.chunk.js
+  9.57 kB           build\static\css\485.33c9d0b5.chunk.css
+  224 B             build\static\js\527.03d41ce2.chunk.js
+  133 B             build\static\js\238.73d1f59f.chunk.js
+
+The project was built assuming it is hosted at /.
+You can control this with the homepage field in your package.json.
+
+The build folder is ready to be deployed.
+You may serve it with a static server:
+
+  npm install -g serve
+  serve -s build
+
+Find out more about deployment here:
+
+  https://cra.link/deployment
+
+OptiFit offline shell: 24 static assets, version 0a8ef1c29dd83daa17b9. Patient/API data excluded.

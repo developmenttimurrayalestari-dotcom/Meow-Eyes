@@ -1230,3 +1230,82 @@ Header tidak lagi menyediakan bar bahasa kosong. Tidak perlu mengubah key,
 setting backend, atau database. Build/deploy frontend untuk menerapkan perubahan.
 Pengujian otomatis memakai fixture widget native; uji terjemahan langsung tetap
 memerlukan domain/key ConveyThis yang aktif.
+
+### Layanan tinting per item checkout — 27 November 2026
+
+Menu **Admin > Katalog > Manage Tinting** (`/admin/tinting`) menyediakan CRUD
+warna tinting: kode unik, nama, HEX warna solid atau atas/tengah/bawah untuk
+gradasi, kelompok warna, harga tambahan, status aktif, urutan, dan catatan
+referensi internal. Staff mengikuti permission `product.view/create/update/delete`.
+Pratinjau memakai kartu warna oval, pencarian kode/nama, dan filter jenis/kelompok.
+
+Data awal diambil dari `Leinz-Master-Tinting.json`: 66 entri tersedia di admin,
+61 aktif. Lima entri (`400`, `42S`, `CON`, `CONG`, `NOTE`) belum dijual pada
+checkout karena belum ada pratinjau HEX atau merupakan layanan khusus/sampel.
+Admin dapat melengkapi warna dan meninjau statusnya. Harga awal yang disetujui:
+Rp60.000 untuk warna biasa/sunglass dan Rp120.000 untuk therapeutic. Harga
+referensi premium Rp90.000 dalam sumber tidak dipakai. Data awal yang disertakan
+kode berada di `backend/data/tinting-catalog.json`; jangan mengedit file ini untuk
+mengubah harga toko yang sudah dikelola admin. Perubahan admin disimpan dalam
+setting privat `catalog.tinting` dengan pemeriksaan versi untuk mencegah dua
+admin saling menimpa perubahan. Menghapus semua warna tidak memulihkan default.
+
+Di checkout, bagian **Tinting Lensa (Opsional)** muncul setelah lensa/resep dan
+sebelum alamat. Frame, Lensa, dan Paket sebagai Main Product dapat memilih satu
+warna per baris produk. Dua produk pada satu baris memakai warna sama dan biaya
+dikalikan dua. Produk lain dapat memilih warna berbeda. Tinting dapat dihapus
+untuk membeli tanpa layanan ini. Biaya ditampilkan terpisah dari Add On dan
+Lens Index; tinting tetap berbayar untuk Paket. Warna solid/gradasi merupakan
+ilustrasi layar, bukan hasil uji optik atau jaminan persis warna lensa produksi.
+
+Pemilihan warna langsung disimpan melalui `PATCH /api/cart/{id}/tinting`.
+Backend memeriksa pemilik cart, ketersediaan warna, dan harga master; harga dari
+customer tidak diterima. Saat penyimpanan berlangsung/gagal, pembayaran ditahan
+sampai pilihan dikonfirmasi atau dihapus. Perubahan pilihan maupun harga master
+membatalkan quote ongkir lama dan memperbarui subtotal, nilai barang untuk
+pengiriman, serta total pembayaran. Tinting adalah layanan, sehingga tidak
+menambah berat barang atau membuat reservasi stok tersendiri. Pembelian frame
+biasa berikutnya tidak digabung otomatis ke baris yang sudah memiliki tinting.
+
+Cart menyimpan pilihan pada `cart_tintings`; snapshot kode, nama, jenis, HEX,
+dan harga per produk pada pesanan disimpan di `order_item_tintings`. Keranjang,
+detail pesanan customer, dan detail pesanan admin menampilkan tinting. Mengubah
+atau menghapus master tidak mengubah snapshot/total pesanan lama. Warna yang
+dinonaktifkan/dihapus tetap terlihat pada keranjang agar dapat diganti/dihapus,
+tetapi tidak dapat diteruskan ke checkout sebelum diperbaiki.
+
+**Penerapan:** fitur ini memerlukan migrasi baru `20261127_0017`. Kode backend
+mengharuskan revisi ini sebelum startup. Terapkan kode, lalu jalankan dari folder
+`backend` menggunakan virtual environment yang sama dengan aplikasi:
+
+```bash
+# Linux / server
+.venv_backend/bin/python -m alembic upgrade head
+pm2 restart meow-backend --update-env
+```
+
+```powershell
+# Windows PowerShell
+.\.venv_backend\Scripts\python.exe -m alembic upgrade head
+```
+
+Setelah itu build/deploy frontend (`npm run build` dari folder `frontend`) dan
+restart proses frontend bila diperlukan. SQL incremental yang dapat ditinjau:
+`backend/sql/017_tinting_services.sql`. Migrasi hanya menambahkan dua tabel;
+tidak mengubah produk, stok, poin, alamat, atau pesanan lama. Katalog awal
+tersedia tanpa import manual dan pertama kali disimpan ke database saat admin
+mengubahnya. Downgrade yang menghapus snapshot finansial sengaja tidak disediakan.
+Migrasi tidak dijalankan otomatis pada database aktif saat pengembangan fitur.
+
+Validasi: 360 tes frontend lulus; setelah penyesuaian lebar kartu, 26 tes terkait
+checkout/tinting/COD diulang dan lulus. Audit 406 kontrol form di 162 file tidak
+menemukan label yang hilang. Suite backend terisolasi: 593 lulus, dua tes lama
+tentang symlink dikecualikan karena Windows menolak pembuatan symlink dengan
+`WinError 1314`, termasuk setelah dicoba di luar sandbox pada folder uji baru.
+Tidak ada tes tinting yang dikecualikan. Tes mencakup hak akses, validasi harga
+dan HEX, konflik versi, kepemilikan cart, dua warna pada baris berbeda, jumlah
+dua produk, tinting berbayar pada Paket, perubahan harga membatalkan quote lama,
+warna nonaktif tetap dapat dihapus, dan snapshot order tetap utuh setelah master
+diubah. Edge headless memakai komponen asli dengan API fixture (tanpa login atau
+backend) memeriksa tata letak checkout 390/320 piksel dan admin desktop, termasuk
+warna gradasi serta tidak adanya pratinjau yang melampaui kartu.

@@ -4,6 +4,7 @@ import { api, apiError, formatIDR, imageSrc } from "../lib/api";
 import { useAuth } from "../contexts/AuthContext";
 import { Trash2, Minus, Plus, ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
+import { TintingDetails } from '../components/TintingSwatch';
 
 const CartPage = () => {
 
@@ -101,6 +102,7 @@ const CartPage = () => {
                     {!it.lens_product && it.lens_index && <p className="text-xs text-meow-mint mt-1">{"Lensa: "}<span className="font-bold">{it.lens_index?.["name"]}</span>{it.product.product_type === 'package' ? " · Termasuk harga paket" : ""}</p>}
                     <p className="font-heading font-extrabold text-meow-salmon mt-1"><span className="conveythis-no-translate notranslate" translate="no" data-conveythis-private="">{formatIDR(it.unit_price)}</span></p>
                     {it.addons?.map((a) => <p key={a.product_id} className="text-xs text-meow-gray">+ {a?.["name"]} · <span className="conveythis-no-translate notranslate" translate="no" data-conveythis-private="">{formatIDR(a.unit_price)}</span>{" / produk"}</p>)}
+                    <TintingDetails tinting={it.tinting}/>
                     {it.lens_price > 0 &&
                 <p className="text-[10px] text-meow-gray">{"Frame "}<span className="conveythis-no-translate notranslate" translate="no" data-conveythis-private="">{formatIDR(it.frame_price)}</span>{" + Lensa "}<span className="conveythis-no-translate notranslate" translate="no" data-conveythis-private="">{formatIDR(it.lens_price)}</span></p>
                 }

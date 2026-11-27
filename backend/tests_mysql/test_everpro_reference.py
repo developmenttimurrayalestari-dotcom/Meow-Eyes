@@ -259,6 +259,7 @@ def test_checkout_quote_and_booking_use_shared_locations_and_token_end_to_end(ad
             client=EverproClient(EverproSettings.from_env(),transport=httpx.MockTransport(handler))
             monkeypatch.setattr(service,'get_everpro_client',lambda:client)
             option=(await service.shipping_options(d['alice'],d['address'],[d['cart']]))['options'][0]
+            assert option['service_type']=='regular'
             req=d['req'].model_copy(update={'shipping_quote_id':option['quote_id'],'courier_code':'JNE','service_code':'REG'})
             order=(await create_checkout(d['alice'],req))['order']
             await service.apply_doku_event(payment_event(order),'shared-paid','shared-test-hash')

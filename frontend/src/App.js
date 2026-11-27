@@ -44,6 +44,7 @@ import AdminProducts from "./pages/admin/AdminProducts";
 import AdminMeowsurement from "./pages/admin/AdminMeowsurement";
 import AdminCategories from "./pages/admin/AdminCategories";
 import AdminHomeCategories from './pages/admin/AdminHomeCategories';
+import AdminTinting from './pages/admin/AdminTinting';
 import AdminMenus from './pages/admin/AdminMenus';
 import AdminOrders from "./pages/admin/AdminOrders";
 import AdminInventory from "./pages/admin/AdminInventory";
@@ -115,6 +116,7 @@ function AppRouter() {
         <Route path="/admin/staff" element={<AdminStaff />} />
         <Route path="/admin/import" element={<AdminImport />} />
         <Route path="/admin/lens-indexes" element={<AdminLensIndexes />} />
+        <Route path="/admin/tinting" element={<AdminTinting />} />
       </Route>
 
       {/* Customer routes within MainLayout */}

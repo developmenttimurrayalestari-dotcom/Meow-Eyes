@@ -18,6 +18,7 @@ from mysql.check_integrity import load_meowsurement_revision, load_loyalty_revis
 
 BACKEND = Path(__file__).resolve().parents[1]
 GROWTH_TABLES = set(load_growth_revision().TABLE_DDL)
+TINTING_TABLES = {'cart_tintings', 'order_item_tintings'}
 
 
 def offline(*args: str) -> str:
@@ -67,7 +68,7 @@ def test_upgrade_sql_matches_committed_export_and_current_metadata():
     # The released baseline export remains frozen at 0002. New DDL has its own
     # incremental export; a fresh replay still matches all current metadata.
     assert offline("upgrade", "20261106_0002", "--sql") == stored
-    assert generated.count("CREATE TABLE ") == len(Base.metadata.tables) - len(GROWTH_TABLES)  # Later incremental tables.
+    assert generated.count("CREATE TABLE ") == len(Base.metadata.tables) - len(GROWTH_TABLES | TINTING_TABLES)  # Later incremental tables.
     assert "version_num='20261111_0005'" in generated
     assert not re.search(r"\bCHECK\s*\(", generated)
     assert generated.count("CREATE TRIGGER ") == 92 + len(load_meowsurement_revision().trigger_definitions()) + len(load_loyalty_revision().trigger_definitions())
@@ -80,7 +81,7 @@ def test_upgrade_sql_matches_committed_export_and_current_metadata():
     emitted = {normalize(statement) for statement in re.split(r";\s*(?:\n|$)", no_comments) if statement.strip()}
     dialect = mysql.dialect()
     for table in Base.metadata.sorted_tables:
-        if table.name in {"categories", "lens_index_types"} | GROWTH_TABLES: continue  # Later incremental revisions.
+        if table.name in {"categories", "lens_index_types"} | GROWTH_TABLES | TINTING_TABLES: continue  # Later incremental revisions.
         ddl = str(CreateTable(table).compile(dialect=dialect))
         for column in load_growth_revision().COLUMNS.get(table.name, ()):
             if table.name in GROWTH_TABLES: continue
@@ -152,7 +153,7 @@ def test_optional_point_expiry_replaces_only_game_and_cashback_guards():
 def test_downgrade_sql_drops_children_before_parents():
     generated = offline("downgrade", "20261109_0003:base", "--sql")
     statements = generated.replace("`", "")
-    positions = {name: statements.index(f"DROP TABLE {name};") for name in Base.metadata.tables if name not in set(load_loyalty_revision().ALL_TABLES) | GROWTH_TABLES and name != 'lens_index_types'}
+    positions = {name: statements.index(f"DROP TABLE {name};") for name in Base.metadata.tables if name not in set(load_loyalty_revision().ALL_TABLES) | GROWTH_TABLES | TINTING_TABLES and name != 'lens_index_types'}
     for table in Base.metadata.tables.values():
         if table.name not in positions: continue
         for fk in table.foreign_key_constraints:
@@ -188,6 +189,18 @@ def test_revision_is_frozen_and_single_head():
     assert "create_all(" not in source and "drop_all(" not in source
     assert "allow_schema_drop" in source
     assert offline("heads").strip() == f"{EXPECTED_SCHEMA_REVISION} (head)"
+
+
+def test_tinting_migration_matches_new_tables_and_keeps_order_history():
+    sql=offline('upgrade','20261123_0016:20261127_0017','--sql')
+    assert sql==(BACKEND/'sql/017_tinting_services.sql').read_text(encoding='utf-8')
+    assert sql.count('CREATE TABLE ')==2
+    assert 'ON DELETE CASCADE' in sql and 'ON DELETE RESTRICT' in sql
+    assert not any(value in sql for value in ('DROP TABLE','DELETE FROM','ALTER TABLE products'))
+    statements='\n'.join(line for line in sql.splitlines() if not line.lstrip().startswith('--'))
+    emitted={normalize(statement) for statement in re.split(r';\s*(?:\n|$)',statements) if statement.strip()}
+    for name in TINTING_TABLES:
+        assert normalize(str(CreateTable(Base.metadata.tables[name]).compile(dialect=mysql.dialect()))) in emitted
 
 
 def test_accessories_guard_migration_preserves_data_and_other_integrity_rules():

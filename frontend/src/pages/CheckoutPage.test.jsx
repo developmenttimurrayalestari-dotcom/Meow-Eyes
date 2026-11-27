@@ -39,6 +39,48 @@ async function mountCheckout(selected = ["cart-owned"]) {
   await flush(); await flush();
 }
 
+test('selecting a shipping type updates the exact quote and authoritative checkout total',async()=>{
+  const regular={...quote,service_type:'regular'};
+  const cargo={...quote,quote_id:'cargo-quote',service_type:'cargo',courier_code:'JTC',service_code:'FT',service_label:'Fast Track',cost:36000};
+  api.post.mockImplementation((url,body)=>{
+    if(url==='/checkout/shipping-options') return Promise.resolve({data:{options:[regular,cargo]}});
+    if(url==='/checkout/preview') return Promise.resolve({data:{subtotal:100000,total:body.shipping_quote_id==='cargo-quote'?136000:110000,shipping:{cost:body.shipping_quote_id==='cargo-quote'?36000:10000}}});
+    return Promise.reject(new Error('unexpected request'));
+  });
+  await mountCheckout();
+  expect(host.querySelector('[data-testid=checkout-total]').textContent).toBe('Rp 110000');
+  await click(host.querySelector('[data-testid=shipping-type-cargo]'));
+  await flush(); await flush();
+  expect(host.querySelector('[data-testid=shipping-group-cargo] input').checked).toBe(true);
+  expect(host.querySelector('[data-testid=checkout-total]').textContent).toBe('Rp 136000');
+  expect(api.post).toHaveBeenCalledWith('/checkout/preview',expect.objectContaining({shipping_quote_id:'cargo-quote',courier_code:'JTC',service_code:'FT'}),expect.any(Object));
+});
+
+test('tinting is optional, blocks payment while saving and charges each product in its own cart line',async()=>{
+  const previousGet=api.get.getMockImplementation();
+  const color={id:'black',code:'04S',name:'Black',kind:'solid',group:'fashion',hex_color:'#000000',additional_price:60000};
+  const row={id:'cart-owned',quantity:2,unit_price:100000,subtotal:200000,product:{name:'Frame A',product_type:'frame'}};
+  let tinting=null,complete;
+  api.get.mockImplementation(url=>url==='/cart'?Promise.resolve({data:{items:[row]}}):url==='/tinting'?Promise.resolve({data:{items:[color]}}):previousGet(url));
+  api.post.mockImplementation((url)=>Promise.resolve({data:url==='/checkout/shipping-options'?{options:[quote]}:
+    {subtotal:200000+(tinting?120000:0),product_subtotal:200000,tinting_subtotal:tinting?120000:0,total:210000+(tinting?120000:0),shipping:{cost:10000}}}));
+  api.patch.mockImplementation((url,payload)=>new Promise(resolve=>{complete=()=>{tinting=payload.tinting_id?color:null;resolve({data:{cart_item:{...row,tinting,tinting_price:tinting?60000:0,subtotal:tinting?320000:200000}}});};}));
+  await mountCheckout();
+  expect(host.querySelector('[data-testid=checkout-total]').textContent).toBe('Rp 210000');
+  await click(host.querySelector('[data-testid=choose-tinting-cart-owned]'));
+  await click(host.querySelector('[data-testid=tinting-cart-owned] input[type=radio]'));
+  expect(host.querySelector('[data-testid=submit-order-btn]').disabled).toBe(true);
+  await act(async()=>complete());await flush();await flush();
+  expect(api.patch).toHaveBeenCalledWith('/cart/cart-owned/tinting',{tinting_id:'black'});
+  expect(host.querySelector('[data-testid=checkout-tinting-subtotal]').textContent).toContain('Rp 120000');
+  expect(host.querySelector('[data-testid=checkout-total]').textContent).toBe('Rp 330000');
+  expect(host.querySelector('[data-testid=submit-order-btn]').disabled).toBe(false);
+  await click(host.querySelector('[aria-label="Hapus tinting Frame A"]'));
+  await act(async()=>complete());await flush();await flush();
+  expect(host.querySelector('[data-testid=checkout-tinting-subtotal]')).toBeNull();
+  expect(host.querySelector('[data-testid=checkout-total]').textContent).toBe('Rp 210000');
+});
+
 test.each([[1250,1250],[80,100]])('shipping shows authoritative item weight %i grams and follows prescription before payment',async(itemsWeight,ratedWeight)=>{
   const previous=api.post.getMockImplementation();
   api.post.mockImplementation((url,body)=>url==='/checkout/shipping-options'?Promise.resolve({data:{options:[quote],items_weight_gram:itemsWeight,weight_gram:ratedWeight}}):previous(url,body));

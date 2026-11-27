@@ -25,6 +25,7 @@ from routes_uploads import router as uploads_router, public_upload_file  # noqa:
 from routes_features import router as features_router  # noqa: E402
 from routes_integrations import router as integrations_router  # noqa: E402
 from routes_meowsurement import router as meowsurement_router  # noqa: E402
+from routes_tinting import router as tinting_router  # noqa: E402
 from scheduler import start_scheduler, stop_scheduler, scheduler  # noqa: E402
 from auth import current_admin  # noqa: E402
 from models import User  # noqa: E402
@@ -144,6 +145,7 @@ api_router.include_router(uploads_router)
 api_router.include_router(features_router)
 api_router.include_router(integrations_router)
 api_router.include_router(meowsurement_router)
+api_router.include_router(tinting_router)
 
 app.include_router(api_router)
 

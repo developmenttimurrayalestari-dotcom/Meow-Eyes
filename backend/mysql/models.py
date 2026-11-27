@@ -387,6 +387,19 @@ class CartItem(UpdatedMixin, Base):
     prescription_id: Mapped[str | None] = mapped_column(ID)
 
 
+class CartTinting(Base):
+    __tablename__ = 'cart_tintings'
+    cart_item_id: Mapped[str] = mapped_column(ID, ForeignKey('cart_items.id', ondelete='CASCADE'), primary_key=True)
+    tinting_id: Mapped[str] = mapped_column(ID, nullable=False)
+    details: Mapped[Any] = mapped_column(JSON, nullable=False)
+
+
+class OrderItemTinting(Base):
+    __tablename__ = 'order_item_tintings'
+    order_item_id: Mapped[str] = mapped_column(ID, ForeignKey('order_items.id', ondelete='RESTRICT'), primary_key=True)
+    details: Mapped[Any] = mapped_column(JSON, nullable=False)
+
+
 class ShippingQuote(CreatedMixin, Base):
     __tablename__ = "shipping_quotes"
     __table_args__ = (

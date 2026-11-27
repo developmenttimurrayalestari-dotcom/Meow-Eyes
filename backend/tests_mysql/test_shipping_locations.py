@@ -109,3 +109,14 @@ def test_unbookable_cargo_without_courier_code_does_not_hide_valid_regular_servi
                      'cargo': [{'logistic_code': '', 'rate_code': 'DARAT-NON ELEKTRONIK', 'logistic_name': 'Sentral Cargo', 'price': 30000}]}}
     options = service._rate_options(body)
     assert len(options) == 1 and options[0]['courier_code'] == 'SCP' and options[0]['cost'] == 9000
+
+
+def test_service_types_follow_provider_groups_instead_of_rate_or_courier_names():
+    def rate(code, label='Reguler'):
+        return {'logistic_code':'JTC','logistic_name':'J&T Express','rate_code':code,'rate_name':label,'price':10000}
+    body={'data':{'regular':[rate('r')],'express':[rate('e')],'cargo':[rate('c')],
+                  'same_day':[rate('s')],'instant':[rate('i')],'sameday':[rate('alias')]}}
+    options=service._rate_options(body,coordinates=True)
+    assert {o['service_code']:o['service_type'] for o in options}=={
+        'r':'regular','e':'express','c':'cargo','s':'same_day','i':'instant','alias':'same_day'}
+    assert {o['service_type'] for o in service._rate_options(body)}=={'regular','express','cargo'}
